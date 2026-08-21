@@ -5,10 +5,9 @@ native child controls, menus, a system-tray icon. Every type exposes its raw han
 you can always drop to plain Win32. Not a framework, not cross-platform, not WinRT.
 v0.1, headed for public release.
 
-Its Win32 house style **is** the tier's — the same conventions as every Windows
-project of mine — so load that first, then winwrap's own API conventions:
-
-@../AGENTS.md
+Shared conventions arrive from the installed `cpp-standards` and
+`windows-standards` plugins, independent of this repository's checkout path.
+Load those first, then winwrap's own API conventions:
 
 @CODE_CONVENTIONS.md
 
@@ -41,4 +40,3 @@ prompt: `cmake --preset dev`, `cmake --build --preset dev`, `ctest --preset dev`
 | `TECH_DEBT.md` | wonder why something is shaped oddly |
 
 `*_PROMPT.md` are one-off session briefs, not standing guidance.
-</content>

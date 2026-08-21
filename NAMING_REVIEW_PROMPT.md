@@ -46,7 +46,7 @@ in the same chain.
    user-facing escape hatch (users shadow it in their window types)?
 4. Is **`handle_notification`** right for the shared match-and-fire?
 5. Whatever the verdict, check consistency with the house conventions
-   (`cpp/CODE_CONVENTIONS.md`, winwrap `CODE_CONVENTIONS.md` §2 create/make
+   (`cpp-standards:cpp-style`, winwrap `CODE_CONVENTIONS.md` §2 create/make
    verb rules, the reserved `try_find` idiom in TECH_DEBT).
 
 ## Constraints & deliverable
