@@ -5,9 +5,7 @@ native child controls, menus, a system-tray icon. Every type exposes its raw han
 you can always drop to plain Win32. Not a framework, not cross-platform, not WinRT.
 v0.1, headed for public release.
 
-Shared conventions arrive from the installed `cpp-standards` and
-`windows-standards` plugins, independent of this repository's checkout path.
-Load those first, then winwrap's own API conventions:
+Winwrap's public-API conventions are project-specific:
 
 @CODE_CONVENTIONS.md
 
