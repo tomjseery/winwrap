@@ -1,11 +1,10 @@
 # winwrap — message-loop design proposal
 
-Design for a reusable message-pump runner, so no winwrap app has to hand-roll
-`GetMessageW` / `TranslateMessage` / `DispatchMessageW` in `wWinMain`. Sits under
-the roadmap gap "**Message loop** — stays app-side for the MVP … a
-`run_message_loop()` free-function helper is additive later" (ROADMAP → *wifi-toggle
-readiness gaps* §3). Design rationale conventions: VISION.md, both `CODE_CONVENTIONS.md`,
-`windows/CLAUDE.md`.
+Design and implementation notes for the reusable message-pump runner. Applications
+may use `run()` or retain their own native loop. Project rationale lives in
+[VISION.md](VISION.md) and [CODE_CONVENTIONS.md](CODE_CONVENTIONS.md); current
+limitations and future application-driven loop work are assessed in
+[ASSESSMENT.md](ASSESSMENT.md).
 
 ## Status: implemented (2026-07-13)
 
@@ -31,13 +30,11 @@ Ship a single **header-only free function `winwrap::run()` returning `int`** (th
 `HINSTANCE` (`GetModuleHandleW(nullptr)`) and `nShowCmd` is consumed by
 `show(cmd)`, so `run()` needs no arguments and no owning object — a free function
 is exactly the right shape, and an `Application`/`MessageLoop` class would be state
-without a reason to exist (YAGNI, §3). `GetMessageW`'s `-1` error is **unreachable
-through winwrap's own always-valid arguments** (`&msg` local, `nullptr` HWND
-filter), so it is an invariant break, not a recoverable failure — guard it with a
-**fail-fast** (`FAIL_FAST_IF`, the sanctioned terminate tier in `windows/CLAUDE.md`
-§4), *not* `std::expected`; wrapping the overwhelmingly-successful `WM_QUIT` path in
-an `expected` for a can't-happen case is ergonomic noise against the value-error
-model's actual purpose (surfacing recoverable, caller-caused failures). Build
+without a reason to exist for the current bare pump. The implementation treats
+`GetMessageW`'s `-1` return as **fail-fast**. Its fixed valid arguments avoid common
+documented failure causes, but do not prove that the documented failure return is
+impossible. Fail-fast is a chosen policy, not an established platform invariant.
+Build
 **only** the bare pump now; accelerators, modeless dialogs, and idle processing are
 walled *open*, not *off* — the free-function entry admits a future defaulted
 `RunConfig` overload without breaking a single caller (§1 config-struct convention,
@@ -58,10 +55,10 @@ walled *open*, not *off* — the free-function entry admits a future defaulted
 
 **Reading of the field, applied to winwrap's pillars (VISION):**
 
-- The two *frameworks* (Win32++, WTL) grow the loop into an **object with virtual
+- Win32++ and WTL grow the loop into an **object with virtual
   extension points** (`PreTranslateMessage`, `OnIdle`) and, in Win32++, a
-  singleton `CWinApp`. That is precisely the "replacement runtime / event system
-  of its own" winwrap is a non-goal against (VISION *not*). Their machinery exists
+  singleton `CWinApp`. A filter/idle adapter around the native pump is not by itself
+  a replacement runtime. Their machinery exists
   to solve accelerators + modeless dialogs + idle *generically for many windows* —
   a problem winwrap does not have yet (one window, no accel table, no dialogs).
 - **WinLamb** is closest to winwrap's spirit (header-only, no framework) and shows
@@ -70,13 +67,11 @@ walled *open*, not *off* — the free-function entry admits a future defaulted
   window object via a `RUN()` macro. winwrap can start below even that — a bare
   pump — and add the two `if`s later behind a config, because the CRTP/deducing-this
   design means the loop never needs to know the window type.
-- **The `-1` split is instructive.** WinLamb throws, WTL *silently ignores*. Silent
-  ignore is out (against "report outcomes faithfully"); throwing is out (winwrap is
-  exception-free for library control flow, VISION pillar 5). The third option none
-  of them take — **fail-fast** — is the correct one *here specifically*, because
-  unlike those generic loops (which accept arbitrary filter HWNDs and so can
-  legitimately see `-1`), winwrap owns both `GetMessageW` arguments and keeps them
-  valid, so `-1` cannot arise from correct use.
+- **The `-1` split is a policy choice.** The inspected WinLamb loop throws and WTL
+  continues; Winwrap currently fails fast. Do not explain that difference through
+  an unverified claim that the other loops accept arbitrary HWND filters. Future
+  loop configuration should explicitly revisit failure reporting and preserve
+  accelerator/modeless-dialog native semantics.
 
 ## (c) Proposed public API + usage
 
@@ -96,9 +91,9 @@ namespace winwrap {
 /// your main window's on_destroy so closing the window exits the app.
 ///
 /// @return The WM_QUIT exit code (msg.wParam), i.e. PostQuitMessage's argument.
-/// @note   GetMessageW's -1 error is unreachable here (winwrap supplies a valid
-///         &msg and a nullptr HWND filter), so it is treated as an invariant
-///         break (fail-fast), not a recoverable std::expected error.
+/// @note   The current policy is fail-fast for GetMessageW's documented -1 error.
+///         Valid fixed arguments avoid common failure causes, but do not prove
+///         that the failure return is impossible.
 [[nodiscard]] inline int run() {
     constexpr int message_failed_code{-1};
     MSG msg{};

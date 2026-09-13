@@ -1,60 +1,74 @@
-# winwrap — tech debt
+# Winwrap technical debt
 
-Deferred decisions and known-but-accepted rough edges: things we've *seen*, reasoned
-about, and chosen not to act on yet. Each item says what it is, why it's parked, and
-what resolving it would involve. Design rationale lives in [VISION.md](VISION.md); the
-work queue in [ROADMAP.md](ROADMAP.md). This file is only the "we know, not now" list.
+Known unresolved work, with objective resolution conditions. Delete resolved
+entries; Git is the archive. Product rationale lives in [VISION.md](VISION.md),
+the work queue in [ROADMAP.md](ROADMAP.md), and dated evidence in
+[ASSESSMENT.md](ASSESSMENT.md).
 
-## Map lookup idiom — `find` / `!= end()` noise
+## Owning areas
 
-`Menu::show` uses the iterator idiom (`if (auto it = m.find(k); it != m.end())`) —
-one hash lookup, but noisy; the iterator-free spelling (`contains` + `at`, C++20)
-costs a second lookup, and C++23 still has no optional-returning map get. **Parked:**
-one call site doesn't justify a helper. **Resolve when** the idiom hits its second
-real consumer (CODE_CONVENTIONS §3 trigger): add a tiny `try_find` returning a
-pointer-to-value (`nullptr` = absent) in a concept-named shared header.
+| Area | Resolution checklist |
+|---|---|
+| Native binding, lifetime, errors, dispatch, controls, menus, tray and other library protocols | [lib/TECH_DEBT.md](lib/TECH_DEBT.md) |
+| Test fixtures, adversarial coverage and interactive/native integration | [tests/TECH_DEBT.md](tests/TECH_DEBT.md) |
+| Build/distribution and repository-wide release guidance | This file |
 
-## Umbrella headers (`controls.hpp`, `mixins.hpp`) — convenience only; decide keep-vs-drop
+## Build and installed consumption
 
-`controls.hpp` and `mixins.hpp` contain **no code** — no shared macro, no shared
-declaration. Each is a pure `#include` aggregator ("include one, get all"). The only
-things an umbrella can buy:
+- **M8 / WIL dependency contract.** Public headers include WIL, but the exported
+  target omits WIL and the package config has no find_dependency. A full install
+  currently installs WIL into the same prefix and a fresh consumer passed; the
+  defect is an implicit/fragile distribution contract, not universal install
+  failure. **Resolve:** choose explicit dependency discovery or deliberate bundled
+  headers/metadata, then validate fresh and relocated consumers with separately
+  located dependencies and package-manager consumption.
+- **Consumer configurations.** Installed include paths assume the default include
+  directory despite GNUInstallDirs; source consumption force-sets WIL options;
+  warning/sanitizer handling distinguishes compiler ID but not every frontend;
+  sanitizer/CRT combinations and 0.x SameMajorVersion compatibility are unproven.
+  **Resolve:** consumer/install/configuration tests and a documented compiler,
+  dependency, CRT and pre-1.0 compatibility policy.
+- **No supported-version CI matrix.** The existing MSVC build/tests pass, but
+  clang-cl and minimum compiler/SDK claims are not established by CI.
+  **Resolve:** reproducible supported MSVC/clang-cl Debug/Release builds, targeted
+  sanitizer support, header instantiation and install consumers. Do not claim
+  support for combinations that are not tested.
+- **No maintained in-repository proving applications or package-manager strategy.**
+  Sibling app references cannot be validated from this checkout; no examples or
+  vcpkg/Conan metadata were tracked at the assessment baseline.
+  **Resolve:** buildable versioned consumers using public targets, then choose
+  distribution channels based on real users. Package-manager breadth is not itself
+  a v0.1 requirement.
 
-- **Ergonomic one-include** — `#include <winwrap/controls.hpp>` instead of N lines. Minor.
-- **Stable public entry point** — the umbrella is the API surface, so internal file
-  layout (`controls/button.hpp`, …) could be reorganized without breaking consumers.
-  Weak here: winwrap is small and the layout is unlikely to churn.
+## Documentation and release policy
 
-**Why it's debt:** it needed an `IWYU pragma: begin_exports` to silence include-cleaner's
-"unused-includes" (the tooling flagging that the file does nothing is a smell); it pulls
-every control into any TU that includes it (compile cost); and the `control.hpp` (base)
-vs `controls.hpp` (catalog) one-letter difference is a readability trap.
-
-**Resolution options:** (a) keep as-is — cheap, harmless if unused; (b) delete both and
-require consumers to include the specific control/mixin they use — fits the "thin,
-pay-for-what-you-include" pillar better. **Status:** parked. Decide at the first real
-external consumer (wifi-toggle), when usage shows whether one-include earns
-its place.
-
-## Message dispatch — known edges (from the CRTP mixin review)
-
-- **Silent hook misses** — a mis-signatured or typo'd `on_*` hook silently never fires:
-  the `requires`-detection compiles the absent branch out, with no diagnostic. **Resolve**
-  (split by the 2026-07-12 dispatch review): the *mis-signature* half is fixable at
-  compile time — the `WW_CASE` static_assert hardening specced in ROADMAP (*Decisions
-  locked → Dispatch design review*, follow-up a). The *typo* half stays behavioural:
-  a Catch2 test per wrapper that pushes a synthetic message through `dispatch_message`
-  and asserts the hook ran. No engine change either way. *Both recommended.*
-- **`return 0` ceiling** — `WW_CASE` hard-codes `return 0` for every handled message, so a
-  hook can't return a meaningful `LRESULT`. Fine for the current fire-and-forget set;
-  **revisit when `WM_NOTIFY` / `WM_CTLCOLOR*` land** — either extend `WW_CASE` to carry a
-  return value, or route those few messages via the shadow-`dispatch_message` escape hatch.
-- **Public `on_*` hooks** *(accepted; won't-fix)* — handlers must be `public` because the
-  mixin calls them from a different class. Making them private costs friend declarations
-  or an accessor shim; not worth it at this scale. Recorded so it isn't relitigated.
-- **MSVC empty-base bloat** — MSVC folds only the *first* empty base to zero bytes; each
-  further empty mixin base costs a byte (+ padding). Measured 2026-07-12: a plain
-  `Window<T>` is 24 bytes vs 16 with `__declspec(empty_bases)` on `MessageDispatcher`, so
-  the mixins.hpp "zero size" doc comment overstates on MSVC. Harmless at our scale (few,
-  heap-allocated windows). **Resolve:** apply `__declspec(empty_bases)` behind a small
-  portability macro (MSVC-only attribute), or just soften the doc comment.
+- **Older specifications need an application-driven reconciliation.** The roadmap
+  retains earlier detailed specifications and one-off prompts; the assessment
+  proposes a different priority and reopens result, ownership, resizing and dialog
+  choices. **Resolve:** choose the next bounded implementation outcome, reconcile
+  its owning specification and retire superseded briefs when they have served
+  their purpose. Do not treat assessment recommendations as already implemented
+  or silently lock undecided public APIs.
+- **Public contract/support documentation is incomplete.** Thread affinity,
+  borrowed/adopted handles, reentrancy, callback exceptions, native default
+  processing, source/ABI compatibility, Windows versions, accessibility/DPI and
+  deprecation policy lack a complete tested release contract.
+  **Resolve:** document those contracts alongside validated examples before
+  recommending production adoption; align source comments during the owning fixes.
+- **Guidance reachability is not automatically checked.** AGENTS links the owning
+  documents and CLAUDE imports AGENTS, but there is no repository reachability
+  hook. **Resolve:** add a small link/import check when repository checks are
+  introduced; validate existing links manually in the meantime.
+- **Generated route identifiers lag the installed skill catalog.** The route table
+  names agent-process documentation/route skills while this environment exposes
+  their concertable equivalents. **Resolve:** reconcile the owning generator's
+  identifiers with supported plugin versions, regenerate rather than hand-edit the
+  table, and verify that AGENTS/CLAUDE changes resolve a real installed docs skill.
+- **Packaged preflight compatibility.** The installed helper classifies every
+  non-.md untracked path as code (including local agent TOML files and collapsed
+  directories), and compares an incremental review's prior-head base directly to
+  origin/main. This can falsely invalidate a completed full-plus-incremental review.
+  **Resolve in the workflow provider:** test metadata-aware expanded status paths
+  and review-chain reconciliation. Until then, explicitly inspect file-level
+  dirtiness, unchanged remote base and the complete exact-head review chain; never
+  stage unrelated local configuration or discard real review/CI failures.
