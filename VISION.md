@@ -8,33 +8,36 @@ What winwrap is, what it deliberately isn't, and why it exists. The user-facing
 
 **Modern C++ (C++23, MSVC) over *native* Win32 — a thin wrapper, not a
 replacement runtime.** winwrap still calls `CreateWindowExW`, `Shell_NotifyIcon`,
-`TrackPopupMenuEx` directly. It never puts its own world between you and the OS
-the way Qt / wxWidgets / GTK do.
+`TrackPopupMenuEx` directly. It serves developers who have already chosen classic
+Win32, leaving application architecture outside the library.
 
 ## Design pillars
 
 1. **Native Win32, never a framework.** Every wrapper exposes the raw handle and
    you can always drop to plain Win32. winwrap adds ergonomics; it never hides
    the platform or locks you in.
-2. **Zero-overhead dispatch, resolved at compile time.** Window message routing
+2. **Compile-time-composed dispatch.** Window message routing
    is composed mixins + `if constexpr`/`requires` detection of named `on_*` hooks
    the derived window defines, with the final type deduced via C++23 *deducing
    this* (the CRTP idea, respelled without the `Derived` parameter) — no vtables,
    no virtual hierarchy, no macro message maps. You write only the `on_*`
-   handlers you need.
+   handlers you need. Message IDs and payloads remain runtime values; no-vtable
+   composition is an implementation choice, not a measured performance advantage.
 3. **Low / zero dependencies.** Header-only WIL for RAII handles, and nothing
-   else. No multi-megabyte runtime to ship next to a tray utility.
-4. **RAII over every resource.** Handles are owned by wrappers — WIL's
+   else. No separate Winwrap runtime DLL; CRT and application deployment remain
+   explicit consumer choices.
+4. **Explicit ownership.** Distinguish owning resources from borrowed views. Use WIL's
    (`unique_hmenu`, `unique_hicon`, …) for the plumbing, winwrap's ergonomic
-   types layered on top. No manual `CloseHandle` / `DestroyWindow` ladders.
+   types layered on top. Factories, attachment and teardown must make ownership
+   visible; current implementation gaps live in [TECH_DEBT.md](TECH_DEBT.md).
 5. **Value-based errors.** The public API returns
    `std::expected<T, std::error_code>` (Win32 codes via `std::system_category()`)
-   — explicit, exception-free-friendly, the right shape for a library. Exceptions
-   are for genuine programmer errors only.
-6. **An integrated system-tray icon — the differentiator.** A reusable
-   `Shell_NotifyIcon` abstraction that rides the *same* CRTP window bridge (tray
-   events arrive as ordinary window messages). This window + tray combination, in
-   modern standalone C++, is the gap winwrap fills.
+   — explicit recoverable OS failures. This does not imply exception-disabled
+   support: allocations and user callbacks require a separately specified policy.
+6. **Useful standalone protocols.** A reusable `Shell_NotifyIcon` abstraction accepts
+   an HWND; tray events arrive as ordinary window messages. It must remain usable
+   with an existing raw-Win32 window, without adopting the Winwrap window base.
+   Tray support is a useful initial use case, not a uniqueness claim.
 7. **Unicode, MSVC.** UTF-16 at the Win32 boundary, the `…W` APIs, `/utf-8` for
    narrow literals. Classic Win32 desktop — not WinRT/UWP.
 
@@ -42,7 +45,7 @@ the way Qt / wxWidgets / GTK do.
 
 - **Not a from-scratch GUI toolkit.** No custom widget tree, no layout engine, no
   theming / custom-drawn widgets. *Ergonomic wrappers over **native** Win32 controls*
-  (`Button`, `Edit`, …) are in scope from v0.2 — but they stay **thin shells over the
+  (`Button`, `Edit`, …) already exist — but they stay **thin shells over the
   OS controls**: winwrap supplies the ergonomics (`button.on_click(...)`), Windows
   supplies the widget. The line is "native controls made pleasant," never a
   Qt/wxWidgets replacement.
@@ -52,49 +55,40 @@ the way Qt / wxWidgets / GTK do.
 - **Not WinRT / UWP / C++/WinRT.** Classic Win32.
 - **No ANSI / TCHAR dual builds.** Always Unicode.
 
-## Why it exists — the landscape
+## Why it exists
 
-The open-source field splits into two camps that never overlap: native-Win32
-**window frameworks** with no tray, and **tray-only** libraries with no window
-framework. None of the window frameworks use CRTP either.
+Repeated native ownership, creation and message-routing protocols justify a
+personal support library. A public library must additionally earn trust through
+correctness, real consuming applications, useful contracts and maintenance.
 
-| Library          | Native Win32 | Dependencies   | Dispatch              | Tray icon |
-|------------------|:-----------:|----------------|-----------------------|:---------:|
-| WinLamb          | yes         | header-only     | lambda-map (runtime)  | no        |
-| Win32++ (Win32xx)| yes         | header-only     | virtual `WndProc`     | no        |
-| LFWin32          | yes         | low             | signal-slot (no vtables) | no     |
-| ATL `CWindowImpl`| yes         | ATL framework   | CRTP **+ macro maps** | no        |
-| zserge/tray, traypp, CTrayNotifyIcon | — | varies | callbacks    | yes, but no window framework |
-| **winwrap**      | **yes**     | **WIL only**    | **compile-time mixins (deducing this)** | **yes** |
-
-The closest existing thing — ATL's `CWindowImpl` plus a third-party tray class —
-drags in the ATL framework, macro message maps, and a dated API, and still
-doesn't bundle the tray. winwrap is that combination done modern, clean, and
-standalone.
+Current and historical alternatives occupy this layer already. WTL is a close
+mature conceptual neighbor, and newer projects overlap parts of the proposed
+modern API. The dated competitor evidence, audience analysis and future-direction
+recommendations have one home: [ASSESSMENT.md](ASSESSMENT.md). Do not infer novelty
+from the absence of another project with exactly the same syntax.
 
 ## The reuse rule
 
 The principle that decides build-vs-adopt for every piece:
 
-> **Reuse** a library when it gives you the thing *cleanly* — no baggage you're
-> trying to avoid. **Build** only when the sole existing version drags that
-> baggage in.
+> **Reuse** std/WIL facilities that meet the required contract. **Build** a native
+> wrapper when a real application exposes useful protocol, ownership, error or
+> routing work that the existing facilities do not address adequately. Similar
+> libraries are evidence to evaluate, not automatic approval or rejection.
 
 - **RAII handles** → WIL provides them cleanly → reuse. (e.g. `Menu` owns its
   `HMENU` via `wil::unique_hmenu`.)
-- **The CRTP window bridge** → the only implementation is ATL's, welded to the
-  ATL framework + macros + no tray → build it. This is the one justified
-  hand-roll, and it's the heart of the library.
-- **The tray abstraction** → nothing modern and standalone exists → build it.
-  It's the differentiator.
+- **The native object bridge** → keep it only if its explicit contracts and actual
+  consumers justify maintaining it. Other implementations exist and deserve study.
+- **The tray abstraction** → prove an interoperable, reliable utility-facing API,
+  rather than claiming tray/window integration is unique.
 
 ## Future directions (not now)
 
-- **C++17 backport.** Keep the design backport-friendly so a future update can
-  reach down to C++17 via preprocessor feature-gating + `nonstd::expected`
-  (expected-lite) where `std::expected` is absent. Deliberately deferred.
+- **C++17 backport.** Remains deferred, not a compatibility promise. The assessment
+  recommends reconsidering only for a real consumer with a supportable test matrix.
 - More RAII-wrapped Win32 objects as the need recurs across real projects.
-- Balloon / toast notifications, `NOTIFYICON_VERSION_4` message protocol.
-- **Ergonomic native-control wrappers** (`Button`, `Edit`, …) — v0.2: thin shells
-  over the OS control classes with on-event callbacks (`button.on_click(...)`),
-  hiding the `WM_COMMAND`-id plumbing. Native controls only — no layout/theming.
+- More shell protocols when applications need them; `NOTIFYICON_VERSION_4` is
+  already targeted. Balloon and modern toast protocols are not interchangeable.
+- Additional native controls after creation/reflection/result/lifetime contracts
+  are reliable. Broad coverage is a possible direction, not a promise to wrap the SDK.

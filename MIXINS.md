@@ -5,6 +5,11 @@ window gains a message feature like file drag-drop, without touching the engine.
 This is the pattern the library repeats for every message feature, so it's
 written down once here.
 
+This describes the current implementation, not a guarantee that every lifecycle
+edge is settled. [Library debt](lib/TECH_DEBT.md) owns the outstanding result,
+reflection, header and reentrancy contracts; [ASSESSMENT.md](ASSESSMENT.md) explains
+the recommended evolution.
+
 See also: [VISION.md](VISION.md) (the "on-event callbacks, hiding the `WM_COMMAND`-id
 plumbing" goal), `lib/include/winwrap/mixins.hpp` (the mixins) and
 `lib/include/winwrap/message_reflection.hpp` (the reflection engine), `CODE_CONVENTIONS.md §3`
@@ -101,6 +106,12 @@ code on the derived window type. `FileDroppable` is the worked example.
        std::optional<LRESULT> handle_message([[maybe_unused]] this auto& self, UINT msg, WPARAM wparam,
                                      LPARAM) {
            switch (msg) {
+               case WM_NCCREATE:
+                   if constexpr (requires(const std::vector<std::wstring>& paths) {
+                                     self.on_files_dropped(paths);
+                                 })
+                       DragAcceptFiles(self.hwnd(), TRUE);
+                   break;
                WW_CASE(WM_DROPFILES,
                        self.on_files_dropped(make_dropped_paths(reinterpret_cast<HDROP>(wparam))));
                default:
@@ -131,15 +142,14 @@ Rules specific to window mixins:
   matching a built-in's message would fire only on windows that *don't* define
   that built-in hook. Don't rely on that; keep the one-message-one-mixin
   invariant.
-- **Opt-in mechanics stay the user's job.** If the OS must be told before the
-  message ever arrives (`WM_DROPFILES` needs `WS_EX_ACCEPTFILES` or
-  `DragAcceptFiles`), document it on the mixin. Don't self-activate off a
-  lifecycle message: a built-in (`Lifecycle`) may claim it first and the
-  activation silently never runs.
+- **Activation follows [CODE_CONVENTIONS §5](CODE_CONVENTIONS.md).**
+  `FileDroppable` currently registers at `WM_NCCREATE` when its hook exists and
+  passes the message onward. This is a window lifecycle hook; a control subclass
+  installed after native creation cannot rely on receiving that creation message.
 - **RAII the message's resources inside the helper** (`make_dropped_paths` is
-  `Drop{drop}.paths()` — the `Drop` view in `winwrap/drop.hpp` owns the handle
-  and runs `DragFinish` in its destructor), so the hook can throw safely and the
-  raw handle never reaches user code. Shadowing `handle_message` for custom drop
+  `Drop{drop}.paths()` — `Drop` in `winwrap/drop.hpp` owns the handle
+  and runs `DragFinish` in its destructor). This protects HDROP cleanup, not the
+  safety of exceptions escaping WndProc. Shadowing `dispatch_message` for custom drop
   handling? Adopt the wparam into a `Drop` and query `count()` / `path(i)` /
   `point()` instead of calling `DragQueryFileW` yourself.
 
@@ -154,5 +164,6 @@ Rules specific to window mixins:
   handler)`) is resolved inside `Menu::show` itself via `TPM_RETURNCMD` and never
   reaches the window; legacy-id items and accelerators still go to the window's
   `Commandable` → `on_command(id)`. `Reflecting` only handles `lparam != 0`.
-- **A second message that needs reflecting (WM_NOTIFY)** joins `Reflecting`; the
-  control-side mixins stay exactly this shape.
+- **WM_NOTIFY** needs handled-state and meaningful-result propagation plus the
+  native payload lifetime contract. It cannot simply inherit the current
+  void-callback/return-zero recipe unchanged.
