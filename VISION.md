@@ -13,9 +13,11 @@ Win32, leaving application architecture outside the library.
 
 ## Design pillars
 
-1. **Native Win32, never a framework.** Every wrapper exposes the raw handle and
-   you can always drop to plain Win32. winwrap adds ergonomics; it never hides
-   the platform or locks you in.
+1. **A broad native desktop façade, not a replacement runtime.** Winwrap aims to
+   abstract the useful classic Win32 desktop surface into coherent C++ operations.
+   "Thin" means preserving native semantics and avoiding an application framework,
+   not limiting the library to a handful of helpers. The wrapper-first API and
+   escape-hatch policy is owned by [CODE_CONVENTIONS.md](CODE_CONVENTIONS.md#4-wrapper-first-apis--abstract-the-operation-preserve-the-escape-hatch).
 2. **Compile-time-composed dispatch.** Window message routing
    is composed mixins + `if constexpr`/`requires` detection of named `on_*` hooks
    the derived window defines, with the final type deduced via C++23 *deducing
@@ -57,9 +59,18 @@ Win32, leaving application architecture outside the library.
 
 ## Why it exists
 
-Repeated native ownership, creation and message-routing protocols justify a
-personal support library. A public library must additionally earn trust through
-correctness, real consuming applications, useful contracts and maintenance.
+**Learning and practical application value are first-class goals.** Winwrap is a
+place for Tommy to understand and apply modern C++ and Win32 in real software:
+explicit object parameters, templates, mixins, static dispatch, ownership, errors,
+testing and build/distribution contracts. These choices do not need to be novel,
+a competitive selling point, or a measured speedup to be worthwhile learning work.
+The test is understanding and maintaining useful applications, not collecting
+language features. Learning value does not excuse incorrect lifetime behavior.
+
+The library should also remove native ceremony in those applications. Public
+adoption is a further possible outcome with additional obligations: correctness,
+real consuming applications, useful contracts and maintenance. Lack of broad
+adoption would not invalidate the learning or personal-infrastructure goals.
 
 Current and historical alternatives occupy this layer already. WTL is a close
 mature conceptual neighbor, and newer projects overlap parts of the proposed
@@ -72,8 +83,8 @@ from the absence of another project with exactly the same syntax.
 The principle that decides build-vs-adopt for every piece:
 
 > **Reuse** std/WIL facilities that meet the required contract. **Build** a native
-> wrapper when a real application exposes useful protocol, ownership, error or
-> routing work that the existing facilities do not address adequately. Similar
+> façade with useful operation coverage and protocol, ownership, error or routing
+> work that the existing facilities do not address adequately. Similar
 > libraries are evidence to evaluate, not automatic approval or rejection.
 
 - **RAII handles** → WIL provides them cleanly → reuse. (e.g. `Menu` owns its
@@ -90,5 +101,7 @@ The principle that decides build-vs-adopt for every piece:
 - More RAII-wrapped Win32 objects as the need recurs across real projects.
 - More shell protocols when applications need them; `NOTIFYICON_VERSION_4` is
   already targeted. Balloon and modern toast protocols are not interchangeable.
-- Additional native controls after creation/reflection/result/lifetime contracts
-  are reliable. Broad coverage is a possible direction, not a promise to wrap the SDK.
+- Additional native controls and desktop operations after the relevant foundation
+  contracts are reliable. Applications prioritize and validate broad coverage;
+  they do not impose a permanent small-utility feature ceiling. Each release still
+  promises a bounded tested surface, not completion of the entire Windows SDK.
