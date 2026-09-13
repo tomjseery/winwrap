@@ -37,6 +37,7 @@ prompt: `cmake --preset dev`, `cmake --build --preset dev`, `ctest --preset dev`
 | `MIXINS.md`, `MESSAGE_LOOP_DESIGN.md` | touch mixins, dispatch, or the loop |
 | `TECH_DEBT.md` | wonder why something is shaped oddly |
 | `ASSESSMENT.md` | evaluate positioning, competitors, release readiness, broader scope, or learning/application strategy |
+| `PLANNING.md` | prepare an implementation plan — readiness gates, evidence and unresolved design choices |
 
 The assessment is dated evidence and proposed direction, not an implementation
 plan or blanket authorization to expand scope. This table is the topic index;

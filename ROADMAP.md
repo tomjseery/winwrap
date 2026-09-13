@@ -3,17 +3,39 @@
 What's done, what's next, and the spec for each piece. Design rationale lives in
 [VISION.md](VISION.md).
 
-## Next session: assessment-led revision
+## Next session: prepare the correctness plan
 
 The [technical and product assessment](ASSESSMENT.md) reassesses the actual source,
 tests, install consumption and current ecosystem. It proposes an application-driven
-roadmap through v1.0; those strategic choices are not newly locked decisions.
+roadmap through v1.0. The author has since clarified the wrapper-first API direction
+and learning purpose; their owners are [CODE_CONVENTIONS.md](CODE_CONVENTIONS.md#4-wrapper-first-apis--abstract-the-operation-preserve-the-escape-hatch)
+and [VISION.md](VISION.md#why-it-exists). Other assessment proposals are not
+automatically locked decisions.
 
 Before resuming feature breadth, resolve the high-severity library findings indexed
 by [TECH_DEBT.md](TECH_DEBT.md), then prove the current tray/control slice in an
 application. The assessment's **Next five milestones** and **Application-driven
 roadmap** are the proposed sequencing to reconcile with the backlog below.
-No runtime fixes or new controls were implemented by the assessment.
+No runtime fixes or new controls were implemented by the assessment or this
+planning preparation. [PLANNING.md](PLANNING.md) owns the readiness map and open
+questions to resolve before an implementation-ready plan and ledger are written.
+
+### Proposed workstreams
+
+These stable keys identify candidates for later plans; no implementation plan or
+delivery ledger exists yet. The order is a release-hardening proposal, not a
+permanent limit on desktop coverage.
+
+- [ ] `winwrap/correctness-foundation` — reliable binding, ownership, failures,
+  message results and focused regression tests; prepare this plan first.
+- [ ] `winwrap/tray-utility` — a complete tray application and the wrapper operations
+  it needs, including icon changes, timer lifetime and recovery.
+- [ ] `winwrap/settings-and-consumption` — native settings, keyboard/focus/DPI,
+  supported build/install checks and documented application deployment.
+- [ ] `winwrap/richer-desktop` — dialogs, accelerators, richer notifications and
+  native controls driven by a multi-window application.
+- [ ] `winwrap/public-stability` — external consumption, compatibility, distribution
+  and sustained release evidence.
 
 ## Existing application backlog and specifications
 
@@ -53,7 +75,9 @@ Close these before or while wiring — wifi-toggle needs each one:
 2. **`on_timer(id)` hook** — a `Timable` mixin (`WM_TIMER`, id = `wparam`) per the
    `MIXINS.md` recipe, for the status poll. Precedent: WTL's `MSG_WM_TIMER` →
    `OnTimer(UINT_PTR)`; no surveyed library wraps `SetTimer`/`KillTimer` beyond
-   raw members, so the app keeps calling those (an RAII guard is additive later).
+   raw members. Plan a Winwrap timer API with explicit ownership/cancellation;
+   direct calls can establish the protocol during learning, not stand in for
+   completed timer coverage in the final supported application slice.
 3. ~~**Message loop**~~ — ✅ **Done (2026-07-13).** `winwrap/message_loop.hpp`:
    header-only `run()` (the `GetMessageW`/`TranslateMessage`/`DispatchMessageW` pump;
    returns `msg.wParam`; `-1` guarded by `FAIL_FAST_IF`) + `quit(int = 0)` (over
