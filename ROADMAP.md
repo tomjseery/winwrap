@@ -3,15 +3,27 @@
 What's done, what's next, and the spec for each piece. Design rationale lives in
 [VISION.md](VISION.md).
 
-## ▶ Next session: start here
+## Next session: assessment-led revision
+
+The [technical and product assessment](ASSESSMENT.md) reassesses the actual source,
+tests, install consumption and current ecosystem. It proposes an application-driven
+roadmap through v1.0; those strategic choices are not newly locked decisions.
+
+Before resuming feature breadth, resolve the high-severity library findings indexed
+by [TECH_DEBT.md](TECH_DEBT.md), then prove the current tray/control slice in an
+application. The assessment's **Next five milestones** and **Application-driven
+roadmap** are the proposed sequencing to reconcile with the backlog below.
+No runtime fixes or new controls were implemented by the assessment.
+
+## Existing application backlog and specifications
 
 > **The road to v0.1 is now a punch list: [`PRE_V01_PROMPTS.md`](PRE_V01_PROMPTS.md)**
-> — one self-contained task per fresh session (5 structural, 3 additive), in
-> order. Work through it; everything below stays as background/spec.
+> — historical session briefs (5 structural, 3 additive). Reconcile them with the
+> assessment and current debt before execution; they are not standing guidance.
 
 **Goal: an MVP usable in wifi-toggle** = `Window` ✓ + `Menu` ✓ + `NotifyIcon`,
-composing through the `on_*` hooks. Design is locked (see *Decisions locked* →
-*Tray / menu integration*) — don't re-litigate; build straight against it.
+composing through the `on_*` hooks. Earlier decisions remain recorded below, but
+the assessment's reproduced correctness issues qualify their readiness claims.
 
 > **v0.2 `Control<T>` is ✅ done** — implemented + MSVC-verified (compiles + links via
 > `control_test`), though not yet exercised on screen. Next: a control-on-screen
@@ -55,11 +67,10 @@ Close these before or while wiring — wifi-toggle needs each one:
    (revised)*. Remaining acceptance check (from the design task): the wifi-toggle
    window ends up with zero menu ids, zero `switch`, zero `on_command`.
 
-Non-gaps confirmed by the survey: `NotifyIcon` already exceeds every surveyed
-library (v4 protocol + TaskbarCreated re-add; Win32++'s tray sample is legacy-v0
-with neither, WTL/WinLamb have no tray support at all), and drawing the red/green
-`HICON` itself is app-side GDI by design (`CreateIconIndirect`; winwrap adopts the
-result).
+`NotifyIcon` targets v4 and exposes a re-add operation; this is not proof of
+automatic Explorer-restart recovery or superiority to every alternative. The
+assessment owns current competitor evidence. Drawing a status `HICON` remains
+app-side GDI (`CreateIconIndirect`); adoption must have an explicit ownership contract.
 
 ## Current state (v0.1)
 
@@ -86,8 +97,9 @@ result).
   pump; returns `msg.wParam`; `-1` → `FAIL_FAST_IF`) + `quit(int = 0)` (over
   `PostQuitMessage`). App exits via `on_destroy` → `winwrap::quit()`. Four Catch2 tests,
   MSVC-clean. Design/rationale: `MESSAGE_LOOP_DESIGN.md`.
-- **Build** — CMake + WIL + install/export + warnings/sanitizers. Solid; no work
-  needed.
+- **Build** — CMake + WIL + install/export + warnings/sanitizers exist. A full-install
+  consumer passed in the assessment; explicit dependency metadata, compiler CI and
+  additional consumer configurations remain release work.
 
 ## Decisions locked
 
@@ -115,7 +127,8 @@ result).
   message. Both `Window<T>` and `Control<T>` inherit it. The `WW_CASE(message, call)` macro (defined + `#undef`'d inside
   `mixins.hpp`) is the only tool that can simultaneously put a maybe-absent member
   into an unevaluated `requires` and `return`/`break` from the caller's frame — one
-  line per case, zero duplication. No vtables; all resolved at compile time. Derived
+  line per case, zero duplication. No vtables; composition is compile-time but
+  message matching is runtime. Derived
   types define only the **public** `on_*` hooks they need. `dispatch_message` stays
   **shadowable** as the escape hatch for runtime-id messages (e.g. the tray
   callback) — delegate the rest with `Window::dispatch_message`.
@@ -214,12 +227,14 @@ result).
   before. Per item there is exactly one route, chosen by which overload added it.
   User-chosen ids must stay below `0xE000`; on a collision the callback wins.
 - **Tray events exposed raw** (you `switch` on the callback message in
-  `handle_message`) for the MVP. A typed `TrayEvent` enum is a future *additive*
+  `dispatch_message`) for the MVP. A typed `TrayEvent` enum is a future *additive*
   layer, not a v1 requirement.
-- **Target `NOTIFYICON_VERSION_4`** from the start (richer events + GUID identity).
+- **Target `NOTIFYICON_VERSION_4`** from the start (richer event protocol; GUID
+  identity requires separate `NIF_GUID` support and is not enabled by v4 alone).
   Changing the protocol later would be a BC break — do it now.
-- **Tray app's window is message-only:** create with `WindowConfig{ .parent =
-  HWND_MESSAGE }`. No new API — `Window` already supports it.
+- **Tray recovery needs a broadcast receiver:** use a hidden top-level window, or
+  forward from one to a message-only host. `HWND_MESSAGE` alone does not receive
+  `TaskbarCreated`; see the platform evidence in the assessment.
 - **Composition & lifetime:** `NotifyIcon` and `Menu` are **members of the derived
   window**, initialized in `on_created()` (where `hwnd()` is valid). Their lifetime
   = the window's.
@@ -313,18 +328,17 @@ below; nothing here is a new pillar.
 **The finding: the sharpest gaps are holes inside wrappers already shipped, not
 missing wrappers.** In priority order:
 
-1. **`PaintDc` — `on_paint()` hands the user nothing** *(recommended next)*.
+1. **Painting protocol — `on_paint()` hands the user nothing** *(shape to reassess)*.
    `Paintable` fires `self.on_paint()` with no DC, and the library contains no
-   `BeginPaint` at all, so every user of the hook hand-rolls the
-   `BeginPaint`/`PAINTSTRUCT`/`EndPaint` pairing — the exact must-not-forget cleanup
-   pillar 4 promises to own. All three libraries wrap the DC (WTL `atlgdi.h`, Win32++
-   `CPaintDC`, WinLamb `gdi.h`). Shape: an RAII `PaintDc` over a *borrowed* HWND,
-   passed as `on_paint(PaintDc&)` — the `Drop` precedent (wrap the protocol in a type,
-   §4). Note the `WW_CASE` `return 0` ceiling doesn't bite here (`WM_PAINT` wants 0).
+   `BeginPaint` adapter. WIL already supplies `wil::BeginPaint`,
+   `wil::unique_hdc_paint` and selection guards. Use those first; a proposed
+   `on_paint(PaintDc&)` needs to add a useful context/protocol contract, not duplicate
+   cleanup. The current hook does not automatically validate the update region.
 2. **`WM_NOTIFY` reflection — an engine gap, not a control gap.**
    `message_reflection.hpp` already says "`WM_NOTIFY` joins here when it lands."
-   ListView, TreeView, Tab, Slider and DateTimePicker *all* notify this way, so none
-   are buildable until it does. **Do this before adding any more controls.** Trips the
+   ListView, TreeView, Tab and DateTimePicker use this protocol; a parent can handle
+   it directly before reflection exists. Trackbars primarily use `WM_HSCROLL` /
+   `WM_VSCROLL`. Prioritize coherent reflection before broadening the catalog. Trips the
    `return 0` ceiling recorded in TECH_DEBT — resolve that at the same time.
 3. **Right-click hooks — the missing half of `Menu`.** `MouseInput` covers
    `WM_MOUSEMOVE` / `WM_LBUTTONDOWN` / `WM_LBUTTONUP` only, so a window that owns a
@@ -353,7 +367,7 @@ features:
 | `Timable` mixin + `SetTimer`/`KillTimer` RAII | WTL `MSG_WM_TIMER` | **build** — already listed as a wifi-toggle gap above |
 | `load_icon` helper (`LoadImageW` / `LoadIconMetric`) | WinLamb `icon.h` | **build** — `NotifyIcon` currently demands a caller-made `HICON`; every tray app needs this |
 | `Point` / `Size` / `Rect` value types | Win32++ `CRect`, WTL `atlmisc.h` | **build, small** — hooks pass raw `int x, int y` / `WORD w, h` today |
-| `on_dpi_changed` mixin (`WM_DPICHANGED`) | **nothing** covers it — WTL and Win32++ both predate Per-Monitor v2 | **build** — the manifest already mandates PMv2, and it's a real edge over the legacy libraries |
+| `on_dpi_changed` mixin (`WM_DPICHANGED`) | Win32++ explicitly advertises PMv2 support; age is not evidence of missing DPI support | **application-driven** — correct payload/result handling and app-owned awareness/layout policy, not a novelty claim |
 | Label (STATIC), ListBox, ProgressBar, RadioButton | all three | **build after** items 2 and 5 above — these four need no `WM_NOTIFY` |
 | ListView / TreeView / Tab / StatusBar | all three | **defer** — gated on `WM_NOTIFY`, and each is a large surface (WinLamb spends four internal headers on ListView alone) |
 | `ITaskbarList3` progress over `shell.hpp` | WinLamb `progress_taskbar.h` | **later** — §3 reserved `shell.hpp` for this, and as of 2026-07-30 that header exists, so the home is real |
@@ -364,18 +378,18 @@ surveyed libraries because they predate modern C++ / WIL, not because winwrap ne
 - Files, registry, memory-mapped files (`CFile`, `CRegKey`, WinLamb
   `file.h`/`file_ini.h`/`file_mapped.h`) → `wil::unique_hfile`, `wil::unique_hkey`,
   `wil::reg`, `std::filesystem`. (`fs.hpp` is not a counterexample — it wraps bare
-  `…W` calls an app was making raw, it doesn't re-own the resource.)
+  selected intent/error protocols, not a prohibition on raw calls.)
 - Strings and time (`CString`, `CTime`) → `std::wstring`, `std::chrono`.
 - Threads and synchronisation (`CWinThread`, `CCriticalSection`, `CEvent`, `CMutex`) →
   `std::thread`, `std::mutex`, `std::condition_variable`.
 - COM plumbing (`com_ptr`, `com_bstr`, `com_variant`) → `wil::com_ptr`.
-- WinLamb's grab-bag — `zip.h`, `xml.h`, `download.h`, `version.h`, sockets. Not Win32
-  wrapping; 2016 simply had no alternative.
+- WinLamb's wider facilities — `zip.h`, `xml.h`, `download.h`, `version.h`, sockets.
+  These are outside Winwrap's intended desktop-boundary concern.
 - MDI, docking, ribbon, splitters, scroll views, property sheets, printing, themes —
   the framework side of the VISION line.
-- **`CResizer` / WinLamb `resizer.h`** (auto-reposition children on resize) — the thin
-  end of a layout engine, which VISION rules out. Flagged because it's the one item
-  two of the three surveyed libraries judged essential and we're still declining.
+- **Native resizing helper** — reopen deliberately using the assessment's boundary:
+  explicit HWND geometry/anchors are not the same responsibility as a full layout
+  engine. No helper is scheduled until a real settings window demonstrates the need.
 
 **Open scope question — resource-template dialogs.** WinLamb devotes four headers to
 them (`dialog_main` / `dialog_modal` / `dialog_modeless` / `dialog_control`); Win32++
@@ -439,7 +453,8 @@ engine, no theming framework, no widget toolkit. Not a Qt/wxWidgets replacement.
 
 ### v0.3 / ongoing — convenience & reach
 
-- **`TrayApp`** convenience bundle (message-only window + `NotifyIcon`), additive.
+- **`TrayApp`** convenience bundle, deferred; preserve standalone components and
+  include a top-level broadcast receiver if restart recovery is promised.
 - **Balloon / toast notifications** over `NotifyIcon`.
 - A typed **`TrayEvent`** enum over the raw tray callback message (additive).
 - A **ctor-arg-forwarding `create`** overload (once `std::forward` is taught).

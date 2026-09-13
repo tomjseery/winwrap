@@ -98,14 +98,13 @@ example: `taskbar_created_message()` stays on `NotifyIcon` today, but its home w
 moves is `shell.hpp` — so if an `ITaskbarList3` wrapper ever shares the Explorer-restart
 concern, it moves there with no redesign.
 
-**The trigger does not apply to raw `…W` calls (2026-07-30).** Reactive extraction
-governs *shared helpers between wrappers*, not *whether a Win32 call gets wrapped at
-all*: a consuming app's logic must never contain bare `…W` calls, so the wrapper is
-owed on the first consumer, not the second. That's the whole promise of the library —
-features you get without touching Windows functions directly. `fs.hpp`
-(`file_attributes`, `set_file_attributes`, `add_file_attributes`,
-`remove_file_attributes`) and `shell.hpp` (`refresh_folder`) exist because
-icon-dropper's `set_folder_icon` needed them once each.
+**Raw Win32 calls are supported application code.** Calling an unsupported
+`…W` API with a borrowed native handle does not require adding a wrapper first.
+Extract public surface when it removes a reusable ownership/protocol hazard,
+clarifies typed results or intent, or addresses demonstrated repeated use—not
+merely to eliminate native function names. Check std/WIL first. Preserve each
+wrapper's binding, ownership, thread and cached-state invariants when mixing raw
+and wrapped operations.
 
 ## 4. Thin wrappers — intent verbs, yes; plumbing renames, no
 

@@ -1,32 +1,35 @@
 # winwrap
 
-Modern C++23 wrappers over **native Win32** — top-level windows, native child
-controls, menus, and a system-tray icon — for self-contained MSVC apps. A thin
-wrapper, not a replacement runtime: winwrap still calls `CreateWindowExW`,
-`Shell_NotifyIcon` and friends, every type exposes its raw handle, and you can drop
-to plain Win32 at any point.
+Winwrap is a C++23 library for developers who have already chosen **classic Win32**.
+It adds ownership and protocol helpers, composable message handling, native
+controls, menus and tray support while keeping HWNDs and direct Win32 calls part
+of normal application code. It is not a cross-platform GUI framework.
 
-> **Status:** v0.1, in progress. Compiled static library exposing the
-> `winwrap::winwrap` CMake target.
+> **Status:** experimental v0.1 work in progress, not yet production-ready.
+> Compiled static library exposing `winwrap::winwrap`. Known lifetime and API
+> contract issues are tracked in [TECH_DEBT.md](TECH_DEBT.md).
 
 ## Why
 
-The open-source field splits into two camps that never overlap: native-Win32 window
-frameworks with no tray icon (WinLamb, Win32++, LFWin32, ATL's `CWindowImpl`), and
-tray-only libraries with no window framework. The closest existing combination — ATL
-plus a third-party tray class — drags in the ATL framework and macro message maps.
-winwrap is that pairing done standalone and modern.
+Winwrap began by removing repeated Win32 ceremony from small native applications.
+Its closest architectural neighbors include WTL, Win32++ and WinLamb, rather than
+only higher-level GUI toolkits. The goal is a small, coherent native boundary—not
+a claim that this architectural layer or integrated tray support is unique.
+The source-based [technical and product assessment](ASSESSMENT.md) compares those
+alternatives, records limitations, and proposes an application-driven direction.
 
-- **Compile-time message dispatch.** No vtables, no virtual hierarchy, no macro
+- **Compile-time message composition.** No vtables, no virtual hierarchy, no macro
   message maps. Messages route to named `on_*` methods your window defines, detected
   with `requires` and resolved by `if constexpr`, with the final type deduced via
-  C++23 *deducing this*. Handlers you don't define emit no code.
-- **Value-based errors.** Every fallible call returns
-  `std::expected<T, std::error_code>` (Win32 codes through `std::system_category()`).
-  No `HRESULT` bookkeeping, no exceptions in the happy path.
-- **RAII over every resource.** Handles are owned by their wrapper; no manual
-  `DestroyWindow` / `DestroyIcon` / `DeleteObject`.
-- **One header-only dependency** (WIL). Nothing to ship next to a tray utility.
+  C++23 *deducing this*. Incoming message IDs are still runtime values.
+- **Value-based OS errors.** Factories and supported fallible operations use
+  `std::expected<T, std::error_code>`. The error-contract audit is incomplete;
+  allocation and user callbacks can still throw.
+- **Explicit native resources.** WIL supplies ownership primitives. Window, Menu,
+  NotifyIcon and Drop manage native lifetimes; Control currently leaves child-HWND
+  destruction to its parent, a contract under review.
+- **One header-only library dependency** (WIL). No separate Winwrap runtime DLL;
+  application dependencies and CRT linkage still determine deployment.
 - **Unicode only**, UTF-16 at the boundary, `…W` APIs throughout.
 
 ## Quick start
@@ -144,8 +147,10 @@ system icon, or a non-shared `LoadImageW`) — never a shared system handle.
 
 ## Requirements
 
-MSVC (Build Tools for Visual Studio 2022 or newer) with C++23 — `std::expected` and
-deducing this are both used. clang-cl works; MinGW is not supported. Windows only.
+Windows and a sufficiently recent MSVC C++23 toolchain: both `std::expected` and
+explicit object parameters are required. The assessment verified MSVC 19.50 x64.
+clang-cl is an intended target, but a supported-version CI matrix has not yet been
+established. MinGW is not supported.
 
 ## Build
 
@@ -169,7 +174,9 @@ FetchContent_MakeAvailable(winwrap)
 target_link_libraries(your_app PRIVATE winwrap::winwrap)
 ```
 
-WIL comes in transitively; you don't need to fetch it yourself.
+For source consumption, WIL comes in transitively. A full CMake install currently
+also installs WIL into the prefix; explicit installed-dependency metadata and
+package-manager consumption remain tracked release work.
 
 ## Design notes
 
@@ -181,4 +188,3 @@ the dispatch model; [ROADMAP.md](ROADMAP.md) is the work queue.
 ## License
 
 MIT — see [LICENSE](LICENSE).
-</content>
