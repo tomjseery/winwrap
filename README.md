@@ -1,9 +1,10 @@
 # winwrap
 
 Winwrap is a C++23 library for developers who have already chosen **classic Win32**.
-It adds ownership and protocol helpers, composable message handling, native
-controls, menus and tray support while keeping HWNDs and direct Win32 calls part
-of normal application code. It is not a cross-platform GUI framework.
+It abstracts native window operations, controls, menus and tray protocols into
+an ergonomic C++ API, with ownership helpers and composable message handling.
+Borrowed native handles remain available for unsupported operations and integration.
+It is not a cross-platform GUI framework.
 
 > **Status:** experimental v0.1 work in progress, not yet production-ready.
 > Compiled static library exposing `winwrap::winwrap`. Known lifetime and API
@@ -13,10 +14,12 @@ of normal application code. It is not a cross-platform GUI framework.
 
 Winwrap began by removing repeated Win32 ceremony from small native applications.
 Its closest architectural neighbors include WTL, Win32++ and WinLamb, rather than
-only higher-level GUI toolkits. The goal is a small, coherent native boundary—not
+only higher-level GUI toolkits. The goal is a coherent native desktop façade—not
 a claim that this architectural layer or integrated tray support is unique.
 The source-based [technical and product assessment](ASSESSMENT.md) compares those
 alternatives, records limitations, and proposes an application-driven direction.
+Learning modern C++ through useful native applications is a first-class purpose;
+the [vision](VISION.md#why-it-exists) separates that value from public adoption.
 
 - **Compile-time message composition.** No vtables, no virtual hierarchy, no macro
   message maps. Messages route to named `on_*` methods your window defines, detected
@@ -33,6 +36,17 @@ alternatives, records limitations, and proposes an application-driven direction.
 - **Unicode only**, UTF-16 at the boundary, `…W` APIs throughout.
 
 ## Quick start
+
+For an existing window object, ordinary operations are member calls:
+
+```cpp
+window.show();
+window.set_text(L"Ready");
+window.enable(true);
+```
+
+The [API conventions](CODE_CONVENTIONS.md#4-wrapper-first-apis--abstract-the-operation-preserve-the-escape-hatch)
+define the boundary between wrapper operations and native interoperability.
 
 A window with a button, wired to a click handler:
 
@@ -184,6 +198,8 @@ package-manager consumption remain tracked release work.
 layout engine, no custom-drawn widgets, no cross-platform layer, no WinRT).
 [MIXINS.md](MIXINS.md) and [MESSAGE_LOOP_DESIGN.md](MESSAGE_LOOP_DESIGN.md) document
 the dispatch model; [ROADMAP.md](ROADMAP.md) is the work queue.
+[PLANNING.md](PLANNING.md) separates readiness gates and open design decisions
+before implementation plans are authored.
 
 ## License
 

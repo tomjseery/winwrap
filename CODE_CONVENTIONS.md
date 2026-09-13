@@ -98,41 +98,44 @@ example: `taskbar_created_message()` stays on `NotifyIcon` today, but its home w
 moves is `shell.hpp` — so if an `ITaskbarList3` wrapper ever shares the Explorer-restart
 concern, it moves there with no redesign.
 
-**Raw Win32 calls are supported application code.** Calling an unsupported
-`…W` API with a borrowed native handle does not require adding a wrapper first.
-Extract public surface when it removes a reusable ownership/protocol hazard,
-clarifies typed results or intent, or addresses demonstrated repeated use—not
-merely to eliminate native function names. Check std/WIL first. Preserve each
-wrapper's binding, ownership, thread and cached-state invariants when mixing raw
-and wrapped operations.
+The second-consumer trigger governs **extracting shared internals**, not adding
+ordinary operations to a public wrapper. Public coverage and native escape hatches
+follow the wrapper-first rule below.
 
-## 4. Thin wrappers — intent verbs, yes; plumbing renames, no
+## 4. Wrapper-first APIs — abstract the operation, preserve the escape hatch
 
-A one-line wrapper over a single Win32 call is sometimes right and sometimes forbidden.
-The deciding test is **not** "how short is it?" but:
+**Supported desktop operations use Winwrap's API by default.** For a window object,
+write `window.show()`, `window.set_text(...)` and `window.enable(...)`, not the
+corresponding raw SDK calls. Examples and application code should teach that path.
+Ordinary operations belong on their resource façade even when the implementation
+is a single native call; they do not need a second application to justify them.
 
-> **Does the user need to understand the underlying Win32 call to use this correctly?**
+```cpp
+window.show();
+window.set_text(L"Ready");
+window.enable(true);
+```
 
-- **No → wrap it (an *intent verb*).** The wrapper names *what the user wants* in
-  winwrap's vocabulary; the underlying call is a detail they never need to know. This
-  is the ergonomics `VISION.md` pillar 1 promises. `quit(int = 0)` over
-  `PostQuitMessage` is the precedent: "quit the app" is the intent, while
-  `PostQuitMessage` ("post a WM_QUIT onto the thread queue") is mechanism the user
-  shouldn't have to learn — and would likely mis-guess (`ExitProcess`? `exit()`?
-  `DestroyWindow`?).
-- **Yes → do *not* rename it.** If the user must understand the call's protocol anyway,
-  a rename hides the searchable Win32 name and adds nothing. `DragQueryFileW` is the
-  precedent: its sentinel-index + length-probe protocol has to be understood either
-  way, so renaming it is pure loss. When such an API deserves ergonomics, wrap the
-  *protocol* in a class (`Drop`), not the *name* in a pass-through.
+**Abstract the useful classic desktop surface, not just its hardest protocols.**
+Build coherent operations for the windows, controls, menus, tray, dialogs and other
+native components within the project's scope. Native terminology, styles and
+semantics may remain visible; callers should not have to repeat the underlying
+function sequence for an operation Winwrap promises to support.
 
-**Rule of thumb:** wrap the **verb** when it lets the user forget the Win32 call
-entirely; wrap the **protocol** (in a type) when the Win32 mechanics are irreducible;
-never wrap the **name** alone. Pairs with `LIBRARY_CONVENTIONS.md`'s thin-wrapper /
-reactive-extraction rules.
+**Raw handles are the escape hatch, not the normal operation API.** An unsupported
+operation or integration with another HWND-based library may use a borrowed
+`hwnd()` / `handle()` directly. That remains supported without first adding a
+wrapper, but it does not count as completing missing coverage in a promised
+feature. Preserve binding, ownership, thread and cached-state invariants. A getter
+does not transfer ownership; the choice of getter versus implicit conversion is
+separate from whether an operation should have an ergonomic member function.
 
-**Precedent:** `winwrap::quit()` (intent verb — wrap), `Drop` (protocol wrapped in a
-type), rejected `DragQueryFileW` renames (name-only — don't).
+**Wrap intent and complete protocols, not just spelling.** `show()` and `quit()`
+are useful one-call intent operations. For a multi-step query such as dropped
+files, `Drop` should own the count/path/cleanup protocol rather than merely rename
+each `DragQueryFileW` call and leave the ceremony to the consumer. Document the
+native mapping so the abstraction remains explainable through Win32 documentation.
+Reuse std/WIL machinery internally where it already meets the contract.
 
 ## 5. A mixin owns the window state its behaviour needs — never split it with the caller
 

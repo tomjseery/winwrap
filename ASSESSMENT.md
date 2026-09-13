@@ -26,7 +26,8 @@ to be earned; they are not consequences of using C++23.**
 The recommended identity is more precise than options A–C: an **application-driven,
 modular classic-Win32 desktop support library**, initially proved in tray and compact
 native utilities, with permission to grow horizontally where consuming applications
-demonstrate a reusable need. Education is a valuable secondary identity. A complete
+demonstrate a useful need. Learning through practical applications is a first-class
+author goal, independent of the public-market positioning. A complete
 Windows-only GUI framework is not the recommended destination.
 
 ## Evidence and limits
@@ -36,6 +37,13 @@ The repository baseline assessed is commit
 2026-09-13. This document is a dated assessment, not an evergreen competitor census
 or an implementation plan. Recommendations below are recommendations, not newly
 locked API decisions.
+
+Author clarification after the assessment: the intended public experience is
+**wrapper-first**, not raw-Win32-first. The owning API rule is
+[CODE_CONVENTIONS.md](CODE_CONVENTIONS.md#4-wrapper-first-apis--abstract-the-operation-preserve-the-escape-hatch);
+[VISION.md](VISION.md#why-it-exists) records learning and practical utility as
+first-class goals. Interpret the recommendations below under those constraints;
+[PLANNING.md](PLANNING.md) separates readiness gates from still-open design work.
 
 Repository evidence includes the complete README, vision, roadmap, API conventions,
 mixin and message-loop designs, recorded debt, root/library/test CMake files,
@@ -91,9 +99,11 @@ for Winwrap's identity, but is not exclusive to it.
 [Microsoft windowing overview](https://learn.microsoft.com/en-us/windows/apps/develop/ui/windowing-overview).
 
 The distinguishing question is: **whose semantics and architecture must an
-application adopt?** Calling `ShowWindow(window.hwnd(), ...)` fits Winwrap's normal
-world. A framework may permit that call while still requiring its own object tree,
-layout rules, event lifecycle, and synchronization assumptions elsewhere.
+application adopt?** `window.show()` is the normal Winwrap operation: it abstracts
+the native call without introducing a second widget model. A borrowed HWND remains
+available when coverage is missing or another library needs it. A framework may
+also permit raw access while requiring its own object tree, layout rules, event
+lifecycle, and synchronization assumptions elsewhere.
 
 WTL is especially important here: its own description explicitly rejects forcing
 an application model and emphasizes mixing its templates with SDK code. Therefore
@@ -221,6 +231,11 @@ The attractive combination is: native terminology, explicit resource/error
 contracts, optional compile-time composition, no ATL requirement, small modular
 consumption, and a tray API that can accompany either Winwrap or an existing HWND.
 This is **product coherence**, not an individually novel invention.
+
+That is a market assessment, not a requirement that every design choice prove a
+selling point. Studying and applying deducing-this, templates and static dispatch
+in a maintained native application has learning value even without novelty or a
+measured end-user speedup. Correctness and understandable contracts still matter.
 
 | Claim | Assessment |
 |---|---|
@@ -412,8 +427,12 @@ Reflection makes composition easier; it is not a prerequisite imposed by Windows
 
 ## Raw-handle interoperability
 
-The instinct to prefer `HWND hwnd() const noexcept` is correct. A typed raw handle
-already passes to the SDK without a conversion. An implicit `operator HWND()`
+For supported operations, use the wrapper: `window.show()`, not a direct
+`ShowWindow` call. The accessor-versus-conversion question applies **only when
+crossing the native boundary**, not when choosing the normal operation API.
+
+At that boundary, this assessment recommends `HWND hwnd() const noexcept`. A typed
+raw handle already passes to the SDK without a conversion. An implicit `operator HWND()`
 saves a few characters but adds hidden overload participation, potentially
 surprising conversions, and less searchable crossings of the abstraction boundary.
 It does not solve ownership. Mature libraries sometimes choose it successfully;
@@ -434,8 +453,9 @@ Recommended contract:
    has callback/state obligations beyond returning a handle; a safe ownership
    transfer may require unbinding and explicit protocol work.
 5. Document permitted raw operations, operations that require synchronization or
-   rebinding, and operations that invalidate the wrapper. Include raw calls in real
-   examples so escape hatches are presented as normal use, not an admission of failure.
+   rebinding, and operations that invalidate the wrapper. Use wrapper operations
+   in ordinary examples; a dedicated interoperability example should demonstrate
+   unsupported operations or integration without implying raw calls are preferred.
 
 Mixing raw and wrapped operations is safe **within a specified contract**, not
 unconditionally. Changing text through Win32 should be observable because Winwrap
@@ -451,11 +471,11 @@ borrowed handles, allowed native mutations, reserved binding state, destruction
 notification, thread, and transfer operations. That is more useful than “you can
 call anything at any time.”
 
-The baseline CODE_CONVENTIONS rule forbidding bare `...W` calls in consuming apps
-directly contradicted this contract. It also encouraged low-value one-line wrappers
-merely to eliminate native calls. The durable rule should permit raw calls and
-require a wrapper to earn its place through ownership, protocol safety, typed
-semantics or demonstrated repeated use.
+An absolute ban on raw calls would contradict the escape-hatch contract, but that
+does not make raw calls the preferred application interface. The corrected
+convention requires wrapper-first operation coverage while permitting escape
+hatches. Small members such as `show()` have value through coherent resource
+ergonomics alone; they need not solve a novel hazard or have two consumers.
 
 ## Architecture as scope grows
 
@@ -627,8 +647,8 @@ a native ownership or callback protocol correctly. It remains thin when:
 2. Unsupported operations remain reachable through borrowed native handles.
 3. It does not duplicate OS state unnecessarily; any required cached state and its
    interoperation limits are explicit.
-4. It removes a protocol, resource hazard, error-conversion burden or recurring
-   routing task, rather than just renaming every API.
+4. It provides coherent resource operations or removes protocol, resource,
+   error-conversion or routing ceremony; even a one-call member can do useful work.
 5. It does not impose application state, navigation, business models or service wiring.
 6. It does not supply a replacement widget tree, rendering system or GUI scheduler.
 7. Its components are independently adoptable and have proportionate dependencies.
@@ -637,17 +657,19 @@ a native ownership or callback protocol correctly. It remains thin when:
 9. Its raw and wrapped operations can coexist under documented invariants.
 10. Omitting a component does not require emulating it to keep the rest functional.
 
-**“Support all components” is not a useful completion condition.** “Wrap every
-Win32 function” is worse: it creates a second SDK with maintenance obligations and
-little added value. “Cover all commonly reused protocols” is better but still
-unbounded without named consumers. The sustainable formulation is:
+**Broad classic desktop abstraction is a coherent destination, not one release's
+completion condition.** A release needs a bounded capability list, while the
+library can continue expanding across useful native components. A mechanical copy
+of SDK function names would miss the ergonomic goal. The sustainable formulation is:
 
-> Cover the native desktop building blocks needed by real consuming applications,
-> and provide extension points that make unsupported controls/protocols easy to add.
+> Build a coherent C++ façade over the useful classic desktop surface, with real
+> applications setting priorities and validating each slice. Keep extension points
+> and native handles available while coverage grows.
 
 ### Capabilities Winwrap should own
 
 - Its native-object/C++-object bridge, lifetime invalidation and creation rollback.
+- Coherent ordinary operations on supported windows, controls and other resources.
 - Explicit own/borrow/adopt contracts and safe supported interoperability.
 - Message handling/default forwarding and notification reflection with real results.
 - Honest value-based OS-error adaptation, including lifecycle setup.
@@ -673,15 +695,16 @@ unbounded without named consumers. The sustainable formulation is:
 - General measure/arrange/layout engine, docking framework or ribbon framework.
 - Data binding, document/view, application navigation or state management.
 - Networking, threading/scheduling frameworks, dependency injection and business logic.
-- Replacement standard-library/WIL utilities, or a wrapper for every SDK function.
+- Replacement standard-library/WIL utilities or a mechanical duplicate SDK rather
+  than ergonomic native desktop operations.
 - Guaranteed support for undocumented Windows theming behavior.
 
-Feature-selection rule: **identify the consuming application, the native protocol
-or hazard, the added value beyond Win32/WIL, the raw interop contract and a testable
-completion condition before adding public surface.** Repeated application use is
-strong evidence; a single high-risk ownership protocol can also justify extraction.
-A one-line intent function may earn its place, but eliminating a visible `...W`
-call is not by itself a benefit.
+Feature-selection recommendation: **identify the supported user operation, its
+native mapping, ownership/error behavior, interop contract and testable completion
+condition.** Prioritize using real applications. Ordinary façade operations need
+not wait for repeated use; speculative shared infrastructure should. Missing
+operations in an advertised capability remain coverage work even when a raw call
+can temporarily reach them. The durable rule lives in CODE_CONVENTIONS.
 
 ## Learning value and method
 
@@ -691,6 +714,12 @@ nonstandard resources, templates/concepts/folds, explicit object parameters,
 package exports, OS testing, public API design and compatibility. These topics
 interact in useful ways: the multiple-inheritance callback defect is a concrete
 example of why a clever template interface does not eliminate pointer-model work.
+
+The author explicitly values applying advanced C++ to useful real-world software.
+That is sufficient reason to explore these techniques without turning them into
+performance marketing. Separate a learning experiment's success (understanding
+the mechanism and its tradeoffs) from a public API's success (correct, maintainable
+behavior for consumers). The two goals can reinforce one another.
 
 The recorded guidance places native Windows knowledge early and does not establish
 independent mastery of the advanced dispatch machinery. Working AI-assisted code
@@ -704,8 +733,8 @@ A large feature list would amplify that danger.
 
 Recommended workflow for each capability:
 
-1. Implement the smallest real use directly with Win32 and WIL. Read the official
-   API contract and observe message order in a debugger/log. Do not hand-roll WIL
+1. For an unfamiliar protocol, investigate the smallest real use with Win32 and WIL.
+   Read the official API contract and observe message order in a debugger/log. Do not hand-roll WIL
    resource primitives merely to make the example “raw.”
 2. Explain creation, ownership, cleanup, thread, failure, reentrancy, native result
    and default-processing behavior in your own words before abstracting it.
@@ -720,6 +749,10 @@ Recommended workflow for each capability:
    then change one part and predict which tests should fail.
 8. Have assistance review reasoning and tests; do not let it continually add
    abstractions whose invariants you cannot describe.
+
+This raw-first investigation is a learning method, not the desired final
+application style. Once supported, the application's ordinary operation belongs
+behind the Winwrap API. Existing simple members need no fresh raw reimplementation.
 
 A good learning gate is: can you predict what happens if creation fails, the parent
 dies first, a callback closes the window, a control receives real keyboard input,
@@ -800,11 +833,14 @@ must be established experimentally, not inferred from “Visual Studio 2022 or n
 
 ### Stop, pivot and expand criteria
 
-- **Extract:** a protocol recurs across applications, or one nontrivial lifetime
-  hazard has a clear reusable contract and test. Existing std/WIL support is checked first.
-- **Remove or keep local:** a wrapper merely renames an SDK function, duplicates
-  mutable native state, needs repeated bypasses, or makes debugging harder without
-  providing ownership/type/protocol value.
+- **Add coverage:** complete ordinary operations on an in-scope native component;
+  check std/WIL support first and specify the native mapping and verification.
+- **Extract shared machinery:** actual reuse or a clear reusable lifetime protocol
+  justifies generalization beyond a particular façade.
+- **Remove or keep local:** an abstraction adds no operation-level ergonomics,
+  duplicates mutable native state, needs repeated bypasses, or makes debugging
+  harder without providing ownership/type/protocol value. Being one line is not
+  itself a reason to remove a useful member.
 - **Stop expanding:** existing advertised features lack failure/lifetime tests or
   have unresolved high-severity defects. More controls do not compensate.
 - **Pivot toward personal support/education:** after several real apps, most proposed
@@ -885,9 +921,10 @@ layer. None addresses the most important current evidence gap.
 Suggested README positioning:
 
 > Winwrap is a C++23 library for developers who have already chosen classic Win32.
-> It adds ownership and protocol helpers, composable message handling, native
-> controls, menus and tray support while keeping HWNDs and direct Win32 calls part
-> of normal application code. It is not a cross-platform GUI framework.
+> It abstracts native desktop operations, controls, menus and tray protocols into
+> an ergonomic C++ API, with ownership helpers and composable message handling.
+> Borrowed native handles remain available for unsupported operations and integration.
+> It is not a cross-platform GUI framework.
 
 Pair that with an explicit experimental status until the release gates above are
 met. Do not present the positioning sentence as proof that all intended contracts
