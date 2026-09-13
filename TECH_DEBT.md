@@ -64,3 +64,11 @@ the work queue in [ROADMAP.md](ROADMAP.md), and dated evidence in
   their concertable equivalents. **Resolve:** reconcile the owning generator's
   identifiers with supported plugin versions, regenerate rather than hand-edit the
   table, and verify that AGENTS/CLAUDE changes resolve a real installed docs skill.
+- **Packaged preflight compatibility.** The installed helper classifies every
+  non-.md untracked path as code (including local agent TOML files and collapsed
+  directories), and compares an incremental review's prior-head base directly to
+  origin/main. This can falsely invalidate a completed full-plus-incremental review.
+  **Resolve in the workflow provider:** test metadata-aware expanded status paths
+  and review-chain reconciliation. Until then, explicitly inspect file-level
+  dirtiness, unchanged remote base and the complete exact-head review chain; never
+  stage unrelated local configuration or discard real review/CI failures.
