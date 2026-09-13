@@ -59,3 +59,8 @@ the work queue in [ROADMAP.md](ROADMAP.md), and dated evidence in
   documents and CLAUDE imports AGENTS, but there is no repository reachability
   hook. **Resolve:** add a small link/import check when repository checks are
   introduced; validate existing links manually in the meantime.
+- **Generated route identifiers lag the installed skill catalog.** The route table
+  names agent-process documentation/route skills while this environment exposes
+  their concertable equivalents. **Resolve:** reconcile the owning generator's
+  identifiers with supported plugin versions, regenerate rather than hand-edit the
+  table, and verify that AGENTS/CLAUDE changes resolve a real installed docs skill.

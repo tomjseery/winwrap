@@ -63,7 +63,7 @@ Local validation produced the following results:
 | Define `int on_create() { return -1; }` | Window creation still reported success. |
 | Put another base before `Control<T>` | The control base had offset 16 on the tested ABI; the callback stores that base address but reconstructs a `T*` without adjustment. |
 | Include only `mixins/paintable.hpp` and instantiate its handler | Compilation failed because `WW_CASE` was undefined. A mere unused include compiled, so an include-only smoke test would miss it. |
-| Full install into a fresh local prefix, then separate minimal `find_package` consumer | Included `menu.hpp`, configured, compiled, and linked successfully; it did not exercise a menu at runtime. The full install also installed WIL into the same include prefix. |
+| Full install into a fresh local prefix, then separate `find_package` consumer | Included `menu.hpp`, configured, compiled, linked, called `Menu::create()` and exited successfully. It did not display/track a popup menu. The full install also installed WIL into the same include prefix. |
 
 The focused probes lived under ignored `build/assessment-probes`; the isolated
 install and consumer lived under `build/assessment-install` and
