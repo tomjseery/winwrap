@@ -7,7 +7,7 @@ change" if left until after the `v0.1` tag. Additive features (6–8) follow.
 
 > **Session zero (before any of these):** commit the currently-uncommitted drop
 > batch (`Drop`, `DropZone`, docs, the constants convention in
-> `cpp-standards:cpp-style`) so every task starts from a clean tree.
+> `base:cpp-style`) so every task starts from a clean tree.
 
 > **Working style, every session:** per `cpp/CLAUDE.md`, offer Tommy the
 > learning-vs-delivery choice up front. Teach anything off `WHAT_I_KNOW.md`
@@ -101,7 +101,7 @@ Also assert the no-hook fall-through (a `BareWindow` with no hooks →
 ## 5. clang-tidy pass over the new drop files
 
 `drop.hpp`, `drop_zone.hpp`, and the touched tests postdate the last tidy run.
-Apply the lint-triage policy (`cpp-standards:cpp-style`): fix legitimate hits,
+Apply the lint-triage policy (`base:cpp-style`): fix legitimate hits,
 suppress-with-comment the wrong ones. One known expected hit:
 `DropZone::on_drop` public data member trips
 `cppcoreguidelines-non-private-member-variables-in-classes` — suppress; public
