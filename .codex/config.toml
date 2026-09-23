@@ -1,0 +1,19 @@
+# cpp-agents comes from the global tj-agents/cpp Git marketplace (v0.3.0+).
+# This project selects cpp + msvc + win32 and disables the legacy compatibility packages.
+[plugins."cpp@cpp-agents"]
+enabled = true
+
+[plugins."msvc@cpp-agents"]
+enabled = true
+
+[plugins."win32@cpp-agents"]
+enabled = true
+
+[plugins."base@cpp-agents"]
+enabled = false
+
+[plugins."windows@cpp-agents"]
+enabled = false
+
+[plugins."gcc@cpp-agents"]
+enabled = false
