@@ -9,15 +9,14 @@ namespace winwrap::notification {
 
 /// App-private message used to reflect a control's `WM_COMMAND` from the parent back
 /// to the control: Reflection sends it, the control's mixins (e.g. Click)
-/// receive it. It sits in the
-/// `WM_APP` range the OS reserves for application use -- safe because winwrap owns the
-/// message space of the controls it subclasses.
+/// receive it. It sits in the `WM_APP` range reserved for application messages.
+/// Other subclasses of the same control can still choose the same identifier.
 inline constexpr UINT wm_command_reflect = WM_APP + 0x1c00;
 
 /// The shared "reflected `WM_COMMAND` -> callback" match-and-fire, written once for
 /// every control notification mixin to build on. If `msg` is the reflected command
 /// and its notification code is `code`, fire `handler` (when assigned) and report the
-/// message handled; otherwise pass. (See the mixins in <winwrap/window/mixins/>.)
+/// message handled; otherwise pass. (See the mixins in <winwrap/window/notification/>.)
 /// @param code     The control notification code to match (`BN_CLICKED`, `EN_CHANGE`, ...).
 /// @param handler  The callback to fire on a match; an unassigned one is skipped.
 /// @return         0 (handled) on a match, else std::nullopt to keep looking.
