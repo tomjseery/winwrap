@@ -78,7 +78,7 @@ Close these before or while wiring — wifi-toggle needs each one:
    raw members. Plan a Winwrap timer API with explicit ownership/cancellation;
    direct calls can establish the protocol during learning, not stand in for
    completed timer coverage in the final supported application slice.
-3. ~~**Message loop**~~ — ✅ **Done (2026-07-13).** `winwrap/message_loop.hpp`:
+3. ~~**Message loop**~~ — ✅ **Done (2026-07-13).** `winwrap/window/message_loop.hpp`:
    header-only `run()` (the `GetMessageW`/`TranslateMessage`/`DispatchMessageW` pump;
    returns `msg.wParam`; `-1` guarded by `FAIL_FAST_IF`) + `quit(int = 0)` (over
    `PostQuitMessage`). A window exits the app via `on_destroy` → `winwrap::quit()`.
@@ -272,7 +272,7 @@ app-side GDI (`CreateIconIndirect`); adoption must have an explicit ownership co
 
 ## Task 1 — `Window<T>`: configurability + lifetime + error model — ✅ DONE
 
-Delivered in `lib/include/winwrap/window.hpp`: `WindowConfig` struct; `create()`
+Delivered in `libs/winwrap/include/winwrap/window/window.hpp`: `WindowConfig` struct; `create()`
 returning `std::expected<std::unique_ptr<T>, std::error_code>`; two-layer
 registration/creation; `last_error()` helper; `RegisterClassW`/`CreateWindowExW`
 error propagation (tolerating `ERROR_CLASS_ALREADY_EXISTS`); `configure_class`
@@ -285,7 +285,7 @@ it just hasn't been shown on screen yet.
 
 ## Task 2 — `Menu` — ✅ DONE
 
-Delivered in `lib/include/winwrap/menu.hpp` + `lib/src/menu.cpp`:
+Delivered in `libs/winwrap/include/winwrap/menu.hpp` + `libs/winwrap/src/menu.cpp`:
 - **`class Menu final`** — sealed, move-only (owns `HMENU` via `wil::unique_hmenu`).
 - **`create()`** — static factory → `std::expected<Menu, std::error_code>`, wraps
   `CreatePopupMenu` (null → `last_error()`); private ctor adopts the handle.
@@ -308,7 +308,7 @@ into a window (right-click → `show()` → `on_command`); wifi-toggle will cove
 
 ## Task 3 — `NotifyIcon`: the differentiator — ✅ DONE
 
-Delivered in `lib/include/winwrap/notify_icon.hpp` + `lib/src/notify_icon.cpp`:
+Delivered in `libs/winwrap/include/winwrap/notify_icon.hpp` + `libs/winwrap/src/notify_icon.cpp`:
 - **`class NotifyIcon final`** — move-only; **hand-written Rule-of-Five** (the shell
   registration is keyed by `(hWnd, uID)`, not an RAII handle — moves neuter the
   source, the destructor runs `NIM_DELETE`). Owns the `HICON` via `wil::unique_hicon`.
@@ -348,7 +348,8 @@ here's the planned order. **None of this blocks v0.1.**
 
 A second library comparison, this one asking "what building block is missing?" rather
 than the 2026-07-12 one's "what does wifi-toggle need?". Checked against the full
-contents of `lib/include/winwrap/`, not a name scan. Feeds the v0.2 / v0.3 sections
+contents of the public include tree (now `libs/winwrap/include/winwrap/`), not a
+name scan. Feeds the v0.2 / v0.3 sections
 below; nothing here is a new pillar.
 
 **The finding: the sharpest gaps are holes inside wrappers already shipped, not
