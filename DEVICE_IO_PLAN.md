@@ -21,7 +21,7 @@ Authorized: implement the handoff's Next Steps and explain the result. No driver
 4. [x] Run WinWrap dev configure, build and CTest under x64 MSVC.
 5. [x] Commit and deliver WinWrap feature; pin its exact commit in sandbox-hwid.
 6. [x] Refactor lab client, run Client build/tests, and update integration and verification docs.
-7. [ ] Explain code and knowledge gaps to Tommy.
+7. [x] Explain code and knowledge gaps to Tommy in the delivery response.
 
 ## Current evidence and next action
 
@@ -33,7 +33,7 @@ Feature/Winwrap-Device-Client branch and PR #2 pin 4e18be1 through FetchContent;
 `.codex/agents/` and the lab checkout's uncommitted files remain untouched.
 The shared one-owner nesting proposal is tj-agents/cpp issue #19.
 
-Next: explain the code and knowledge gaps to Tommy. PR review/merge and the live
+The delivery response explains the code and knowledge gaps. PR review/merge and the live
 `hwid_client`/`--probe` check in the designated disposable VM remain pending.
 No driver installation, loading, signing-policy, boot-policy or Driver Verifier
 action occurred.
