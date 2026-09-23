@@ -3,11 +3,10 @@
 #include <winioctl.h>
 
 #include <array>
+#include <catch2/catch_test_macros.hpp>
 #include <cstddef>
 #include <filesystem>
 #include <span>
-
-#include <catch2/catch_test_macros.hpp>
 
 #include "device_interface_list.hpp"
 
@@ -25,8 +24,7 @@ TEST_CASE("device interface list parser preserves one or several paths") {
     REQUIRE(one_path->size() == 1);
     CHECK((*one_path)[0] == L"one");
 
-    const std::array<wchar_t, 9> several{
-        L'o', L'n', L'e', L'\0', L't', L'w', L'o', L'\0', L'\0'};
+    const std::array<wchar_t, 9> several{L'o', L'n', L'e', L'\0', L't', L'w', L'o', L'\0', L'\0'};
     const auto paths{winwrap::detail::parse_device_interface_list(several)};
     REQUIRE(paths.has_value());
     REQUIRE(paths->size() == 2);
@@ -38,10 +36,9 @@ TEST_CASE("device interface list parser rejects malformed termination") {
     const std::array<wchar_t, 2> no_terminator{L'a', L'b'};
     const std::array<wchar_t, 2> no_list_end{L'a', L'\0'};
     const std::array<wchar_t, 4> trailing_data{L'a', L'\0', L'\0', L'b'};
-    for (const auto characters : {
-             std::span<const wchar_t>{no_terminator},
-             std::span<const wchar_t>{no_list_end},
-             std::span<const wchar_t>{trailing_data}}) {
+    for (const auto characters :
+         {std::span<const wchar_t>{no_terminator}, std::span<const wchar_t>{no_list_end},
+          std::span<const wchar_t>{trailing_data}}) {
         const auto paths{winwrap::detail::parse_device_interface_list(characters)};
         REQUIRE_FALSE(paths.has_value());
         CHECK(paths.error().value() == ERROR_INVALID_DATA);
@@ -49,10 +46,9 @@ TEST_CASE("device interface list parser rejects malformed termination") {
 }
 
 TEST_CASE("device open reports a missing path") {
-    const auto device{winwrap::Device::open({
-        .path = L"\\\\.\\WinWrapMissingDeviceForTest",
-        .access = GENERIC_READ,
-        .share_mode = FILE_SHARE_READ})};
+    const auto device{winwrap::Device::open({.path = L"\\\\.\\WinWrapMissingDeviceForTest",
+                                             .access = GENERIC_READ,
+                                             .share_mode = FILE_SHARE_READ})};
     REQUIRE_FALSE(device.has_value());
     CHECK(device.error().value() == ERROR_FILE_NOT_FOUND);
 }
@@ -63,10 +59,10 @@ TEST_CASE("device control returns the actual bytes from a temporary file") {
     REQUIRE(::GetTempFileNameW(directory.c_str(), L"wwd", 0, path.data()) != 0);
 
     {
-        const auto device{winwrap::Device::open({
-            .path = path.data(),
-            .access = GENERIC_READ,
-            .share_mode = FILE_SHARE_READ | FILE_SHARE_WRITE})};
+        const auto device{
+            winwrap::Device::open({.path = path.data(),
+                                   .access = GENERIC_READ,
+                                   .share_mode = FILE_SHARE_READ | FILE_SHARE_WRITE})};
         REQUIRE(device.has_value());
         CHECK(::GetFileType(device->handle()) == FILE_TYPE_DISK);
 

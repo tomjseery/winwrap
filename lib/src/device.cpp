@@ -24,8 +24,8 @@ namespace {
 
 namespace detail {
 
-std::expected<std::vector<std::wstring>, std::error_code>
-parse_device_interface_list(std::span<const wchar_t> characters) {
+std::expected<std::vector<std::wstring>, std::error_code> parse_device_interface_list(
+    std::span<const wchar_t> characters) {
     if (characters.empty())
         return std::unexpected(system_error(ERROR_INVALID_DATA));
 
@@ -78,26 +78,24 @@ std::expected<std::vector<std::wstring>, std::error_code> Device::paths(const GU
 }
 
 std::expected<Device, std::error_code> Device::open(const Config& config) {
-    const HANDLE raw{::CreateFileW(config.path.c_str(), config.access, config.share_mode,
-                                   nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr)};
+    const HANDLE raw{::CreateFileW(config.path.c_str(), config.access, config.share_mode, nullptr,
+                                   OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr)};
     if (raw == INVALID_HANDLE_VALUE)
         return std::unexpected(last_error());
     return Device{wil::unique_hfile{raw}};
 }
 
-std::expected<std::size_t, std::error_code>
-Device::control(DWORD code, std::span<const std::byte> input,
-                std::span<std::byte> output) const {
+std::expected<std::size_t, std::error_code> Device::control(DWORD code,
+                                                            std::span<const std::byte> input,
+                                                            std::span<std::byte> output) const {
     constexpr auto maximum{static_cast<std::size_t>(std::numeric_limits<DWORD>::max())};
     if (input.size() > maximum || output.size() > maximum)
         return std::unexpected(system_error(ERROR_INVALID_PARAMETER));
 
     DWORD returned{};
     const BOOL succeeded{::DeviceIoControl(
-        handle_.get(), code,
-        input.empty() ? nullptr : const_cast<std::byte*>(input.data()),
-        static_cast<DWORD>(input.size()),
-        output.empty() ? nullptr : output.data(),
+        handle_.get(), code, input.empty() ? nullptr : const_cast<std::byte*>(input.data()),
+        static_cast<DWORD>(input.size()), output.empty() ? nullptr : output.data(),
         static_cast<DWORD>(output.size()), &returned, nullptr)};
     if (succeeded == FALSE)
         return std::unexpected(last_error());
