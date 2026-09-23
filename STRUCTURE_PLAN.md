@@ -1,6 +1,6 @@
 # WinWrap structure and naming update
 
-Owner: `Refactor/Winwrap-Structure`, based on committed `Feature/Device-Io` because `Device` is not yet on `origin/main`. Claude completed the initial structure commit `9b46fd5` on 2026-09-23. Codex owns the subsequent naming update in the same worktree.
+Owner: `Refactor/Winwrap-Structure`, based on `Feature/Device-Io` because `Device` is not yet on `origin/main`. Continue in this existing worktree. Tommy requested a reviewable PR after the remaining organization is complete.
 
 ## Authorized outcome
 
@@ -8,17 +8,23 @@ Apply Tommy's approved window-subsystem organization and clearer file names. Kee
 
 ## Decisions
 
-- Group Window, Control, concrete controls, dispatch, reflection, and mixins under `winwrap/window/`.
-- Put the message-loop header under `window/` because it belongs to the same desktop message subsystem, while leaving its public `run()` and `quit()` names unchanged in this path-focused change.
+- Put desktop UI APIs under `winwrap/desktop/`: `window/` for HWND-backed windows and controls, `menu.hpp` and `drop.hpp` for independent resources, `message_loop.hpp` for the calling thread's pump, and `shell/` for Explorer integration including `notify_icon.hpp`.
+- Keep the public `NotifyIcon` name, which matches `Shell_NotifyIcon` and Windows' notification-area terminology; explain it as a tray icon in public documentation. This structural PR does not rename the resource or its config record.
+- Group the control `WM_COMMAND` notification protocol under `desktop/window/notification/command/`. Keep one header per public notification mixin, a focused `protocol.hpp` for the shared message and matching helper, and `reflection.hpp` for the parent-side mixin. Name the latter `CommandReflection`, since only `WM_COMMAND` is implemented. Do not invent a `callbacks.hpp` aggregate.
+- Name the router's private call-through `invoke_mixin`; it invokes another object's handler and is not itself a message handler.
+- Move the sole Shell free function from the over-nested `shell/folder.hpp` to `desktop/shell/change_notifications.hpp` alongside the Shell subsystem. Rename it `notify_folder_changed` to describe its fire-and-forget `SHChangeNotify` call. Add other related Shell change-notification functions there only when needed.
+
+- Group Window, Control, concrete controls, routing, reflection, and mixins under `winwrap/desktop/window/`.
+- Put the message-loop header under `desktop/` because it pumps the calling thread, not one window. Leave its public `run()` and `quit()` names unchanged in this structure change.
 - Remove `mixins.hpp` and `controls.hpp` as implementation dependencies. Focused headers must compile independently. No new public alias headers are planned for this experimental v0.1 layout unless consumer evidence requires them.
 - `WindowHandle` is a shared non-owning implementation base, not a standalone owned handle. Choose a precise name and home without changing its behavior.
 - The interface-list parser belongs in `device.hpp`, as Tommy requested. Remove the separate `device_paths.hpp` while retaining the malformed-list tests. Keep the parser in `detail` unless a type-owned public parsing operation has a real consumer; do not expose a test-only Device method.
-- Replace vague `fs.hpp` with `filesystem/attributes.hpp`. The equally broad `shell.hpp` has been moved to `shell/folder.hpp` for its sole folder-refresh operation.
-- Keep `Menu`, `NotifyIcon`, `Device`, `Drop`, and generic error support outside the window folder as independent resource or cross-cutting concepts.
+- Keep `filesystem/attributes.hpp`; move the prior `shell/folder.hpp` operation as described above.
+- Keep `Menu`, `NotifyIcon`, and `Drop` outside the window folder as independent desktop resources. Keep `Device`, filesystem attributes, and generic error support outside desktop.
 - Mirror the single library target with `libs/winwrap/` and `tests/winwrap/`; retain the public target and include root.
 - Name the message fold `MessageRouter` with `route_message`; mixins keep `handle_message`. Name message-only hooks by the messages they route: `FocusMessages`, `KeyboardMessages`, `MouseMessages`, `PaintMessages`, `SizeMessages`, and `CommandMessages`. Keep `FileDroppable` because it also registers file-drop acceptance.
-- Put callback mixins under `window/notification/` with short names in the `notification` namespace: `Click`, `TextChange`, and `SelectionChange`. They expose callbacks for control notifications; the control itself already supports clicks or text changes without the mixin.
-- Use the established Win32 term *message reflection* for a parent returning a control notification to the child. Keep its protocol in `window/notification/command.hpp` and its parent mixin in `window/notification/reflection.hpp` as `notification::Reflection`.
+- Put callback mixins under `desktop/window/notification/command/` with short names in the `notification` namespace: `Click`, `TextChange`, and `SelectionChange`. They expose callbacks for control notifications; the control itself already supports clicks or text changes without the mixin.
+- Use the established Win32 term *message reflection* for a parent returning a control notification to the child. Scope the current implementation to `WM_COMMAND` with `notification::CommandReflection` under `desktop/window/notification/command/`.
 
 ## Work and verification
 
@@ -37,9 +43,12 @@ Apply Tommy's approved window-subsystem organization and clearer file names. Kee
 - 2026-09-23 (Claude) evidence: MSVC 14.51 (VS 18) `gdb` preset built cleanly including the header check; `ctest --test-dir build/gdb` passed 33/33. `dev` compiles but cannot link because this VS install lacks the ASan runtime (`clang_rt.asan*` absent) — environment, not this change. A `cmake --install` into a scratch prefix plus a separate `find_package(winwrap)` consumer using a `Window` with `FileDroppable`, a `Button`, `device.hpp` and `filesystem/attributes.hpp` built and ran with exit 0.
 - 2026-09-23 (Codex): After Tommy confirmed Claude was done, renamed the message fold and six hook mixins, split the former `message_reflection.hpp` into the notification command protocol and reflection mixin, and moved the three callback mixins to `notification/` with short type names. Microsoft MFC documentation confirms *message reflection* is the established Win32 term; an earlier `Relay` proposal was withdrawn. Updated includes, examples, tests, and current guidance, including the explicit decision to keep descriptive `*Config` names. A clean MSVC 14.51 build in `build/naming` compiled every public header standalone and passed all 33 tests after the final renames. An installed-package consumer included `message_router.hpp`, `notification/click.hpp`, `notification/reflection.hpp`, and a control header, then configured, built, and exited 0. The original `build/gdb` cache had picked up MSYS `ld.exe`/`ar.exe` when invoked outside a VS developer environment, so verification used a new build directory with explicit MSVC tools and cached dependency sources.
 - 2026-09-23 (Codex review): Checked the combined two-commit refactor against `a75ea32`. Updated current ROADMAP paths and the message-loop design's current-location note. Corrected the public notification header's absolute collision-safety claim to match the existing M4 debt. These final edits change documentation and comments only; the last compiled code remains the 33/33-tested code above.
+- 2026-09-24 (Codex): Tommy requested a concrete PR for the remaining structure work. In this same worktree, moved the desktop UI API under `desktop/`; moved notification mixins and reflection under `desktop/window/notification/command/`; renamed the parent mixin to `CommandReflection`, shared matcher to `handle_command`, and the router's private call-through to `invoke_mixin`. Moved Menu and NotifyIcon source files and mirrored test folders. Moved the sole Shell free function to `desktop/shell/change_notifications.hpp` as `notify_folder_changed`; kept the public `NotifyIcon` type because it follows Windows' notification-area terminology. Updated current guidance, examples, includes, and CMake. MSVC 14.51 build compiled every public header alone and passed all 33 tests. A fresh install had no old `winwrap/window` tree, and a separate `find_package(winwrap)` consumer built and exited 0 using the new headers.
+- 2026-09-24 (Codex review): Renamed the Shell header from ambiguous `notifications.hpp` to `change_notifications.hpp`. The MSVC header check rebuilt with the final path. A new, clean install contained `desktop/shell/change_notifications.hpp` and no obsolete `desktop/shell/notifications.hpp` or root `window/`. A fresh configured `find_package(winwrap)` consumer compiled, linked, and exited 0. Reusing an earlier consumer CMake cache initially found the previous install prefix; a new build directory resolved that test setup issue.
 
 ## Next Steps
 
-1. Deliver after `Feature/Device-Io` merges: rebase this branch onto `origin/main`, re-run the build and tests, and open its own PR. Opening it earlier would carry the Device commits.
-2. Follow-up in icon-dropper (separate repository, not authorized here): it consumes the sibling winwrap checkout and includes `winwrap/mixins.hpp`, `window.hpp`, `message_loop.hpp`, `fs.hpp` and `shell.hpp`. Update to `winwrap/window/...`, `filesystem/attributes.hpp` and `shell/folder.hpp` when this lands.
-3. Install the MSVC AddressSanitizer component to restore the `dev` preset link on this machine.
+1. Review and commit the verified desktop-grouping diff. Fetch the current remote branches. Open a PR against `Feature/Device-Io` if that feature is still unmerged; otherwise rebase onto `origin/main` and open against main. Tommy explicitly requested the PR now for review.
+2. Review `desktop/shell/change_notifications.hpp` with Tommy in the PR. It still contains only one function; Tommy is unconvinced by the filename and wants to revisit its ownership after seeing the code. Also discuss whether `CommandReflection` should remain a router mixin or become a free operation. Keep these as visible design questions, not unreported final decisions.
+3. Follow-up in icon-dropper (separate repository, not authorized here): update its former root-level winwrap includes to `winwrap/desktop/...`, `filesystem/attributes.hpp`, and the final Shell helper path; change `refresh_folder` calls if that API name remains.
+4. Install the MSVC AddressSanitizer component to restore the `dev` preset link on this machine.

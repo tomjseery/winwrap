@@ -12,13 +12,14 @@ Winwrap's public-API conventions are project-specific:
 
 ## Layout
 
-`libs/winwrap/include/winwrap/` — public headers: `window/` (`window.hpp`,
-`control.hpp`, `controls/`, `mixins/`, `message_router.hpp`, `notification/` and
-`message_loop.hpp`),
-`notify_icon.hpp`, `menu.hpp`, `device.hpp`, `drop.hpp`, `error.hpp`,
-`filesystem/attributes.hpp` and `shell/folder.hpp`; `libs/winwrap/src/` — three
-`.cpp`s; `tests/winwrap/` — Catch2, one file per type, plus a per-header compile
-check. Build from an *x64 Native Tools* prompt: `cmake --preset dev`,
+`libs/winwrap/include/winwrap/` — public headers: `desktop/` holds `window/`
+(`Window`, `Control`, controls, mixins, and command notifications), the
+thread's `message_loop.hpp`, `menu.hpp`, `drop.hpp`, and `shell/` (the
+notification-area icon and Shell change notifications). `device.hpp`,
+`filesystem/attributes.hpp`, `error.hpp`, and `win.hpp` remain at their
+respective non-desktop boundaries. `libs/winwrap/src/` and `tests/winwrap/`
+mirror these owners; tests include a per-header compile check. Build from an
+*x64 Native Tools* prompt: `cmake --preset dev`,
 `cmake --build --preset dev`, `ctest --preset dev`.
 
 ## Terminology
@@ -30,7 +31,7 @@ check. Build from an *x64 Native Tools* prompt: `cmake --preset dev`,
 | **mixin** | one opt-in behaviour composed into `Window<T, Mixins...>` / `Control<T, Mixins...>` |
 | **`on_*` hook** | the public member the *user's* type defines (`on_paint`); mixins detect it with `requires` |
 | **deducing this** (C++23) | explicit object parameters deduce the receiver's static type; the native bridge must still recover the correct object |
-| **message reflection** | Win32 term for sending a child control's notification from its parent back to the child; `WM_COMMAND` implemented, `WM_NOTIFY` pending |
+| **command reflection** | `notification::CommandReflection` sends a child control's `WM_COMMAND` notification from its parent back to the child; `WM_NOTIFY` pending |
 | **`*Config`** | a descriptively named designated-initializer record for a multi-argument factory; keep `WindowConfig`, `ControlConfig`, and `NotifyIconConfig` |
 
 ## Read on demand
