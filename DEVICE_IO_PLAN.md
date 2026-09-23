@@ -25,4 +25,4 @@ Authorized: implement the handoff's Next Steps and explain the result. No driver
 
 ## Current evidence and next action
 
-WinWrap branch Feature/Device-Io starts from ac9cf95. Existing untracked .codex/agents files are unrelated and untouched. WinWrap dev configure/build succeeded under MSVC 19.51; all 32 CTest cases passed after correcting temporary-file cleanup. Next: commit the feature, then integrate the pinned commit in the lab. Live VM validation remains Tommy's action.
+WinWrap branch Feature/Device-Io starts from ac9cf95. Existing untracked .codex/agents files are unrelated and untouched. WinWrap PR #7 is open. Device source and tests were formatted with the repository rules and the MSVC build plus all 32 CTests passed again. The lab integration is committed in PR #2 and initially passed 9 CTests against b479c57; next: repin it to this final formatted WinWrap commit and rerun its host check. cpp:domain-design lacked an explicit nesting rule; upstream proposal: tj-agents/cpp issue #19. Live VM validation remains Tommy's action.
