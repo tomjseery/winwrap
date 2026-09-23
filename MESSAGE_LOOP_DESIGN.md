@@ -8,9 +8,9 @@ limitations and future application-driven loop work are assessed in
 
 ## Status: implemented (2026-07-13)
 
-Built and MSVC-verified in `libs/winwrap/include/winwrap/window/message_loop.hpp`
+Built and MSVC-verified in `libs/winwrap/include/winwrap/desktop/message_loop.hpp`
 (`run()` + `quit()`) with four passing Catch2 tests in
-`tests/winwrap/message_loop_test.cpp`. Historical paths below record the original
+`tests/winwrap/desktop/message_loop_test.cpp`. Historical paths below record the original
 design. Two deltas from the
 proposal below:
 

@@ -78,7 +78,7 @@ Close these before or while wiring — wifi-toggle needs each one:
    raw members. Plan a Winwrap timer API with explicit ownership/cancellation;
    direct calls can establish the protocol during learning, not stand in for
    completed timer coverage in the final supported application slice.
-3. ~~**Message loop**~~ — ✅ **Done (2026-07-13).** `winwrap/window/message_loop.hpp`:
+3. ~~**Message loop**~~ — ✅ **Done (2026-07-13).** `winwrap/desktop/message_loop.hpp`:
    header-only `run()` (the `GetMessageW`/`TranslateMessage`/`DispatchMessageW` pump;
    returns `msg.wParam`; `-1` guarded by `FAIL_FAST_IF`) + `quit(int = 0)` (over
    `PostQuitMessage`). A window exits the app via `on_destroy` → `winwrap::quit()`.
@@ -137,8 +137,9 @@ app-side GDI (`CreateIconIndirect`); adoption must have an explicit ownership co
   the struct-doc style lives in `base:cpp-style` (all projects).
 - **Errors as `std::expected<T, std::error_code>`** at the public API; Win32 codes
   via `std::system_category()`. WIL stays for RAII handles only, not control flow.
-- **Message dispatch via composable compile-time mixins** (`window/mixins/` +
-  `notification/reflection.hpp` + `message_router.hpp`); respelled from CRTP to
+- **Message dispatch via composable compile-time mixins** (`desktop/window/mixins/` +
+  `desktop/window/notification/command/reflection.hpp` +
+  `desktop/window/message_router.hpp`); respelled from CRTP to
   C++23 **deducing this** on 2026-07-12 (see *Dispatch design review* below) —
   mixins are plain structs whose `handle_message` deduces the final type through an
   explicit object parameter (`this auto& self`).
@@ -149,7 +150,7 @@ app-side GDI (`CreateIconIndirect`); adoption must have an explicit ownership co
   expression (`||`), short-circuiting on first match, and its `route_message`
   falls back to the derived type's `default_proc` when no mixin claims the
   message. Both `Window<T>` and `Control<T>` inherit it. The `WINWRAP_HOOK_CASE(message, call)` macro (defined in
-  `window/detail/hook_case.hpp`, included by each hook mixin) is the only tool that can simultaneously put a maybe-absent member
+  `desktop/window/detail/hook_case.hpp`, included by each hook mixin) is the only tool that can simultaneously put a maybe-absent member
   into an unevaluated `requires` and `return`/`break` from the caller's frame — one
   line per case, zero duplication. No vtables; composition is compile-time but
   message matching is runtime. Derived
@@ -201,7 +202,7 @@ app-side GDI (`CreateIconIndirect`); adoption must have an explicit ownership co
     **Naming (revised 2026-09-23):** engine = `MessageRouter`
     in `message_router.hpp`, entry = `route_message`, mixin member =
     `handle_message`, shared control-notification match-and-fire =
-    `notification::handle`. Routing chooses which mixin receives a message;
+    `notification::handle_command`. Routing chooses which mixin receives a message;
     handling is the mixin's response. The earlier `MessageDispatcher` /
     `dispatch_message` wording overlapped Win32's own `DispatchMessage`.
     One change from the 2026-07-12 provisional scheme: the
@@ -272,7 +273,7 @@ app-side GDI (`CreateIconIndirect`); adoption must have an explicit ownership co
 
 ## Task 1 — `Window<T>`: configurability + lifetime + error model — ✅ DONE
 
-Delivered in `libs/winwrap/include/winwrap/window/window.hpp`: `WindowConfig` struct; `create()`
+Delivered in `libs/winwrap/include/winwrap/desktop/window/window.hpp`: `WindowConfig` struct; `create()`
 returning `std::expected<std::unique_ptr<T>, std::error_code>`; two-layer
 registration/creation; `last_error()` helper; `RegisterClassW`/`CreateWindowExW`
 error propagation (tolerating `ERROR_CLASS_ALREADY_EXISTS`); `configure_class`
@@ -285,7 +286,7 @@ it just hasn't been shown on screen yet.
 
 ## Task 2 — `Menu` — ✅ DONE
 
-Delivered in `libs/winwrap/include/winwrap/menu.hpp` + `libs/winwrap/src/menu.cpp`:
+Delivered in `libs/winwrap/include/winwrap/desktop/menu.hpp` + `libs/winwrap/src/desktop/menu.cpp`:
 - **`class Menu final`** — sealed, move-only (owns `HMENU` via `wil::unique_hmenu`).
 - **`create()`** — static factory → `std::expected<Menu, std::error_code>`, wraps
   `CreatePopupMenu` (null → `last_error()`); private ctor adopts the handle.
@@ -308,7 +309,7 @@ into a window (right-click → `show()` → `on_command`); wifi-toggle will cove
 
 ## Task 3 — `NotifyIcon`: the differentiator — ✅ DONE
 
-Delivered in `libs/winwrap/include/winwrap/notify_icon.hpp` + `libs/winwrap/src/notify_icon.cpp`:
+Delivered in `libs/winwrap/include/winwrap/desktop/shell/notify_icon.hpp` + `libs/winwrap/src/desktop/shell/notify_icon.cpp`:
 - **`class NotifyIcon final`** — move-only; **hand-written Rule-of-Five** (the shell
   registration is keyed by `(hWnd, uID)`, not an RAII handle — moves neuter the
   source, the destructor runs `NIM_DELETE`). Owns the `HICON` via `wil::unique_hicon`.
@@ -362,7 +363,8 @@ missing wrappers.** In priority order:
    `on_paint(PaintDc&)` needs to add a useful context/protocol contract, not duplicate
    cleanup. The current hook does not automatically validate the update region.
 2. **`WM_NOTIFY` reflection — an engine gap, not a control gap.**
-   `window/notification/reflection.hpp` leaves room for `WM_NOTIFY` when implemented.
+   The current `desktop/window/notification/command/reflection.hpp` handles
+   only `WM_COMMAND`; `WM_NOTIFY` needs its own protocol when implemented.
    ListView, TreeView, Tab and DateTimePicker use this protocol; a parent can handle
    it directly before reflection exists. Trackbars primarily use `WM_HSCROLL` /
    `WM_VSCROLL`. Prioritize coherent reflection before broadening the catalog. Trips the
@@ -397,7 +399,7 @@ features:
 | `on_dpi_changed` mixin (`WM_DPICHANGED`) | Win32++ explicitly advertises PMv2 support; age is not evidence of missing DPI support | **application-driven** — correct payload/result handling and app-owned awareness/layout policy, not a novelty claim |
 | Label (STATIC), ListBox, ProgressBar, RadioButton | all three | **build after** items 2 and 5 above — these four need no `WM_NOTIFY` |
 | ListView / TreeView / Tab / StatusBar | all three | **defer** — gated on `WM_NOTIFY`, and each is a large surface (WinLamb spends four internal headers on ListView alone) |
-| `ITaskbarList3` progress in a `shell/` header | WinLamb `progress_taskbar.h` | **later** — §3 reserves the `shell/` folder for this; `shell/folder.hpp` already exists, so the home is real |
+| `ITaskbarList3` progress in a `shell/` header | WinLamb `progress_taskbar.h` | **later** — `desktop/shell/` already owns notification-area and Shell change-notification APIs; give taskbar progress its own focused header when implemented |
 
 **Explicitly not building** — recorded so it isn't relitigated. These appear across the
 surveyed libraries because they predate modern C++ / WIL, not because winwrap needs them:
@@ -454,7 +456,7 @@ widget; `Control<T>` supplies the same compile-time `on_*` dispatch as `Window<T
   `window.hpp`.
 - **Click semantics:** a control's `BN_CLICKED` arrives at the **parent** as
   `WM_COMMAND`. ~~Click-on-the-control-object (message reflection) is a future
-  *additive* layer.~~ **✅ Built (2026-06-30):** the parent's `notification::Reflection` mixin now
+  *additive* layer.~~ **✅ Built (2026-06-30):** the parent's `notification::CommandReflection` mixin now
   bounces the notification back down to the control (`notification::wm_command_reflect`), where the
   control's own mixin fires the callback. Menu / accelerator commands
   (`lparam == 0`) still go to the window's `on_command(id)` via `CommandMessages`.
@@ -470,8 +472,9 @@ widget; `Control<T>` supplies the same compile-time `on_*` dispatch as `Window<T
     - `Edit` → `notification::TextChange` (EN_CHANGE)
     - `ComboBox` → `notification::SelectionChange` (CBN_SELCHANGE)
   A window-message mixin is one file under `mixins/`; a control-notification
-  mixin is one file under `notification/`; a control is one file under `controls/`;
-  the reflection path (`window/notification/reflection.hpp` and `command.hpp`)
+  mixin is one file under `desktop/window/notification/command/`; a control is
+  one file under `desktop/window/controls/`;
+  the reflection path (`desktop/window/notification/command/reflection.hpp` and `protocol.hpp`)
   stays shared as the controls grow. See
   `MIXINS.md` for the recipe. This is still **thin shells over native controls** —
   not a widget toolkit; the hard boundary below (no layout / theming) is unchanged.
@@ -488,7 +491,7 @@ engine, no theming framework, no widget toolkit. Not a Qt/wxWidgets replacement.
 - A typed **`TrayEvent`** enum over the raw tray callback message (additive).
 - A **ctor-arg-forwarding `create`** overload (once `std::forward` is taught).
 - **`Drop` RAII view** — ✅ **Done (2026-07-12; built on request, superseding its
-  parked status).** `winwrap/drop.hpp`: `class Drop final`, move-only owner of
+  parked status).** `winwrap/desktop/drop.hpp`: `class Drop final`, move-only owner of
   the `HDROP` (`DragFinish` in the destructor and on move-assign; hand-written
   Rule of Five, the `NotifyIcon` precedent), with `count()` / `path(i)` /
   `paths()` / `point()` / `handle()` hiding the sentinel-index + length-probe
@@ -522,11 +525,12 @@ engine, no theming framework, no widget toolkit. Not a Qt/wxWidgets replacement.
   read-modify-write intent verbs `add_file_attributes` / `remove_file_attributes` (the
   latter falls back to `FILE_ATTRIBUTE_NORMAL`, since Win32 has no zero mask). All take
   `const std::filesystem::path&` — on Windows `path::c_str()` is already `wchar_t*`, so
-  the `…W` call costs no conversion. `shell.hpp`: `refresh_folder` over
+  the `…W` call costs no conversion. The former `shell.hpp` had `refresh_folder` over
   `SHChangeNotify(SHCNE_UPDATEDIR, …)`. Four Catch2 tests. Built because icon-dropper's
   `set_folder_icon` had bare `…W` calls in its logic; the "wait for a second consumer"
   trigger explicitly does **not** gate wrapping a raw Win32 call (see
-  `CODE_CONVENTIONS.md` §3).
+  `CODE_CONVENTIONS.md` §3). The current API is
+  `desktop/shell/change_notifications.hpp` with `notify_folder_changed`.
 - More **RAII-wrapped Win32 objects** as real projects need them.
 - **Catch2 tests** that exercise behaviour without a live message pump.
 

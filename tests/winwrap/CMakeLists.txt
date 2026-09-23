@@ -9,16 +9,16 @@ FetchContent_MakeAvailable(Catch2)
 
 add_executable(winwrap_test
     device_test.cpp
-    window_test.cpp
-    drop_window_test.cpp
-    file_droppable_test.cpp
-    control_test.cpp
-    button_test.cpp
-    checkbox_test.cpp
-    edit_test.cpp
-    combobox_test.cpp
-    message_loop_test.cpp
-    file_attributes_test.cpp)
+    desktop/window/window_test.cpp
+    desktop/window/drop_window_test.cpp
+    desktop/window/mixins/file_droppable_test.cpp
+    desktop/window/control_test.cpp
+    desktop/window/controls/button_test.cpp
+    desktop/window/controls/checkbox_test.cpp
+    desktop/window/controls/edit_test.cpp
+    desktop/window/controls/combobox_test.cpp
+    desktop/message_loop_test.cpp
+    filesystem/file_attributes_test.cpp)
 
 target_link_libraries(winwrap_test
     PRIVATE
