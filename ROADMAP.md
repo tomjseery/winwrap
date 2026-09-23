@@ -137,7 +137,7 @@ app-side GDI (`CreateIconIndirect`); adoption must have an explicit ownership co
   the struct-doc style lives in `base:cpp-style` (all projects).
 - **Errors as `std::expected<T, std::error_code>`** at the public API; Win32 codes
   via `std::system_category()`. WIL stays for RAII handles only, not control flow.
-- **Message dispatch via composable compile-time mixins** (`mixins.hpp` +
+- **Message dispatch via composable compile-time mixins** (`window/mixins/` +
   `message_reflection.hpp` + `message_dispatcher.hpp`); respelled from CRTP to
   C++23 **deducing this** on 2026-07-12 (see *Dispatch design review* below) —
   mixins are plain structs whose `handle_message` deduces the final type through an
@@ -148,8 +148,8 @@ app-side GDI (`CreateIconIndirect`); adoption must have an explicit ownership co
   `nullopt` = pass on. `MessageDispatcher<Mixins...>` chains them via a fold
   expression (`||`), short-circuiting on first match, and its `dispatch_message`
   falls back to the derived type's `default_proc` when no mixin claims the
-  message. Both `Window<T>` and `Control<T>` inherit it. The `WW_CASE(message, call)` macro (defined + `#undef`'d inside
-  `mixins.hpp`) is the only tool that can simultaneously put a maybe-absent member
+  message. Both `Window<T>` and `Control<T>` inherit it. The `WINWRAP_HOOK_CASE(message, call)` macro (defined in
+  `window/detail/hook_case.hpp`, included by each hook mixin) is the only tool that can simultaneously put a maybe-absent member
   into an unevaluated `requires` and `return`/`break` from the caller's frame — one
   line per case, zero duplication. No vtables; composition is compile-time but
   message matching is runtime. Derived
@@ -205,7 +205,7 @@ app-side GDI (`CreateIconIndirect`); adoption must have an explicit ownership co
     Win32's own `DispatchMessage`). One change from the provisional scheme: the
     mixin member was bare `handle`, which gained the `_message` suffix — in a
     Win32 wrapper `handle` is the domain's loaded *noun* (`Menu::handle()` is
-    already the raw-`HMENU` accessor, and an eventual `WindowHandle::handle()`
+    already the raw-`HMENU` accessor, and an eventual `BaseWindow::handle()`
     would collide on the very objects that carry the mixin member), and the
     suffix restores the verb+object symmetry of its two siblings. *Probed on our toolchain (2026-07-12,
     MSVC 2022 BuildTools `/std:c++latest`): a prototype engine compiles and
@@ -378,7 +378,7 @@ missing wrappers.** In priority order:
    `str.h` for it). Precedent for the home: a concept-named shared header per §3.
 5. Smaller holes in the same class: **`InitCommonControlsEx` is never called** (fine
    for the current BUTTON/EDIT/COMBOBOX — user32 classes — but ProgressBar / ListView
-   / StatusBar will fail to create); **`WindowHandle` lacks** `client_rect`, `move`,
+   / StatusBar will fail to create); **`BaseWindow` lacks** `client_rect`, `move`,
    `invalidate`, `focus`, `destroy`, `set_font`, `dpi`; **`Menu` has no** separator,
    submenu, check/enable, or menu bar.
 
@@ -394,15 +394,15 @@ features:
 | `on_dpi_changed` mixin (`WM_DPICHANGED`) | Win32++ explicitly advertises PMv2 support; age is not evidence of missing DPI support | **application-driven** — correct payload/result handling and app-owned awareness/layout policy, not a novelty claim |
 | Label (STATIC), ListBox, ProgressBar, RadioButton | all three | **build after** items 2 and 5 above — these four need no `WM_NOTIFY` |
 | ListView / TreeView / Tab / StatusBar | all three | **defer** — gated on `WM_NOTIFY`, and each is a large surface (WinLamb spends four internal headers on ListView alone) |
-| `ITaskbarList3` progress over `shell.hpp` | WinLamb `progress_taskbar.h` | **later** — §3 reserved `shell.hpp` for this, and as of 2026-07-30 that header exists, so the home is real |
+| `ITaskbarList3` progress in a `shell/` header | WinLamb `progress_taskbar.h` | **later** — §3 reserves the `shell/` folder for this; `shell/folder.hpp` already exists, so the home is real |
 
 **Explicitly not building** — recorded so it isn't relitigated. These appear across the
 surveyed libraries because they predate modern C++ / WIL, not because winwrap needs them:
 
 - Files, registry, memory-mapped files (`CFile`, `CRegKey`, WinLamb
   `file.h`/`file_ini.h`/`file_mapped.h`) → `wil::unique_hfile`, `wil::unique_hkey`,
-  `wil::reg`, `std::filesystem`. (`fs.hpp` is not a counterexample — it wraps bare
-  selected intent/error protocols, not a prohibition on raw calls.)
+  `wil::reg`, `std::filesystem`. (`filesystem/attributes.hpp` is not a counterexample —
+  it wraps bare selected intent/error protocols, not a prohibition on raw calls.)
 - Strings and time (`CString`, `CTime`) → `std::wstring`, `std::chrono`.
 - Threads and synchronisation (`CWinThread`, `CCriticalSection`, `CEvent`, `CMutex`) →
   `std::thread`, `std::mutex`, `std::condition_variable`.
