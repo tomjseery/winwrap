@@ -17,3 +17,7 @@ enabled = false
 
 [plugins."gcc@cpp-agents"]
 enabled = false
+
+# Core agent roles are profile-scoped; Concertable project delivery is unrelated here.
+[plugins."concertable@agent-standards"]
+enabled = false
