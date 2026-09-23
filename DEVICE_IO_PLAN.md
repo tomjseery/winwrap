@@ -26,14 +26,23 @@ Authorized: implement the handoff's Next Steps and explain the result. No driver
 ## Current evidence and next action
 
 WinWrap standards PR #6 and Device PR #7 are open; the latter's production source
-is commit 4e18be1. The x64 MSVC dev build passes, and all 33 CTests pass, including
+is commit 169f19b. An earlier x64 MSVC dev build passed all 33 CTests, including
 a real Configuration Manager empty-interface case. The lab's isolated
-Feature/Winwrap-Device-Client branch and PR #2 pin 4e18be1 through FetchContent;
+Feature/Winwrap-Device-Client branch and PR #2 pin 169f19b through FetchContent;
 `scripts/Build.ps1 -Target Client` passes all 9 CTests. Original untracked
 `.codex/agents/` and the lab checkout's uncommitted files remain untouched.
 The shared one-owner nesting proposal is tj-agents/cpp issue #19.
 
-The delivery response explains the code and knowledge gaps. PR review/merge and the live
+The private path helper is now detail::paths in device_paths.hpp. The current
+no-sanitizer MSVC build passes all 33 CTests. The dev ASan preset cannot link
+because the installed MSVC toolchain lacks
+clang_rt.asan_dynamic_runtime_thunk-x86_64.lib; restore that component and
+rerun the dev preset to close this validation gap. The library still uses
+CreateFileW inside Device::open and DeviceIoControl inside
+Device::control, as its intended Win32 boundary. Review the control input
+contract and the lab negative-probe call after this naming cleanup.
+
+PR review/merge and the live
 `hwid_client`/`--probe` check in the designated disposable VM remain pending.
 No driver installation, loading, signing-policy, boot-policy or Driver Verifier
 action occurred.

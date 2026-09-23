@@ -6,7 +6,7 @@
 #include <limits>
 #include <utility>
 
-#include "device_interface_list.hpp"
+#include "device_paths.hpp"
 #include "winwrap/error.hpp"
 
 namespace winwrap {
@@ -24,7 +24,7 @@ namespace {
 
 namespace detail {
 
-std::expected<std::vector<std::wstring>, std::error_code> parse_device_interface_list(
+std::expected<std::vector<std::wstring>, std::error_code> paths(
     std::span<const wchar_t> characters) {
     if (characters.empty())
         return std::unexpected(system_error(ERROR_INVALID_DATA));
@@ -71,7 +71,7 @@ std::expected<std::vector<std::wstring>, std::error_code> Device::paths(const GU
             continue;
         if (listing != CR_SUCCESS)
             return std::unexpected(configuration_error(listing));
-        return detail::parse_device_interface_list(list);
+        return detail::paths(list);
     }
 
     return std::unexpected(system_error(ERROR_RETRY));

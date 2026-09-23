@@ -8,11 +8,11 @@
 #include <filesystem>
 #include <span>
 
-#include "device_interface_list.hpp"
+#include "device_paths.hpp"
 
 TEST_CASE("device interface list parser accepts no present interfaces") {
     const std::array<wchar_t, 1> empty{L'\0'};
-    const auto paths{winwrap::detail::parse_device_interface_list(empty)};
+    const auto paths{winwrap::detail::paths(empty)};
     REQUIRE(paths.has_value());
     CHECK(paths->empty());
 }
@@ -26,13 +26,13 @@ TEST_CASE("Device::paths integration returns no paths for an unregistered interf
 }
 TEST_CASE("device interface list parser preserves one or several paths") {
     const std::array<wchar_t, 6> one{L'o', L'n', L'e', L'\0', L'\0', L'\0'};
-    const auto one_path{winwrap::detail::parse_device_interface_list(one)};
+    const auto one_path{winwrap::detail::paths(one)};
     REQUIRE(one_path.has_value());
     REQUIRE(one_path->size() == 1);
     CHECK((*one_path)[0] == L"one");
 
     const std::array<wchar_t, 9> several{L'o', L'n', L'e', L'\0', L't', L'w', L'o', L'\0', L'\0'};
-    const auto paths{winwrap::detail::parse_device_interface_list(several)};
+    const auto paths{winwrap::detail::paths(several)};
     REQUIRE(paths.has_value());
     REQUIRE(paths->size() == 2);
     CHECK((*paths)[0] == L"one");
@@ -46,7 +46,7 @@ TEST_CASE("device interface list parser rejects malformed termination") {
     for (const auto characters :
          {std::span<const wchar_t>{no_terminator}, std::span<const wchar_t>{no_list_end},
           std::span<const wchar_t>{trailing_data}}) {
-        const auto paths{winwrap::detail::parse_device_interface_list(characters)};
+        const auto paths{winwrap::detail::paths(characters)};
         REQUIRE_FALSE(paths.has_value());
         CHECK(paths.error().value() == ERROR_INVALID_DATA);
     }
