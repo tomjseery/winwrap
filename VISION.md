@@ -13,8 +13,8 @@ Win32, leaving application architecture outside the library.
 
 ## Design pillars
 
-1. **A broad native desktop façade, not a replacement runtime.** Winwrap aims to
-   abstract the useful classic Win32 desktop surface into coherent C++ operations.
+1. **A broad native Windows façade, not a replacement runtime.** Winwrap aims to
+   abstract useful classic Win32 desktop and user-mode device operations into coherent C++ operations.
    "Thin" means preserving native semantics and avoiding an application framework,
    not limiting the library to a handful of helpers. The wrapper-first API and
    escape-hatch policy is owned by [CODE_CONVENTIONS.md](CODE_CONVENTIONS.md#4-wrapper-first-apis--abstract-the-operation-preserve-the-escape-hatch).
@@ -41,7 +41,7 @@ Win32, leaving application architecture outside the library.
    with an existing raw-Win32 window, without adopting the Winwrap window base.
    Tray support is a useful initial use case, not a uniqueness claim.
 7. **Unicode, MSVC.** UTF-16 at the Win32 boundary, the `…W` APIs, `/utf-8` for
-   narrow literals. Classic Win32 desktop — not WinRT/UWP.
+   narrow literals. Classic user-mode Win32 — not WinRT/UWP or kernel-mode APIs.
 
 ## What winwrap is *not* (non-goals)
 

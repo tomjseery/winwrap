@@ -157,8 +157,25 @@ system icon, or a non-shared `LoadImageW`) — never a shared system handle.
 | `winwrap/drop.hpp` | `Drop` — the `WM_DROPFILES` query protocol as a type |
 | `winwrap/mixins.hpp` | the composable behaviours (`FileDroppable`, `Paintable`, `Clickable`, …) |
 | `winwrap/message_loop.hpp` | `run()` and `quit()` |
+| `winwrap/device.hpp` | `Device` — present-interface paths, synchronous open and control |
 | `winwrap/error.hpp` | `last_error()` / `check()` — Win32 codes as `std::error_code` |
 
+## Device I/O
+
+`Device::paths(interface_id)` snapshots all currently present interface paths;
+an empty vector means none are present. `Device::open({.path = ..., .access = ...,
+.share_mode = ...})` owns the `CreateFileW` handle. `control(code, input, output)`
+is synchronous and reports the number of output bytes actually written; callers
+must interpret and validate those bytes for their own protocol. `handle()` borrows
+the native handle without transferring ownership. There is no overlapped-I/O API;
+asynchronous requests need separate buffer and cancellation lifetimes.
+
+Configuration Manager returns `CONFIGRET`, not a `GetLastError` code. WinWrap
+uses `CM_MapCrToWin32Err` and `std::system_category()` for those failures.
+Several distinct `CONFIGRET` values may map to one Win32 code; an unmapped value
+becomes `ERROR_GEN_FAILURE`, so the original configuration code is lost.
+If the interface list changes through three size/list attempts, `paths` returns
+`ERROR_RETRY`. A malformed list returns `ERROR_INVALID_DATA`.
 ## Requirements
 
 Windows and a sufficiently recent MSVC C++23 toolchain: both `std::expected` and

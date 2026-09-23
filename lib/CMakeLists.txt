@@ -1,4 +1,5 @@
 add_library(winwrap STATIC
+    src/device.cpp
     src/notify_icon.cpp
     src/menu.cpp)
 add_library(winwrap::winwrap ALIAS winwrap)
@@ -21,6 +22,7 @@ target_link_libraries(winwrap
         user32
         shell32
         comctl32
+        cfgmgr32
         gdi32
         $<BUILD_INTERFACE:WIL::WIL>
     PRIVATE

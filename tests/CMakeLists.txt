@@ -8,6 +8,7 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(Catch2)
 
 add_executable(winwrap_test
+    device_test.cpp
     window_test.cpp
     drop_window_test.cpp
     file_droppable_test.cpp
@@ -28,3 +29,5 @@ target_link_libraries(winwrap_test
 
 include(Catch)
 catch_discover_tests(winwrap_test)
+
+target_include_directories(winwrap_test PRIVATE ${PROJECT_SOURCE_DIR}/lib/src)
