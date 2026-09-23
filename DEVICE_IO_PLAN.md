@@ -19,10 +19,21 @@ Authorized: implement the handoff's Next Steps and explain the result. No driver
 2. [x] Update WinWrap scope and API naming conventions.
 3. [x] Implement Device, cfgmgr32 link, parsing and host tests.
 4. [x] Run WinWrap dev configure, build and CTest under x64 MSVC.
-5. [ ] Commit and deliver WinWrap feature; pin its exact commit in sandbox-hwid.
-6. [ ] Refactor lab client, run Client build/tests, and update integration and verification docs.
+5. [x] Commit and deliver WinWrap feature; pin its exact commit in sandbox-hwid.
+6. [x] Refactor lab client, run Client build/tests, and update integration and verification docs.
 7. [ ] Explain code and knowledge gaps to Tommy.
 
 ## Current evidence and next action
 
-WinWrap branch Feature/Device-Io starts from ac9cf95. Existing untracked .codex/agents files are unrelated and untouched. WinWrap PR #7 is open. Device source and tests were formatted with the repository rules and the MSVC build plus all 32 CTests passed again. The lab integration is committed in PR #2 and initially passed 9 CTests against b479c57; next: repin it to this final formatted WinWrap commit and rerun its host check. cpp:domain-design lacked an explicit nesting rule; upstream proposal: tj-agents/cpp issue #19. Live VM validation remains Tommy's action.
+WinWrap standards PR #6 and Device PR #7 are open; the latter's production source
+is commit 4e18be1. The x64 MSVC dev build passes, and all 33 CTests pass, including
+a real Configuration Manager empty-interface case. The lab's isolated
+Feature/Winwrap-Device-Client branch and PR #2 pin 4e18be1 through FetchContent;
+`scripts/Build.ps1 -Target Client` passes all 9 CTests. Original untracked
+`.codex/agents/` and the lab checkout's uncommitted files remain untouched.
+The shared one-owner nesting proposal is tj-agents/cpp issue #19.
+
+Next: explain the code and knowledge gaps to Tommy. PR review/merge and the live
+`hwid_client`/`--probe` check in the designated disposable VM remain pending.
+No driver installation, loading, signing-policy, boot-policy or Driver Verifier
+action occurred.
