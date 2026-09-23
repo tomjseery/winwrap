@@ -8,15 +8,15 @@
 
 #include "winwrap/error.hpp"
 #include "winwrap/window/base_window.hpp"
-#include "winwrap/window/message_dispatcher.hpp"
-#include "winwrap/window/message_reflection.hpp"
-#include "winwrap/window/mixins/commandable.hpp"
-#include "winwrap/window/mixins/focus_aware.hpp"
-#include "winwrap/window/mixins/keyboard_input.hpp"
+#include "winwrap/window/message_router.hpp"
+#include "winwrap/window/notification/reflection.hpp"
+#include "winwrap/window/mixins/command_messages.hpp"
+#include "winwrap/window/mixins/focus_messages.hpp"
+#include "winwrap/window/mixins/keyboard_messages.hpp"
 #include "winwrap/window/mixins/lifecycle.hpp"
-#include "winwrap/window/mixins/mouse_input.hpp"
-#include "winwrap/window/mixins/paintable.hpp"
-#include "winwrap/window/mixins/sizable.hpp"
+#include "winwrap/window/mixins/mouse_messages.hpp"
+#include "winwrap/window/mixins/paint_messages.hpp"
+#include "winwrap/window/mixins/size_messages.hpp"
 
 namespace winwrap {
 
@@ -41,7 +41,7 @@ struct WindowConfig {
 /// virtual, no vtable.
 ///
 /// Messages route to the matching hook the window defines, or to DefWindowProcW
-/// when none claims it (see dispatch_message, inherited from MessageDispatcher). Define
+/// when none claims it (see route_message, inherited from MessageRouter). Define
 /// only the hooks you need, as **public** members; they come from the composable
 /// mixins in <winwrap/window/mixins/>:
 ///
@@ -53,12 +53,12 @@ struct WindowConfig {
 ///   - `on_key_down(vk)`      -- `WM_KEYDOWN` (virtual-key code)
 ///   - `on_focus(gained)`     -- `WM_SETFOCUS` (true) / `WM_KILLFOCUS` (false)
 ///
-/// For a message with a runtime id (e.g. a tray callback), shadow dispatch_message
-/// in T and delegate the rest with `Window::dispatch_message`.
+/// For a message with a runtime id (e.g. a tray callback), shadow route_message
+/// in T and delegate the rest with `Window::route_message`.
 ///
 /// Extra mixins compose *after* the built-ins (first-match-wins, so a built-in
 /// hook always beats an extra on an overlapping message); to intercept a message
-/// a built-in claims, shadow dispatch_message instead.
+/// a built-in claims, shadow route_message instead.
 ///
 /// @tparam T       The derived window type. Must provide
 ///                 `static constexpr const wchar_t* window_class_name` and be
@@ -67,8 +67,8 @@ struct WindowConfig {
 ///                 after the built-ins in the order given.
 template <typename T, typename... Mixins>
 class Window : public BaseWindow,
-               public MessageDispatcher<Lifecycle, Sizable, Commandable, Reflecting, Paintable,
-                                        MouseInput, KeyboardInput, FocusAware, Mixins...> {
+               public MessageRouter<Lifecycle, SizeMessages, CommandMessages, notification::Reflection, PaintMessages,
+                                        MouseMessages, KeyboardMessages, FocusMessages, Mixins...> {
 public:
     Window(const Window&) = delete;
     Window& operator=(const Window&) = delete;
@@ -89,7 +89,7 @@ public:
     }
 
     /// The message fallback: hands any message no hook claimed to DefWindowProcW.
-    /// Called by dispatch_message (inherited from MessageDispatcher); not for direct use.
+    /// Called by route_message (inherited from MessageRouter); not for direct use.
     LRESULT default_proc(UINT msg, WPARAM wparam, LPARAM lparam) {
         return DefWindowProcW(hwnd(), msg, wparam, lparam);
     }
@@ -154,7 +154,7 @@ private:
         }
 
         if (self) {
-            LRESULT result = self->dispatch_message(msg, wparam, lparam);
+            LRESULT result = self->route_message(msg, wparam, lparam);
             if (msg == WM_NCDESTROY) {
                 // The window is gone; sever the link so the destructor won't
                 // DestroyWindow a dead handle.

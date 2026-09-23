@@ -2,16 +2,16 @@
 
 #include "winwrap/win.hpp"
 
-#include "winwrap/window/mixins/selection_changeable.hpp"
+#include "winwrap/window/notification/selection_change.hpp"
 #include "winwrap/window/control.hpp"
 
 namespace winwrap {
 
 /// A native drop-down list (the "COMBOBOX" system class, CBS_DROPDOWNLIST: pick from the
-/// list, no free typing). It composes SelectionChangeable, so `on_selection_changed(index)`
+/// list, no free typing). It composes notification::SelectionChange, so `on_selection_changed(index)`
 /// fires when the user picks a different item (the reflected `CBN_SELCHANGE`). Populate it
 /// with `add_item`, and read or set the current pick with `selection()` / `set_selection()`.
-class ComboBox final : public Control<ComboBox, SelectionChangeable> {
+class ComboBox final : public Control<ComboBox, notification::SelectionChange> {
 public:
     static constexpr const wchar_t* control_class = L"COMBOBOX";
     static constexpr DWORD default_style = CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP;

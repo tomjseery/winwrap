@@ -13,7 +13,7 @@ struct CheckboxHost : winwrap::Window<CheckboxHost> {
 constexpr UINT checkbox_id = 1;
 }  // namespace
 
-TEST_CASE("Checkbox reuses Clickable -- on_click fires through the parent's reflection") {
+TEST_CASE("Checkbox reuses notification::Click -- on_click fires through the parent's reflection") {
     auto host = CheckboxHost::create();
     REQUIRE(host);
 

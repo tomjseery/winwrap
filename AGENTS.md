@@ -13,7 +13,8 @@ Winwrap's public-API conventions are project-specific:
 ## Layout
 
 `libs/winwrap/include/winwrap/` — public headers: `window/` (`window.hpp`,
-`control.hpp`, `controls/`, `mixins/`, dispatch, reflection and `message_loop.hpp`),
+`control.hpp`, `controls/`, `mixins/`, `message_router.hpp`, `notification/` and
+`message_loop.hpp`),
 `notify_icon.hpp`, `menu.hpp`, `device.hpp`, `drop.hpp`, `error.hpp`,
 `filesystem/attributes.hpp` and `shell/folder.hpp`; `libs/winwrap/src/` — three
 `.cpp`s; `tests/winwrap/` — Catch2, one file per type, plus a per-header compile
@@ -24,13 +25,13 @@ check. Build from an *x64 Native Tools* prompt: `cmake --preset dev`,
 
 | Term | Means |
 |---|---|
-| **dispatcher** | `MessageDispatcher` — compile-time-composed mixins inspect a runtime `WM_*`, then `default_proc` |
+| **router** | `MessageRouter` — tries each mixin's `handle_message` for a runtime `WM_*`, then `default_proc` |
 | **`handle_message`** | a mixin's message function; returns an engaged `optional<LRESULT>` if it handled it, `nullopt` to keep looking. First match wins |
 | **mixin** | one opt-in behaviour composed into `Window<T, Mixins...>` / `Control<T, Mixins...>` |
 | **`on_*` hook** | the public member the *user's* type defines (`on_paint`); mixins detect it with `requires` |
 | **deducing this** (C++23) | explicit object parameters deduce the receiver's static type; the native bridge must still recover the correct object |
-| **reflection** | bouncing a control notification from parent to control; `WM_COMMAND` implemented, `WM_NOTIFY` pending |
-| **`Config`** | a type-owned designated-initializer record for a multi-argument factory; legacy top-level `*Config` types remain pending migration |
+| **message reflection** | Win32 term for sending a child control's notification from its parent back to the child; `WM_COMMAND` implemented, `WM_NOTIFY` pending |
+| **`*Config`** | a descriptively named designated-initializer record for a multi-argument factory; keep `WindowConfig`, `ControlConfig`, and `NotifyIconConfig` |
 
 ## Read on demand
 

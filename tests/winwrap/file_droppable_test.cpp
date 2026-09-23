@@ -50,7 +50,7 @@ TEST_CASE("FileDroppable unpacks a synthetic WM_DROPFILES into on_files_dropped"
     DropWindow window;
     HDROP drop = make_test_hdrop({L"C:\\one.txt", L"C:\\two two.png"});
     const LRESULT result =
-        window.dispatch_message(WM_DROPFILES, reinterpret_cast<WPARAM>(drop), 0);
+        window.route_message(WM_DROPFILES, reinterpret_cast<WPARAM>(drop), 0);
     CHECK(result == 0);
     REQUIRE(window.dropped.size() == 2);
     CHECK(window.dropped[0] == L"C:\\one.txt");
@@ -59,7 +59,7 @@ TEST_CASE("FileDroppable unpacks a synthetic WM_DROPFILES into on_files_dropped"
 
 TEST_CASE("FileDroppable leaves other messages unclaimed") {
     DropWindow window;
-    CHECK(window.dispatch_message(WM_NULL, 0, 0) == 0);
+    CHECK(window.route_message(WM_NULL, 0, 0) == 0);
     CHECK(window.dropped.empty());
 }
 

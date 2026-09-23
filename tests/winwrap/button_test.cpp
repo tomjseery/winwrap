@@ -7,8 +7,8 @@
 #include "winwrap/window/window.hpp"
 
 namespace {
-// Bare carrier for the Clickable mixin, to exercise it without a live control.
-struct ClickableFixture : winwrap::Clickable {};
+// Bare carrier for the notification::Click mixin, to exercise it without a live control.
+struct ClickFixture : winwrap::notification::Click {};
 
 // A host window that owns a button, so the full parent -> reflect -> control path
 // can run for real.
@@ -23,32 +23,32 @@ struct ClickHost : winwrap::Window<ClickHost> {
 };
 }  // namespace
 
-TEST_CASE("Clickable fires on_click on a reflected BN_CLICKED") {
-    ClickableFixture fix;
+TEST_CASE("notification::Click fires on_click on a reflected BN_CLICKED") {
+    ClickFixture fix;
     bool clicked = false;
     fix.on_click = [&] { clicked = true; };
 
     const auto handled =
-        fix.handle_message(winwrap::wm_command_reflect, MAKEWPARAM(0, BN_CLICKED), 0);
+        fix.handle_message(winwrap::notification::wm_command_reflect, MAKEWPARAM(0, BN_CLICKED), 0);
 
     REQUIRE(clicked);
     REQUIRE(handled == 0);
 }
 
-TEST_CASE("Clickable ignores messages that are not a reflected click") {
-    ClickableFixture fix;
+TEST_CASE("notification::Click ignores messages that are not a reflected click") {
+    ClickFixture fix;
     bool clicked = false;
     fix.on_click = [&] { clicked = true; };
 
     REQUIRE_FALSE(fix.handle_message(WM_PAINT, 0, 0).has_value());  // wrong message
-    REQUIRE_FALSE(fix.handle_message(winwrap::wm_command_reflect, MAKEWPARAM(0, BN_SETFOCUS), 0)
+    REQUIRE_FALSE(fix.handle_message(winwrap::notification::wm_command_reflect, MAKEWPARAM(0, BN_SETFOCUS), 0)
                       .has_value());  // wrong notification
     REQUIRE_FALSE(clicked);
 }
 
-TEST_CASE("Clickable with no handler swallows the click without crashing") {
-    ClickableFixture fix;  // on_click left unassigned
-    REQUIRE(fix.handle_message(winwrap::wm_command_reflect, MAKEWPARAM(0, BN_CLICKED), 0) == 0);
+TEST_CASE("notification::Click with no handler swallows the click without crashing") {
+    ClickFixture fix;  // on_click left unassigned
+    REQUIRE(fix.handle_message(winwrap::notification::wm_command_reflect, MAKEWPARAM(0, BN_CLICKED), 0) == 0);
 }
 
 TEST_CASE("Button::create(cfg, handler) wires on_click in one call") {
@@ -74,7 +74,7 @@ TEST_CASE("Button on_click fires through the parent window's reflection") {
     (*host)->button->on_click = [&] { clicked = true; };
 
     // Windows delivers a click to the parent as WM_COMMAND; SendMessageW runs the
-    // whole reflect -> Clickable path synchronously, so no message pump is needed.
+    // whole reflect -> notification::Click path synchronously, so no message pump is needed.
     SendMessageW((*host)->hwnd(), WM_COMMAND, MAKEWPARAM(ClickHost::button_id, BN_CLICKED),
                  reinterpret_cast<LPARAM>((*host)->button->hwnd()));
 

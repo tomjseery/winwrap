@@ -8,12 +8,13 @@
 
 namespace winwrap {
 
-/// Routes `WM_PAINT` to the final type's `on_paint()` when defined.
-struct Paintable {
+/// Routes `WM_SIZE` to the final type's `on_size(width, height)` (client area,
+/// from lparam).
+struct SizeMessages {
     std::optional<LRESULT> handle_message([[maybe_unused]] this auto& self, UINT msg, WPARAM,
-                                          LPARAM) {
+                                          LPARAM lparam) {
         switch (msg) {
-            WINWRAP_HOOK_CASE(WM_PAINT, self.on_paint());
+            WINWRAP_HOOK_CASE(WM_SIZE, self.on_size(LOWORD(lparam), HIWORD(lparam)));
             default:
                 break;
         }

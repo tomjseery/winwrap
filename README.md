@@ -120,12 +120,12 @@ public:
             tray_ = std::move(*icon);
     }
 
-    LRESULT dispatch_message(UINT msg, WPARAM wparam, LPARAM lparam) {
+    LRESULT route_message(UINT msg, WPARAM wparam, LPARAM lparam) {
         if (msg == tray_callback && LOWORD(lparam) == WM_CONTEXTMENU) {
             show_tray_menu();
             return 0;
         }
-        return Window::dispatch_message(msg, wparam, lparam);
+        return Window::route_message(msg, wparam, lparam);
     }
 
 private:
@@ -155,7 +155,9 @@ system icon, or a non-shared `LoadImageW`) — never a shared system handle.
 | `winwrap/notify_icon.hpp` | `NotifyIcon` — a system-tray icon, plus the Explorer-restart re-add path (`taskbar_created_message()` → `add()`) |
 | `winwrap/menu.hpp` | `Menu` — popup menus, items by id or by lambda |
 | `winwrap/drop.hpp` | `Drop` — the `WM_DROPFILES` query protocol as a type |
-| `winwrap/window/mixins/*.hpp` | the composable behaviours (`FileDroppable`, `Paintable`, `Clickable`, …) |
+| `winwrap/window/mixins/*.hpp` | window message mixins (`FileDroppable`, `PaintMessages`, …) |
+| `winwrap/window/message_router.hpp` | routes a message to composed mixins, then the native default procedure |
+| `winwrap/window/notification/*.hpp` | control notification mixins (`notification::Click`, `TextChange`, `SelectionChange`) and parent-to-child reflection |
 | `winwrap/window/message_loop.hpp` | `run()` and `quit()` |
 | `winwrap/device.hpp` | `Device` — present-interface paths, synchronous open and control |
 | `winwrap/error.hpp` | `last_error()` / `check()` — Win32 codes as `std::error_code` |

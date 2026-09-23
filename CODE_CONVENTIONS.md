@@ -9,15 +9,18 @@ never override:
 
 Where those say *how to write C++*, this says *how winwrap shapes its API*.
 
-## 1. Type-owned names and factories
+## 1. Descriptive names and factories
 
-A name that belongs to one public type nests in that type: `Device::Config`, not
-`DeviceConfig`. Shared names stay in the enclosing namespace. A factory lives on
-the type it produces, as `Device::open` does. Introduce a separate type only when
+A public name must say what it represents at the use site. Keep descriptive
+factory-input names such as `WindowConfig`, `ControlConfig`, and
+`NotifyIconConfig`; a bare `Config` is too ambiguous as a general rule, even when
+it can be qualified by an owning type. `Device::Config` is an existing nested
+form, not a precedent for renaming the other records. A factory lives on the
+type it produces, as `Device::open` does. Introduce a separate type only when
 it enforces a rule, owns a resource, or represents a distinct concept.
 
 When a public factory takes more than about two arguments, or two easily swapped
-arguments of the same type, gather them into a nested `Config` record and use
+arguments of the same type, gather them into a descriptively named input record and use
 C++20 designated initializers. Passive config records collect input; the factory
 performs validation and resource acquisition.
 
@@ -30,9 +33,8 @@ auto device = Device::open({
 ```
 
 This makes call sites clear and leaves room for defaults without positional
-ambiguity. Private helpers with one call site may remain positional. Existing
-top-level `WindowConfig`, `ControlConfig`, and `NotifyIconConfig` predate this
-rule; their migration is tracked in TECH_DEBT.md.
+ambiguity. Private helpers with one call site may remain positional. Keep the
+existing descriptive top-level config names; they are intentional public names.
 
 Accessors use the concept name or `handle()`, without a `get_` prefix.
 A raw handle returned by an accessor is borrowed; the wrapper retains ownership.
