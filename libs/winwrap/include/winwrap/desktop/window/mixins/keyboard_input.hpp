@@ -4,12 +4,12 @@
 
 #include <optional>
 
-#include "winwrap/desktop/window/detail/hook_case.hpp"
+#include "winwrap/desktop/window/mixins/hook_case.hpp"
 
 namespace winwrap {
 
 /// Routes `WM_KEYDOWN` to the final type's `on_key_down(vk)` (the virtual-key code).
-struct KeyboardMessages {
+struct KeyboardInput {
     std::optional<LRESULT> handle_message([[maybe_unused]] this auto& self, UINT msg, WPARAM wparam,
                                           LPARAM) {
         switch (msg) {

@@ -18,7 +18,7 @@
 
 namespace {
 struct DropWindow : winwrap::Window<DropWindow, winwrap::FileDroppable> {
-    static constexpr const wchar_t* window_class_name = L"WinwrapFileDroppableTestWindow";
+    static constexpr const wchar_t* window_class_name = L"WinwrapFileDropTestWindow";
     std::vector<std::wstring> dropped;
     void on_files_dropped(const std::vector<std::wstring>& paths) { dropped = paths; }
 };

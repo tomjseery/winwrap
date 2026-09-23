@@ -11,7 +11,7 @@ namespace winwrap {
 /// at the first that handles the message (first-match wins). When no mixin claims
 /// the message, falls back to the final type's `default_proc` -- the only thing
 /// that varies between wrappers is which default proc closes the gap. Compose a
-/// wrapper as `class C : public MessageRouter<PaintMessages, MouseMessages, ...>` and
+/// wrapper as `class C : public MessageRouter<Paintable, MouseInput, ...>` and
 /// route its WndProc to `route_message`.
 ///
 /// The final type is never named here: `route_message` takes an explicit object

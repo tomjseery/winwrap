@@ -9,12 +9,12 @@
 #include <vector>
 
 #include "winwrap/desktop/drop.hpp"
-#include "winwrap/desktop/window/detail/hook_case.hpp"
+#include "winwrap/desktop/window/mixins/hook_case.hpp"
 
 namespace winwrap {
 
-/// Unpacks an HDROP into the dropped-file paths and releases it -- the Drop view
-/// owns the handle, so DragFinish runs even if an allocation throws.
+/// Unpacks an HDROP into the dropped-file paths and releases it -- Drop owns
+/// the handle, so DragFinish runs even if an allocation throws.
 inline std::vector<std::wstring> make_dropped_paths(HDROP drop) {
     return Drop{drop}.paths();
 }

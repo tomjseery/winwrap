@@ -4,13 +4,13 @@
 
 #include <optional>
 
-#include "winwrap/desktop/window/detail/hook_case.hpp"
+#include "winwrap/desktop/window/mixins/hook_case.hpp"
 
 namespace winwrap {
 
 /// Routes `WM_SIZE` to the final type's `on_size(width, height)` (client area,
 /// from lparam).
-struct SizeMessages {
+struct SizeChange {
     std::optional<LRESULT> handle_message([[maybe_unused]] this auto& self, UINT msg, WPARAM,
                                           LPARAM lparam) {
         switch (msg) {

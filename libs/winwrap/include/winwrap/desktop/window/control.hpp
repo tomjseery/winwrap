@@ -11,10 +11,10 @@
 #include "winwrap/error.hpp"
 #include "winwrap/desktop/window/base_window.hpp"
 #include "winwrap/desktop/window/message_router.hpp"
-#include "winwrap/desktop/window/mixins/focus_messages.hpp"
-#include "winwrap/desktop/window/mixins/keyboard_messages.hpp"
-#include "winwrap/desktop/window/mixins/mouse_messages.hpp"
-#include "winwrap/desktop/window/mixins/paint_messages.hpp"
+#include "winwrap/desktop/window/mixins/focus_aware.hpp"
+#include "winwrap/desktop/window/mixins/keyboard_input.hpp"
+#include "winwrap/desktop/window/mixins/mouse_input.hpp"
+#include "winwrap/desktop/window/mixins/paintable.hpp"
 
 namespace winwrap {
 
@@ -65,7 +65,7 @@ struct ControlConfig {
 template <typename T, typename... Mixins>
 class Control
     : public BaseWindow,
-      public MessageRouter<PaintMessages, MouseMessages, KeyboardMessages, FocusMessages, Mixins...> {
+      public MessageRouter<Paintable, MouseInput, KeyboardInput, FocusAware, Mixins...> {
 public:
     Control(const Control&) = delete;
     Control& operator=(const Control&) = delete;

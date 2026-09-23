@@ -26,7 +26,7 @@ this composition in the literature is **variadic CRTP** — winwrap used it unti
 *Dispatch design review* for the respelling.) They differ in *who supplies the
 handler*:
 
-- **Hook mixins** (`PaintMessages`, `MouseMessages`, …) — the mixin detects an `on_*` *method*
+- **Hook mixins** (`Paintable`, `MouseInput`, …) — the mixin detects an `on_*` *method*
   the derived type defines, via `if constexpr (requires { self.on_x(); })`. The
   handler is code on the type. Window and Control compose their built-in hooks;
   features such as `FileDroppable` remain opt-in.
@@ -37,11 +37,13 @@ handler*:
 
 Use a callback mixin (not a hook) for anything a *user* wires up with a lambda.
 
-Name a hook mixin for the Win32 message family it routes (`SizeMessages`,
-`PaintMessages`, `FocusMessages`), rather than implying it grants a capability
-with `-able`. `FileDroppable` keeps a capability name because it also registers
-the HWND to accept file drops. Callback mixins name the notification exposed
-to the control's user.
+Use singular names that describe what each mixin adds. `-able` is appropriate
+when the mixin grants that capability (`FileDroppable` registers drop acceptance);
+`FocusAware` observes focus changes without making a window focusable.
+`SizeChange` reports `WM_SIZE` without making a window resizable, and
+`WindowCommand` routes menu and accelerator commands rather than control
+notifications. Callback mixins name the notification exposed to the control's
+user. Avoid a uniform suffix that obscures these differences.
 
 ## Why control notifications need reflection
 
@@ -112,8 +114,8 @@ Window features are **hook** mixins (the taxonomy above): the message arrives at
 the window itself — no reflection, no id plumbing — and the natural handler is
 code on the derived window type. `FileDroppable` is the worked example.
 
-1. Add `desktop/window/mixins/<name>.hpp`, same shape as `paint_messages.hpp`: include
-   `winwrap/desktop/window/detail/hook_case.hpp` and write a `WINWRAP_HOOK_CASE` per
+1. Add `desktop/window/mixins/<name>.hpp`, same shape as `paintable.hpp`: include
+   `winwrap/desktop/window/mixins/hook_case.hpp` and write a `WINWRAP_HOOK_CASE` per
    message. If the message carries a packed payload, unpack it in a local
    `make_*` helper so the hook sees typed values, never raw `WPARAM`/`LPARAM`:
 
@@ -180,7 +182,7 @@ Rules specific to window mixins:
   control behind them (`lparam == 0`). A callback menu item (`add_item(text,
   handler)`) is resolved inside `Menu::show` itself via `TPM_RETURNCMD` and never
   reaches the window; legacy-id items and accelerators still go to the window's
-  `CommandMessages` → `on_command(id)`. `notification::CommandReflection` only handles `lparam != 0`.
+  `WindowCommand` → `on_command(id)`. `notification::CommandReflection` only handles `lparam != 0`.
 - **WM_NOTIFY** needs handled-state and meaningful-result propagation plus the
   native payload lifetime contract. It cannot simply inherit the current
   void-callback/return-zero recipe unchanged.

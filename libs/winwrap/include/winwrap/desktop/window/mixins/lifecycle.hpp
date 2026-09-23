@@ -4,7 +4,7 @@
 
 #include <optional>
 
-#include "winwrap/desktop/window/detail/hook_case.hpp"
+#include "winwrap/desktop/window/mixins/hook_case.hpp"
 
 namespace winwrap {
 
