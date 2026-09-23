@@ -2,16 +2,16 @@
 
 #include "winwrap/win.hpp"
 
-#include "winwrap/window/mixins/clickable.hpp"
+#include "winwrap/window/notification/click.hpp"
 #include "winwrap/window/control.hpp"
 
 namespace winwrap {
 
 /// A native check box -- the "BUTTON" system class with the BS_AUTOCHECKBOX style, which
 /// makes Windows toggle the check state on each click for you. It reuses the very same
-/// Clickable mixin as Button (both are "BUTTON"-class controls that emit `BN_CLICKED`),
+/// notification::Click mixin as Button (both are "BUTTON"-class controls that emit `BN_CLICKED`),
 /// so `on_click` fires on every toggle; read the resulting state with `checked()`.
-class Checkbox final : public Control<Checkbox, Clickable> {
+class Checkbox final : public Control<Checkbox, notification::Click> {
 public:
     static constexpr const wchar_t* control_class = L"BUTTON";
     static constexpr DWORD default_style = BS_AUTOCHECKBOX | WS_TABSTOP;

@@ -10,7 +10,7 @@ namespace winwrap {
 
 /// Routes `WM_SETFOCUS` / `WM_KILLFOCUS` to the final type's `on_focus(gained)` --
 /// true on gain, false on loss.
-struct FocusAware {
+struct FocusMessages {
     std::optional<LRESULT> handle_message([[maybe_unused]] this auto& self, UINT msg, WPARAM,
                                           LPARAM) {
         switch (msg) {

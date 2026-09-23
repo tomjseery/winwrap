@@ -7,7 +7,7 @@
 #include <memory>
 #include <system_error>
 
-#include "winwrap/window/mixins/clickable.hpp"
+#include "winwrap/window/notification/click.hpp"
 #include "winwrap/window/control.hpp"
 
 namespace winwrap {
@@ -20,10 +20,10 @@ namespace winwrap {
 ///
 ///     button->on_click = [] { /* ... */ };   // `button` is the created unique_ptr<Button>
 ///
-/// The click reaches the parent window as `BN_CLICKED`; the window's Reflecting mixin
-/// bounces it back here, where the composed Clickable mixin fires `on_click`
-/// (which Clickable provides -- see <winwrap/window/mixins/clickable.hpp>).
-class Button final : public Control<Button, Clickable> {
+/// The click reaches the parent window as `BN_CLICKED`; the window's notification::Reflection mixin
+/// bounces it back here, where the composed notification::Click mixin fires `on_click`
+/// (which notification::Click provides -- see <winwrap/window/notification/click.hpp>).
+class Button final : public Control<Button, notification::Click> {
 public:
     static constexpr const wchar_t* control_class = L"BUTTON";
 

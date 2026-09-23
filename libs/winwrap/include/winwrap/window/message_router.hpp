@@ -7,14 +7,14 @@
 namespace winwrap {
 
 /// The WndProc-shaped entry point over a set of composed message mixins: inherits
-/// each, and `dispatch_message` tries their `handle_message` in the order listed, stopping
+/// each, and `route_message` tries their `handle_message` in the order listed, stopping
 /// at the first that handles the message (first-match wins). When no mixin claims
 /// the message, falls back to the final type's `default_proc` -- the only thing
 /// that varies between wrappers is which default proc closes the gap. Compose a
-/// wrapper as `class C : public MessageDispatcher<Paintable, MouseInput, ...>` and
-/// route its WndProc to `dispatch_message`.
+/// wrapper as `class C : public MessageRouter<PaintMessages, MouseMessages, ...>` and
+/// route its WndProc to `route_message`.
 ///
-/// The final type is never named here: `dispatch_message` takes an explicit object
+/// The final type is never named here: `route_message` takes an explicit object
 /// parameter (C++23 deducing this), so `self` is deduced as the most-derived type
 /// at each call site and flows into every mixin's `handle_message` -- the same
 /// compile-time resolution CRTP gave, without a `Derived` parameter or casts.
@@ -22,8 +22,8 @@ namespace winwrap {
 ///
 /// @tparam Mixins  The message mixins to compose, tried in the order given.
 template <typename... Mixins>
-struct MessageDispatcher : Mixins... {
-    LRESULT dispatch_message(this auto& self, UINT msg, WPARAM wparam, LPARAM lparam) {
+struct MessageRouter : Mixins... {
+    LRESULT route_message(this auto& self, UINT msg, WPARAM wparam, LPARAM lparam) {
         std::optional<LRESULT> result;
         ((result = handle_message<Mixins>(self, msg, wparam, lparam)) || ...);
         if (result)

@@ -138,24 +138,24 @@ app-side GDI (`CreateIconIndirect`); adoption must have an explicit ownership co
 - **Errors as `std::expected<T, std::error_code>`** at the public API; Win32 codes
   via `std::system_category()`. WIL stays for RAII handles only, not control flow.
 - **Message dispatch via composable compile-time mixins** (`window/mixins/` +
-  `message_reflection.hpp` + `message_dispatcher.hpp`); respelled from CRTP to
+  `notification/reflection.hpp` + `message_router.hpp`); respelled from CRTP to
   C++23 **deducing this** on 2026-07-12 (see *Dispatch design review* below) —
   mixins are plain structs whose `handle_message` deduces the final type through an
   explicit object parameter (`this auto& self`).
-  Seven empty-base mixins — `Lifecycle`, `Sizable`, `Commandable`, `Paintable`,
-  `MouseInput`, `KeyboardInput`, `FocusAware` — each expose
+  Seven empty-base mixins — `Lifecycle`, `SizeMessages`, `CommandMessages`, `PaintMessages`,
+  `MouseMessages`, `KeyboardMessages`, `FocusMessages` — each expose
   `std::optional<LRESULT> handle_message(UINT, WPARAM, LPARAM)`: engaged = handled,
-  `nullopt` = pass on. `MessageDispatcher<Mixins...>` chains them via a fold
-  expression (`||`), short-circuiting on first match, and its `dispatch_message`
+  `nullopt` = pass on. `MessageRouter<Mixins...>` chains them via a fold
+  expression (`||`), short-circuiting on first match, and its `route_message`
   falls back to the derived type's `default_proc` when no mixin claims the
   message. Both `Window<T>` and `Control<T>` inherit it. The `WINWRAP_HOOK_CASE(message, call)` macro (defined in
   `window/detail/hook_case.hpp`, included by each hook mixin) is the only tool that can simultaneously put a maybe-absent member
   into an unevaluated `requires` and `return`/`break` from the caller's frame — one
   line per case, zero duplication. No vtables; composition is compile-time but
   message matching is runtime. Derived
-  types define only the **public** `on_*` hooks they need. `dispatch_message` stays
+  types define only the **public** `on_*` hooks they need. `route_message` stays
   **shadowable** as the escape hatch for runtime-id messages (e.g. the tray
-  callback) — delegate the rest with `Window::dispatch_message`.
+  callback) — delegate the rest with `Window::route_message`.
 - **Dispatch design review (2026-07-12): held.** Stress-tested against seven
   alternatives — ATL/WTL macro maps, virtual `WndProc` (Win32++), runtime lambda
   registries (WinLamb), signal/slot (LFWin32), `constexpr` message tables,
@@ -180,12 +180,12 @@ app-side GDI (`CreateIconIndirect`); adoption must have an explicit ownership co
     final type is spelled from `self` now that no `Derived` parameter exists).
     A member *named* like the hook whose
     signature doesn't match becomes a compile error instead of a silent no-fire.
-    `Commandable` (macro-free) gets the same assert by hand. Limits: pure-typo
+    `CommandMessages` (macro-free) gets the same assert by hand. Limits: pure-typo
     hooks (`on_pain`) still need the synthetic-message Catch2 tests (TECH_DEBT);
     an overloaded hook name evades the check (acceptable edge).
   - **(b) ✅ DONE (2026-07-12) — deducing-this respelling (P0847, MSVC since
     VS 17.4).** Same architecture, simpler spelling at identical codegen: mixins
-    lost `<Derived>` and the `static_cast`s, `Clickable`/`TextChangeable` lost
+    lost `<Derived>` and the `static_cast`s, `notification::Click`/`notification::TextChange` lost
     their dummy template params, `MessageHandler`/`Window`/`Control` lost the
     `template <typename> typename...` template-template params;
     `handle_message(this auto& self, ...)` deduces the final type at the call
@@ -198,11 +198,13 @@ app-side GDI (`CreateIconIndirect`); adoption must have an explicit ownership co
     static `handle_message<Mixin>(self, ...)` helper (same name, deliberately), which
     expands the pack as a template argument instead. GCC/Clang accept the direct
     form; keep the helper for MSVC.
-    **Naming (settled 2026-07-12, fresh-eyes review):** engine = `MessageDispatcher`
-    in `message_dispatcher.hpp`, entry = `dispatch_message`, mixin member =
-    `handle_message`, shared match-and-fire = `handle_notification` — dispatchers
-    dispatch, handlers handle (Reactor vocabulary — ACE's `handle_*` members;
-    Win32's own `DispatchMessage`). One change from the provisional scheme: the
+    **Naming (revised 2026-09-23):** engine = `MessageRouter`
+    in `message_router.hpp`, entry = `route_message`, mixin member =
+    `handle_message`, shared control-notification match-and-fire =
+    `notification::handle`. Routing chooses which mixin receives a message;
+    handling is the mixin's response. The earlier `MessageDispatcher` /
+    `dispatch_message` wording overlapped Win32's own `DispatchMessage`.
+    One change from the 2026-07-12 provisional scheme: the
     mixin member was bare `handle`, which gained the `_message` suffix — in a
     Win32 wrapper `handle` is the domain's loaded *noun* (`Menu::handle()` is
     already the raw-`HMENU` accessor, and an eventual `BaseWindow::handle()`
@@ -215,7 +217,7 @@ app-side GDI (`CreateIconIndirect`); adoption must have an explicit ownership co
   - **(c) Empirical layout note (probed 2026-07-12).** "Empty mixins → zero
     size" is false on MSVC by default: only the *first* empty base is folded
     away, so the 8-mixin list costs +8 bytes per window (measured 24 vs 16 with
-    `__declspec(empty_bases)` on `MessageDispatcher`). Harmless at our scale;
+    `__declspec(empty_bases)` on `MessageRouter`). Harmless at our scale;
     recorded in TECH_DEBT (fix or soften the mixins.hpp doc comment).
 - **Class-level config** (the `WNDCLASS`) is customized by a `configure_class`
   hook the derived type shadows — same CRTP mechanism as the `on_*` dispatch.
@@ -247,11 +249,11 @@ app-side GDI (`CreateIconIndirect`); adoption must have an explicit ownership co
   so the id machinery is invisible library plumbing (like control-notification ids).
   **Escape hatch:** the legacy `add_item(id, text)` overload stays; a picked id with
   no stored handler is re-posted as `WM_COMMAND` to the owner → `on_command(id)` via
-  `Commandable` — legacy menus, mixed menus, and accelerators behave exactly as
+  `CommandMessages` — legacy menus, mixed menus, and accelerators behave exactly as
   before. Per item there is exactly one route, chosen by which overload added it.
   User-chosen ids must stay below `0xE000`; on a collision the callback wins.
 - **Tray events exposed raw** (you `switch` on the callback message in
-  `dispatch_message`) for the MVP. A typed `TrayEvent` enum is a future *additive*
+  `route_message`) for the MVP. A typed `TrayEvent` enum is a future *additive*
   layer, not a v1 requirement.
 - **Target `NOTIFYICON_VERSION_4`** from the start (richer event protocol; GUID
   identity requires separate `NIF_GUID` support and is not enabled by v4 alone).
@@ -353,23 +355,23 @@ below; nothing here is a new pillar.
 missing wrappers.** In priority order:
 
 1. **Painting protocol — `on_paint()` hands the user nothing** *(shape to reassess)*.
-   `Paintable` fires `self.on_paint()` with no DC, and the library contains no
+   `PaintMessages` fires `self.on_paint()` with no DC, and the library contains no
    `BeginPaint` adapter. WIL already supplies `wil::BeginPaint`,
    `wil::unique_hdc_paint` and selection guards. Use those first; a proposed
    `on_paint(PaintDc&)` needs to add a useful context/protocol contract, not duplicate
    cleanup. The current hook does not automatically validate the update region.
 2. **`WM_NOTIFY` reflection — an engine gap, not a control gap.**
-   `message_reflection.hpp` already says "`WM_NOTIFY` joins here when it lands."
+   `window/notification/reflection.hpp` leaves room for `WM_NOTIFY` when implemented.
    ListView, TreeView, Tab and DateTimePicker use this protocol; a parent can handle
    it directly before reflection exists. Trackbars primarily use `WM_HSCROLL` /
    `WM_VSCROLL`. Prioritize coherent reflection before broadening the catalog. Trips the
    `return 0` ceiling recorded in TECH_DEBT — resolve that at the same time.
-3. **Right-click hooks — the missing half of `Menu`.** `MouseInput` covers
+3. **Right-click hooks — the missing half of `Menu`.** `MouseMessages` covers
    `WM_MOUSEMOVE` / `WM_LBUTTONDOWN` / `WM_LBUTTONUP` only, so a window that owns a
    context `Menu` can't detect the click that should show it. Add `on_rbutton_down` /
    `on_rbutton_up` (and consider `WM_CONTEXTMENU`, which also covers the keyboard menu
    key). *Not* a v0.1 blocker: the tray path delivers `WM_CONTEXTMENU` through
-   `NotifyIcon`'s callback message, not through `MouseInput`.
+   `NotifyIcon`'s callback message, not through `MouseMessages`.
 4. **UTF-8 ↔ UTF-16 conversion is absent.** No `MultiByteToWideChar` /
    `WideCharToMultiByte` anywhere in `include/` or `src/`. The house style mandates
    UTF-8 core / UTF-16 boundary and the whole API takes `const wchar_t*`, yet the
@@ -451,10 +453,10 @@ widget; `Control<T>` supplies the same compile-time `on_*` dispatch as `Window<T
   `window.hpp`.
 - **Click semantics:** a control's `BN_CLICKED` arrives at the **parent** as
   `WM_COMMAND`. ~~Click-on-the-control-object (message reflection) is a future
-  *additive* layer.~~ **✅ Built (2026-06-30):** the parent's `Reflecting` mixin now
-  bounces the notification back down to the control (`wm_command_reflect`), where the
+  *additive* layer.~~ **✅ Built (2026-06-30):** the parent's `notification::Reflection` mixin now
+  bounces the notification back down to the control (`notification::wm_command_reflect`), where the
   control's own mixin fires the callback. Menu / accelerator commands
-  (`lparam == 0`) still go to the window's `on_command(id)` via `Commandable`.
+  (`lparam == 0`) still go to the window's `on_command(id)` via `CommandMessages`.
 - **Lifetime** mirrors `Window<T>`: non-movable, `create()` →
   `std::expected<std::unique_ptr<T>, std::error_code>`, held as a `unique_ptr`
   member of the owner window; the parent destroys the child HWND (no
@@ -463,11 +465,13 @@ widget; `Control<T>` supplies the same compile-time `on_*` dispatch as `Window<T
   earlier "no pre-built controls, extract only reactively" stance is **superseded.**
   `Control<T>` stays the base, but the library now *does* ship concrete `final`
   controls, each composing the **notification mixins** it emits:
-    - `Button` / `Checkbox` → `Clickable` (BN_CLICKED)
-    - `Edit` → `TextChangeable` (EN_CHANGE)
-    - `ComboBox` → `SelectionChangeable` (CBN_SELCHANGE)
-  A mixin is one file under `mixins/`; a control is one file under `controls/`;
-  the engine (`message_reflection.hpp` / `message_handler.hpp`) never changes as either grows. See
+    - `Button` / `Checkbox` → `notification::Click` (BN_CLICKED)
+    - `Edit` → `notification::TextChange` (EN_CHANGE)
+    - `ComboBox` → `notification::SelectionChange` (CBN_SELCHANGE)
+  A window-message mixin is one file under `mixins/`; a control-notification
+  mixin is one file under `notification/`; a control is one file under `controls/`;
+  the reflection path (`window/notification/reflection.hpp` and `command.hpp`)
+  stays shared as the controls grow. See
   `MIXINS.md` for the recipe. This is still **thin shells over native controls** —
   not a widget toolkit; the hard boundary below (no layout / theming) is unchanged.
 

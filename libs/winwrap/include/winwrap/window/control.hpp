@@ -10,11 +10,11 @@
 
 #include "winwrap/error.hpp"
 #include "winwrap/window/base_window.hpp"
-#include "winwrap/window/message_dispatcher.hpp"
-#include "winwrap/window/mixins/focus_aware.hpp"
-#include "winwrap/window/mixins/keyboard_input.hpp"
-#include "winwrap/window/mixins/mouse_input.hpp"
-#include "winwrap/window/mixins/paintable.hpp"
+#include "winwrap/window/message_router.hpp"
+#include "winwrap/window/mixins/focus_messages.hpp"
+#include "winwrap/window/mixins/keyboard_messages.hpp"
+#include "winwrap/window/mixins/mouse_messages.hpp"
+#include "winwrap/window/mixins/paint_messages.hpp"
 
 namespace winwrap {
 
@@ -33,7 +33,7 @@ struct ControlConfig {
 
 /// CRTP base for a native child control -- a button, edit box, checkbox, etc.: a
 /// WS_CHILD window of a system-registered class ("BUTTON", "EDIT", "STATIC", ...).
-/// Derive as `class Button : public winwrap::Control<Button, Clickable>`: the base
+/// Derive as `class Button : public winwrap::Control<Button, notification::Click>`: the base
 /// owns creation, the SetWindowSubclass->object bridge, message routing, and teardown,
 /// while T provides `static constexpr const wchar_t* control_class` and composes the
 /// mixins it supports. Dispatch resolves at compile time -- no virtual. Non-movable;
@@ -51,21 +51,21 @@ struct ControlConfig {
 ///       `on_key_down(vk)`       -- `WM_KEYDOWN` (virtual-key code)
 ///       `on_focus(gained)`      -- `WM_SETFOCUS` (true) / `WM_KILLFOCUS` (false)
 ///   - **Notification mixins** the control opts into via `Mixins...` -- each
-///     brings a `std::function` callback you assign (e.g. Clickable -> `on_click`).
-///     The owner window's Reflecting mixin bounces the notification down so it lands
+///     brings a `std::function` callback you assign (e.g. notification::Click -> `on_click`).
+///     The owner window's notification::Reflection mixin bounces the notification down so it lands
 ///     here. Adding one is mechanical -- see MIXINS.md.
 ///
-/// Shadow dispatch_message in T for anything the mixins don't cover, and delegate the
-/// rest with `Control::dispatch_message`.
+/// Shadow route_message in T for anything the mixins don't cover, and delegate the
+/// rest with `Control::route_message`.
 ///
 /// @tparam T           The derived control type. Must provide
 ///                     `static constexpr const wchar_t* control_class` and be
 ///                     default-constructible.
-/// @tparam Mixins  Notification mixins to compose (e.g. Clickable).
+/// @tparam Mixins  Notification mixins to compose (e.g. notification::Click).
 template <typename T, typename... Mixins>
 class Control
     : public BaseWindow,
-      public MessageDispatcher<Paintable, MouseInput, KeyboardInput, FocusAware, Mixins...> {
+      public MessageRouter<PaintMessages, MouseMessages, KeyboardMessages, FocusMessages, Mixins...> {
 public:
     Control(const Control&) = delete;
     Control& operator=(const Control&) = delete;
@@ -89,7 +89,7 @@ public:
     [[nodiscard]] UINT id() const { return id_; }
 
     /// The message fallback: hands any message no hook claimed to DefSubclassProc.
-    /// Called by dispatch_message (inherited from MessageDispatcher); not for direct use.
+    /// Called by route_message (inherited from MessageRouter); not for direct use.
     LRESULT default_proc(UINT msg, WPARAM wparam, LPARAM lparam) {
         return DefSubclassProc(hwnd(), msg, wparam, lparam);
     }
@@ -126,7 +126,7 @@ private:
     static LRESULT CALLBACK subclass_proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam,
                                           UINT_PTR /*id_subclass*/, DWORD_PTR ref_data) {
         T* self = reinterpret_cast<T*>(ref_data);
-        LRESULT result = self->dispatch_message(msg, wparam, lparam);
+        LRESULT result = self->route_message(msg, wparam, lparam);
         if (msg == WM_NCDESTROY) {
             // The HWND is going away -- detach our proc and sever the dangling
             // pointer so the dtor won't RemoveWindowSubclass a dead handle.

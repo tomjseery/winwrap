@@ -9,7 +9,7 @@
 namespace winwrap {
 
 /// Routes `WM_KEYDOWN` to the final type's `on_key_down(vk)` (the virtual-key code).
-struct KeyboardInput {
+struct KeyboardMessages {
     std::optional<LRESULT> handle_message([[maybe_unused]] this auto& self, UINT msg, WPARAM wparam,
                                           LPARAM) {
         switch (msg) {

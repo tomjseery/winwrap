@@ -12,12 +12,12 @@ the recommended evolution.
 
 See also: [VISION.md](VISION.md) (the "on-event callbacks, hiding the `WM_COMMAND`-id
 plumbing" goal), `libs/winwrap/include/winwrap/window/mixins/` (the mixins) and
-`libs/winwrap/include/winwrap/window/message_reflection.hpp` (the reflection engine), `CODE_CONVENTIONS.md §3`
+`libs/winwrap/include/winwrap/window/notification/reflection.hpp` (the reflection engine), `CODE_CONVENTIONS.md §3`
 (where shared code lives).
 
 ## The two kinds of message mixin
 
-Both are plain structs composed by the same compile-time fold (`MessageDispatcher`), both
+Both are plain structs composed by the same compile-time fold (`MessageRouter`), both
 add no vtable. A mixin whose `handle_message` needs the final type takes it as an explicit
 object parameter — `handle_message(this auto& self, …)`, C++23 **deducing this** — so `self`
 *is* the composed window/control, deduced at each call site. (The classic spelling of
@@ -26,36 +26,48 @@ this composition in the literature is **variadic CRTP** — winwrap used it unti
 *Dispatch design review* for the respelling.) They differ in *who supplies the
 handler*:
 
-- **Hook mixins** (`Paintable`, `MouseInput`, …) — the mixin detects an `on_*` *method*
+- **Hook mixins** (`PaintMessages`, `MouseMessages`, …) — the mixin detects an `on_*` *method*
   the derived type defines, via `if constexpr (requires { self.on_x(); })`. The
-  handler is code on the type. Every window/control gets these from the base list.
-- **Callback mixins** (`Clickable`, …) — the mixin *owns a `std::function`
+  handler is code on the type. Window and Control compose their built-in hooks;
+  features such as `FileDroppable` remain opt-in.
+- **Callback mixins** (`notification::Click`, …) — the mixin *owns a `std::function`
   callback member* and fires it. The handler is a value you assign at runtime. A
-  control opts in by listing the mixin in `Control<T, Mixins...>`.
+  control opts in by listing the mixin in `Control<T, Mixins...>`. These live in
+  `window/notification/` with the shared command and reflection protocol.
 
 Use a callback mixin (not a hook) for anything a *user* wires up with a lambda.
+
+Name a hook mixin for the Win32 message family it routes (`SizeMessages`,
+`PaintMessages`, `FocusMessages`), rather than implying it grants a capability
+with `-able`. `FileDroppable` keeps a capability name because it also registers
+the HWND to accept file drops. Callback mixins name the notification exposed
+to the control's user.
 
 ## Why control notifications need reflection
 
 Windows sends a control's notification (a click, a text change) to the control's
-**parent** as `WM_COMMAND`, not to the control. So the parent's `Reflecting` mixin
-bounces it back down to the control (`SendMessageW(child, wm_command_reflect, …)`),
-where the control's own mixins handle it. `Reflecting` is generic — one
-mixin reflects *every* control, so **adding a mixin never touches the parent.**
+**parent** as `WM_COMMAND`, not to the control. The parent's `notification::Reflection`
+mixin sends a private message back to the child
+(`SendMessageW(child, notification::wm_command_reflect, …)`), where the control's
+own mixins handle it. This is Win32's *message reflection* pattern, unrelated to
+C++ reflection. One mixin reflects notifications for every control, so adding a
+control mixin never changes the parent.
 
 ## Recipe — adding a *control* mixin
 
-1. Add `mixins/<name>.hpp` (one mixin per file, named for the mixin), same
-   shape as `clickable.hpp` — the match-and-fire is delegated to `handle_notification`
-   (in `message_reflection.hpp`), so the whole mixin is the callback plus one line:
+1. Add `window/notification/<name>.hpp` (one notification mixin per file), same
+   shape as `click.hpp` — the match-and-fire is delegated to `notification::handle`
+   (in `window/notification/command.hpp`), so the whole mixin is the callback plus one line:
 
    ```cpp
-   struct TextChangeable {
+   namespace winwrap::notification {
+   struct TextChange {
        std::function<void()> on_text_changed;     ///< assign your handler
        [[nodiscard]] std::optional<LRESULT> handle_message(UINT msg, WPARAM wparam, LPARAM) const {
-           return handle_notification(msg, wparam, EN_CHANGE, on_text_changed);
+           return handle(msg, wparam, EN_CHANGE, on_text_changed);
        }
    };
+   }
    ```
 
 2. Keep the header self-contained; the per-header check enforces it.
@@ -63,32 +75,34 @@ mixin reflects *every* control, so **adding a mixin never touches the parent.**
 3. Compose it on a control in `window/controls/<name>.hpp`:
 
    ```cpp
-   class Edit final : public Control<Edit, TextChangeable> {
+   class Edit final : public Control<Edit, notification::TextChange> {
        static constexpr const wchar_t* control_class = L"EDIT";
    };
    ```
 
-That's it — `Reflecting` already delivers the notification, so there is nothing to
+That's it — `notification::Reflection` already delivers the notification, so there is nothing to
 wire on the window side.
 
 ### Variant — a mixin that carries a payload
 
 Some notifications carry data that **isn't in the message** — `CBN_SELCHANGE` says
 "the selection changed" but not *to what*; the index lives in the control. Use the
-payload overload of `handle_notification`, which takes a **`fetch`** callable run
+payload overload of `notification::handle`, which takes a **`fetch`** callable run
 *only after* the code matches (so the control is queried solely when the notification
 actually fired). The fetch needs the control's `hwnd()`, so this is the one control
 mixin whose `handle_message` needs the object — it takes `this auto& self` and the lambda
 captures it by reference (safe: the fetch runs synchronously inside the handler):
 
 ```cpp
-struct SelectionChangeable {
+namespace winwrap::notification {
+struct SelectionChange {
     std::function<void(int)> on_selection_changed;  ///< gets the new index
     std::optional<LRESULT> handle_message(this auto& self, UINT msg, WPARAM wparam, LPARAM) {
-        return handle_notification(msg, wparam, CBN_SELCHANGE, self.on_selection_changed,
+        return handle(msg, wparam, CBN_SELCHANGE, self.on_selection_changed,
             [&self] { return static_cast<int>(SendMessageW(self.hwnd(), CB_GETCURSEL, 0, 0)); });
     }
 };
+}
 ```
 
 ## Recipe — adding a *window* mixin
@@ -97,7 +111,7 @@ Window features are **hook** mixins (the taxonomy above): the message arrives at
 the window itself — no reflection, no id plumbing — and the natural handler is
 code on the derived window type. `FileDroppable` is the worked example.
 
-1. Add `window/mixins/<name>.hpp`, same shape as `paintable.hpp`: include
+1. Add `window/mixins/<name>.hpp`, same shape as `paint_messages.hpp`: include
    `winwrap/window/detail/hook_case.hpp` and write a `WINWRAP_HOOK_CASE` per
    message. If the message carries a packed payload, unpack it in a local
    `make_*` helper so the hook sees typed values, never raw `WPARAM`/`LPARAM`:
@@ -139,7 +153,7 @@ Rules specific to window mixins:
 
 - **Extras run after the built-ins** (first-match-wins), so an extra can never
   steal a message a built-in hook handles. To intercept one anyway, shadow
-  `dispatch_message` — explicit beats positional.
+  `route_message` — explicit beats positional.
 - **A built-in only claims a message when its hook is defined** — an extra
   matching a built-in's message would fire only on windows that *don't* define
   that built-in hook. Don't rely on that; keep the one-message-one-mixin
@@ -151,21 +165,21 @@ Rules specific to window mixins:
 - **RAII the message's resources inside the helper** (`make_dropped_paths` is
   `Drop{drop}.paths()` — `Drop` in `winwrap/drop.hpp` owns the handle
   and runs `DragFinish` in its destructor). This protects HDROP cleanup, not the
-  safety of exceptions escaping WndProc. Shadowing `dispatch_message` for custom drop
+  safety of exceptions escaping WndProc. Shadowing `route_message` for custom drop
   handling? Adopt the wparam into a `Drop` and query `count()` / `path(i)` /
   `point()` instead of calling `DragQueryFileW` yourself.
 
 ## Rules of thumb
 
-- **One notification code per mixin** (BN_CLICKED → `Clickable`, EN_CHANGE →
-  `TextChangeable`). Keep the demux trivial.
+- **One notification code per mixin** (BN_CLICKED → `notification::Click`, EN_CHANGE →
+  `notification::TextChange`). Keep the demux trivial.
 - **Callback signature carries the payload.** A click is `void()`; a notification with
   data takes it as parameters (e.g. a selection index), not as raw Win32 words.
 - **Menu / accelerator commands are *not* control notifications** — they have no
   control behind them (`lparam == 0`). A callback menu item (`add_item(text,
   handler)`) is resolved inside `Menu::show` itself via `TPM_RETURNCMD` and never
   reaches the window; legacy-id items and accelerators still go to the window's
-  `Commandable` → `on_command(id)`. `Reflecting` only handles `lparam != 0`.
+  `CommandMessages` → `on_command(id)`. `notification::Reflection` only handles `lparam != 0`.
 - **WM_NOTIFY** needs handled-state and meaningful-result propagation plus the
   native payload lifetime contract. It cannot simply inherit the current
   void-callback/return-zero recipe unchanged.

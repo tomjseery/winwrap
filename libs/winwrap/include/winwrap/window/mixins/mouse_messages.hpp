@@ -12,7 +12,7 @@ namespace winwrap {
 
 /// Routes the mouse messages to `on_mouse_move` / `on_lbutton_down` /
 /// `on_lbutton_up`, each taking the client-area (x, y) from lparam.
-struct MouseInput {
+struct MouseMessages {
     std::optional<LRESULT> handle_message([[maybe_unused]] this auto& self, UINT msg, WPARAM,
                                           LPARAM lparam) {
         switch (msg) {
