@@ -8,7 +8,7 @@
 
 namespace winwrap::detail {
 
-[[nodiscard]] std::expected<std::vector<std::wstring>, std::error_code> parse_device_interface_list(
+[[nodiscard]] std::expected<std::vector<std::wstring>, std::error_code> paths(
     std::span<const wchar_t> characters);
 
 }  // namespace winwrap::detail
