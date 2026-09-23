@@ -25,10 +25,11 @@ Authorized: implement the handoff's Next Steps and explain the result. No driver
 
 ## Current evidence and next action
 
-WinWrap standards PR #6 and Device PR #7 are open; the latter's production source
-is commit 169f19b. An earlier x64 MSVC dev build passed all 33 CTests, including
+WinWrap standards PR #6 and Device PR #7 are open. The Device branch
+contains the private path helper naming cleanup. An earlier x64 MSVC dev build passed all 33 CTests, including
 a real Configuration Manager empty-interface case. The lab's isolated
-Feature/Winwrap-Device-Client branch and PR #2 pin 169f19b through FetchContent;
+Feature/Winwrap-Device-Client branch and PR #2 pin an exact WinWrap revision
+through FetchContent;
 `scripts/Build.ps1 -Target Client` passes all 9 CTests. Original untracked
 `.codex/agents/` and the lab checkout's uncommitted files remain untouched.
 The shared one-owner nesting proposal is tj-agents/cpp issue #19.
