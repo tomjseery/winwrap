@@ -17,6 +17,13 @@ TEST_CASE("device interface list parser accepts no present interfaces") {
     CHECK(paths->empty());
 }
 
+TEST_CASE("Device::paths integration returns no paths for an unregistered interface class") {
+    const GUID unused_interface{
+        0x44cf8f39, 0x4a5f, 0x4ec4, {0x97, 0x28, 0x62, 0x5e, 0xd1, 0x01, 0x84, 0x3d}};
+    const auto paths{winwrap::Device::paths(unused_interface)};
+    REQUIRE(paths.has_value());
+    CHECK(paths->empty());
+}
 TEST_CASE("device interface list parser preserves one or several paths") {
     const std::array<wchar_t, 6> one{L'o', L'n', L'e', L'\0', L'\0', L'\0'};
     const auto one_path{winwrap::detail::parse_device_interface_list(one)};
