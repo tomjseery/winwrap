@@ -77,13 +77,14 @@ As the library grows, decide *where* a thing belongs by what conceptually needs 
   stays in that wrapper's header, even if the underlying mechanism *looks* generic.
   `notify_icon.hpp` owns `taskbar_created_message()` — only tray icons care about
   the "TaskbarCreated" broadcast.
-- **Related free operations share a concept-named header.** Group functions that
-  wrap one native resource or protocol together, as `filesystem/attributes.hpp`
-  does for reading and changing file attributes. `desktop/shell/change_notifications.hpp`
-  owns Shell change notifications; it currently has only
-  `notify_folder_changed()`. A single helper does not need a directory of its
-  own, and an unrelated Shell API does not belong in that header merely because
-  it comes from the same DLL. Generic error conversion stays in `error.hpp`.
+- **Related free operations share a resource-named header.** Group functions that
+  operate on one resource together, as `filesystem/attributes.hpp` does for file
+  attributes. `desktop/shell/folder.hpp` owns Shell operations on a folder; it
+  currently has `notify_folder_changed()`. Add later folder operations there
+  rather than creating a header per function. A header can start with one
+  function: its stable resource boundary is what lets it grow. Keep unrelated
+  Shell operations in their own resource headers. Generic error conversion stays
+  in `error.hpp`.
 
 **The move trigger — the second real consumer.** Keep a thing local until a
 *second* wrapper genuinely needs it; only then lift it into the appropriate shared

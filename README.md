@@ -159,7 +159,7 @@ system icon, or a non-shared `LoadImageW`) — never a shared system handle.
 | `winwrap/desktop/window/message_router.hpp` | routes a message to composed mixins, then the native default procedure |
 | `winwrap/desktop/window/notification/command/*.hpp` | control notification mixins (`notification::Click`, `TextChange`, `SelectionChange`) and parent-to-child reflection |
 | `winwrap/desktop/message_loop.hpp` | `run()` and `quit()` |
-| `winwrap/desktop/shell/change_notifications.hpp` | `notify_folder_changed()` — tell Explorer a folder changed |
+| `winwrap/desktop/shell/folder.hpp` | `notify_folder_changed()` — tell Explorer a folder changed |
 | `winwrap/filesystem/attributes.hpp` | file-attribute queries and updates |
 | `winwrap/device.hpp` | `Device` — present-interface paths, synchronous open and control |
 | `winwrap/error.hpp` | `last_error()` / `check()` — Win32 codes as `std::error_code` |

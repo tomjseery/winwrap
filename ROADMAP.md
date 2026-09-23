@@ -530,7 +530,7 @@ engine, no theming framework, no widget toolkit. Not a Qt/wxWidgets replacement.
   `set_folder_icon` had bare `…W` calls in its logic; the "wait for a second consumer"
   trigger explicitly does **not** gate wrapping a raw Win32 call (see
   `CODE_CONVENTIONS.md` §3). The current API is
-  `desktop/shell/change_notifications.hpp` with `notify_folder_changed`.
+  `desktop/shell/folder.hpp` with `notify_folder_changed`.
 - More **RAII-wrapped Win32 objects** as real projects need them.
 - **Catch2 tests** that exercise behaviour without a live message pump.
 
