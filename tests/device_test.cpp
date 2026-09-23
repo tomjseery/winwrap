@@ -10,21 +10,21 @@
 
 #include "device_paths.hpp"
 
-TEST_CASE("device interface list parser accepts no present interfaces") {
+TEST_CASE("paths accepts an empty list") {
     const std::array<wchar_t, 1> empty{L'\0'};
     const auto paths{winwrap::detail::paths(empty)};
     REQUIRE(paths.has_value());
     CHECK(paths->empty());
 }
 
-TEST_CASE("Device::paths integration returns no paths for an unregistered interface class") {
+TEST_CASE("Device::paths returns no paths for an unknown interface") {
     const GUID unused_interface{
         0x44cf8f39, 0x4a5f, 0x4ec4, {0x97, 0x28, 0x62, 0x5e, 0xd1, 0x01, 0x84, 0x3d}};
     const auto paths{winwrap::Device::paths(unused_interface)};
     REQUIRE(paths.has_value());
     CHECK(paths->empty());
 }
-TEST_CASE("device interface list parser preserves one or several paths") {
+TEST_CASE("paths preserves one or more entries") {
     const std::array<wchar_t, 6> one{L'o', L'n', L'e', L'\0', L'\0', L'\0'};
     const auto one_path{winwrap::detail::paths(one)};
     REQUIRE(one_path.has_value());
@@ -39,7 +39,7 @@ TEST_CASE("device interface list parser preserves one or several paths") {
     CHECK((*paths)[1] == L"two");
 }
 
-TEST_CASE("device interface list parser rejects malformed termination") {
+TEST_CASE("paths rejects malformed termination") {
     const std::array<wchar_t, 2> no_terminator{L'a', L'b'};
     const std::array<wchar_t, 2> no_list_end{L'a', L'\0'};
     const std::array<wchar_t, 4> trailing_data{L'a', L'\0', L'\0', L'b'};
