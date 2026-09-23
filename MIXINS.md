@@ -6,13 +6,13 @@ This is the pattern the library repeats for every message feature, so it's
 written down once here.
 
 This describes the current implementation, not a guarantee that every lifecycle
-edge is settled. [Library debt](lib/TECH_DEBT.md) owns the outstanding result,
+edge is settled. [Library debt](libs/winwrap/TECH_DEBT.md) owns the outstanding result,
 reflection, header and reentrancy contracts; [ASSESSMENT.md](ASSESSMENT.md) explains
 the recommended evolution.
 
 See also: [VISION.md](VISION.md) (the "on-event callbacks, hiding the `WM_COMMAND`-id
-plumbing" goal), `lib/include/winwrap/mixins.hpp` (the mixins) and
-`lib/include/winwrap/message_reflection.hpp` (the reflection engine), `CODE_CONVENTIONS.md §3`
+plumbing" goal), `libs/winwrap/include/winwrap/window/mixins/` (the mixins) and
+`libs/winwrap/include/winwrap/window/message_reflection.hpp` (the reflection engine), `CODE_CONVENTIONS.md §3`
 (where shared code lives).
 
 ## The two kinds of message mixin
@@ -58,9 +58,9 @@ mixin reflects *every* control, so **adding a mixin never touches the parent.**
    };
    ```
 
-2. Add the one-line `#include` to the `mixins.hpp` umbrella.
+2. Keep the header self-contained; the per-header check enforces it.
 
-3. Compose it on a control in `controls/<name>.hpp`:
+3. Compose it on a control in `window/controls/<name>.hpp`:
 
    ```cpp
    class Edit final : public Control<Edit, TextChangeable> {
@@ -97,7 +97,8 @@ Window features are **hook** mixins (the taxonomy above): the message arrives at
 the window itself — no reflection, no id plumbing — and the natural handler is
 code on the derived window type. `FileDroppable` is the worked example.
 
-1. Add `mixins/<name>.hpp`, same shape as `paintable.hpp`: a `WW_CASE` per
+1. Add `window/mixins/<name>.hpp`, same shape as `paintable.hpp`: include
+   `winwrap/window/detail/hook_case.hpp` and write a `WINWRAP_HOOK_CASE` per
    message. If the message carries a packed payload, unpack it in a local
    `make_*` helper so the hook sees typed values, never raw `WPARAM`/`LPARAM`:
 
@@ -112,7 +113,7 @@ code on the derived window type. `FileDroppable` is the worked example.
                                  })
                        DragAcceptFiles(self.hwnd(), TRUE);
                    break;
-               WW_CASE(WM_DROPFILES,
+               WINWRAP_HOOK_CASE(WM_DROPFILES,
                        self.on_files_dropped(make_dropped_paths(reinterpret_cast<HDROP>(wparam))));
                default:
                    break;
@@ -122,8 +123,9 @@ code on the derived window type. `FileDroppable` is the worked example.
    };
    ```
 
-2. Add the one-line `#include` to the `mixins.hpp` umbrella — that's what places
-   the file inside the `WW_CASE` `#define`/`#undef` window.
+2. Keep the header self-contained — it must compile on its own; the per-header
+   check in `tests/winwrap/CMakeLists.txt` enforces that. There is no aggregate
+   header to register it in.
 
 3. Compose it through `Window`'s mixin pack — no library edit:
 

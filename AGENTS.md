@@ -12,11 +12,13 @@ Winwrap's public-API conventions are project-specific:
 
 ## Layout
 
-`lib/include/winwrap/` — public headers (`window.hpp`, `control.hpp` + `controls/`,
-`notify_icon.hpp`, `menu.hpp`, `device.hpp`, `mixins.hpp` + `mixins/`,
-`error.hpp`); `lib/src/` —
-three `.cpp`s; `tests/` — Catch2, one file per type. Build from an *x64 Native Tools*
-prompt: `cmake --preset dev`, `cmake --build --preset dev`, `ctest --preset dev`.
+`libs/winwrap/include/winwrap/` — public headers: `window/` (`window.hpp`,
+`control.hpp`, `controls/`, `mixins/`, dispatch, reflection and `message_loop.hpp`),
+`notify_icon.hpp`, `menu.hpp`, `device.hpp`, `drop.hpp`, `error.hpp`,
+`filesystem/attributes.hpp` and `shell/folder.hpp`; `libs/winwrap/src/` — three
+`.cpp`s; `tests/winwrap/` — Catch2, one file per type, plus a per-header compile
+check. Build from an *x64 Native Tools* prompt: `cmake --preset dev`,
+`cmake --build --preset dev`, `ctest --preset dev`.
 
 ## Terminology
 

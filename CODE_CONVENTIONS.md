@@ -77,8 +77,8 @@ As the library grows, decide *where* a thing belongs by what conceptually needs 
   the "TaskbarCreated" broadcast.
 - **Cross-cutting concerns live in concept-named shared headers.** A utility every
   wrapper uses goes in a focused header named for the concept. `error.hpp`
-  (`last_error`, `check`) is the precedent; `fs.hpp` (file attributes) and `shell.hpp`
-  (Explorer notifications) followed.
+  (`last_error`, `check`) is the precedent; `filesystem/attributes.hpp` (file
+  attributes) and `shell/folder.hpp` (Explorer folder notifications) followed.
 
 **The move trigger — the second real consumer.** Keep a thing local until a
 *second* wrapper genuinely needs it; only then lift it into the appropriate shared
@@ -89,8 +89,8 @@ wrong before you've seen two real uses.
 Set the **convention** (the destination + naming) early so there's no sprawl and the
 eventual move is mechanical; do the **extraction** late, when the trigger fires. Worked
 example: `taskbar_created_message()` stays on `NotifyIcon` today, but its home when it
-moves is `shell.hpp` — so if an `ITaskbarList3` wrapper ever shares the Explorer-restart
-concern, it moves there with no redesign.
+moves is a `shell/` header — so if an `ITaskbarList3` wrapper ever shares the
+Explorer-restart concern, it moves there with no redesign.
 
 The second-consumer trigger governs **extracting shared internals**, not adding
 ordinary operations to a public wrapper. Public coverage and native escape hatches

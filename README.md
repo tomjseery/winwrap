@@ -51,9 +51,9 @@ define the boundary between wrapper operations and native interoperability.
 A window with a button, wired to a click handler:
 
 ```cpp
-#include <winwrap/controls.hpp>
-#include <winwrap/message_loop.hpp>
-#include <winwrap/window.hpp>
+#include <winwrap/window/controls/button.hpp>
+#include <winwrap/window/message_loop.hpp>
+#include <winwrap/window/window.hpp>
 
 class MainWindow : public winwrap::Window<MainWindow> {
 public:
@@ -150,13 +150,13 @@ system icon, or a non-shared `LoadImageW`) — never a shared system handle.
 
 | Header | Gives you |
 |---|---|
-| `winwrap/window.hpp` | `Window<T, Mixins…>` — registration, the callback→object bridge, dispatch, teardown |
-| `winwrap/control.hpp`, `winwrap/controls.hpp` | `Control<T, Mixins…>` and concrete `Button`, `Edit`, `Checkbox`, `ComboBox` |
+| `winwrap/window/window.hpp` | `Window<T, Mixins…>` — registration, the callback→object bridge, dispatch, teardown |
+| `winwrap/window/control.hpp`, `winwrap/window/controls/*.hpp` | `Control<T, Mixins…>` and concrete `Button`, `Edit`, `Checkbox`, `ComboBox` |
 | `winwrap/notify_icon.hpp` | `NotifyIcon` — a system-tray icon, plus the Explorer-restart re-add path (`taskbar_created_message()` → `add()`) |
 | `winwrap/menu.hpp` | `Menu` — popup menus, items by id or by lambda |
 | `winwrap/drop.hpp` | `Drop` — the `WM_DROPFILES` query protocol as a type |
-| `winwrap/mixins.hpp` | the composable behaviours (`FileDroppable`, `Paintable`, `Clickable`, …) |
-| `winwrap/message_loop.hpp` | `run()` and `quit()` |
+| `winwrap/window/mixins/*.hpp` | the composable behaviours (`FileDroppable`, `Paintable`, `Clickable`, …) |
+| `winwrap/window/message_loop.hpp` | `run()` and `quit()` |
 | `winwrap/device.hpp` | `Device` — present-interface paths, synchronous open and control |
 | `winwrap/error.hpp` | `last_error()` / `check()` — Win32 codes as `std::error_code` |
 

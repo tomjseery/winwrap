@@ -9,8 +9,8 @@ the work queue in [ROADMAP.md](ROADMAP.md), and dated evidence in
 
 | Area | Resolution checklist |
 |---|---|
-| Native binding, lifetime, errors, dispatch, controls, menus, tray and other library protocols | [lib/TECH_DEBT.md](lib/TECH_DEBT.md) |
-| Test fixtures, adversarial coverage and interactive/native integration | [tests/TECH_DEBT.md](tests/TECH_DEBT.md) |
+| Native binding, lifetime, errors, dispatch, controls, menus, tray and other library protocols | [libs/winwrap/TECH_DEBT.md](libs/winwrap/TECH_DEBT.md) |
+| Test fixtures, adversarial coverage and interactive/native integration | [tests/winwrap/TECH_DEBT.md](tests/winwrap/TECH_DEBT.md) |
 | Build/distribution and repository-wide release guidance | This file |
 
 ## Build and installed consumption
