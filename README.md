@@ -155,7 +155,7 @@ system icon, or a non-shared `LoadImageW`) — never a shared system handle.
 | `winwrap/desktop/shell/notify_icon.hpp` | `NotifyIcon` — a system-tray icon, plus the Explorer-restart re-add path (`taskbar_created_message()` → `add()`) |
 | `winwrap/desktop/menu.hpp` | `Menu` — popup menus, items by id or by lambda |
 | `winwrap/desktop/drop.hpp` | `Drop` — the `WM_DROPFILES` query protocol as a type |
-| `winwrap/desktop/window/mixins/*.hpp` | window message mixins (`FileDroppable`, `PaintMessages`, …) |
+| `winwrap/desktop/window/mixins/*.hpp` | window message mixins (`FileDroppable`, `Paintable`, …) |
 | `winwrap/desktop/window/message_router.hpp` | routes a message to composed mixins, then the native default procedure |
 | `winwrap/desktop/window/notification/command/*.hpp` | control notification mixins (`notification::Click`, `TextChange`, `SelectionChange`) and parent-to-child reflection |
 | `winwrap/desktop/message_loop.hpp` | `run()` and `quit()` |

@@ -10,13 +10,13 @@
 #include "winwrap/desktop/window/base_window.hpp"
 #include "winwrap/desktop/window/message_router.hpp"
 #include "winwrap/desktop/window/notification/command/reflection.hpp"
-#include "winwrap/desktop/window/mixins/command_messages.hpp"
-#include "winwrap/desktop/window/mixins/focus_messages.hpp"
-#include "winwrap/desktop/window/mixins/keyboard_messages.hpp"
+#include "winwrap/desktop/window/mixins/window_command.hpp"
+#include "winwrap/desktop/window/mixins/focus_aware.hpp"
+#include "winwrap/desktop/window/mixins/keyboard_input.hpp"
 #include "winwrap/desktop/window/mixins/lifecycle.hpp"
-#include "winwrap/desktop/window/mixins/mouse_messages.hpp"
-#include "winwrap/desktop/window/mixins/paint_messages.hpp"
-#include "winwrap/desktop/window/mixins/size_messages.hpp"
+#include "winwrap/desktop/window/mixins/mouse_input.hpp"
+#include "winwrap/desktop/window/mixins/paintable.hpp"
+#include "winwrap/desktop/window/mixins/size_change.hpp"
 
 namespace winwrap {
 
@@ -67,8 +67,8 @@ struct WindowConfig {
 ///                 after the built-ins in the order given.
 template <typename T, typename... Mixins>
 class Window : public BaseWindow,
-               public MessageRouter<Lifecycle, SizeMessages, CommandMessages, notification::CommandReflection, PaintMessages,
-                                        MouseMessages, KeyboardMessages, FocusMessages, Mixins...> {
+               public MessageRouter<Lifecycle, SizeChange, WindowCommand, notification::CommandReflection, Paintable,
+                                        MouseInput, KeyboardInput, FocusAware, Mixins...> {
 public:
     Window(const Window&) = delete;
     Window& operator=(const Window&) = delete;

@@ -143,14 +143,14 @@ app-side GDI (`CreateIconIndirect`); adoption must have an explicit ownership co
   C++23 **deducing this** on 2026-07-12 (see *Dispatch design review* below) —
   mixins are plain structs whose `handle_message` deduces the final type through an
   explicit object parameter (`this auto& self`).
-  Seven empty-base mixins — `Lifecycle`, `SizeMessages`, `CommandMessages`, `PaintMessages`,
-  `MouseMessages`, `KeyboardMessages`, `FocusMessages` — each expose
+  Seven empty-base mixins — `Lifecycle`, `SizeChange`, `WindowCommand`, `Paintable`,
+  `MouseInput`, `KeyboardInput`, `FocusAware` — each expose
   `std::optional<LRESULT> handle_message(UINT, WPARAM, LPARAM)`: engaged = handled,
   `nullopt` = pass on. `MessageRouter<Mixins...>` chains them via a fold
   expression (`||`), short-circuiting on first match, and its `route_message`
   falls back to the derived type's `default_proc` when no mixin claims the
   message. Both `Window<T>` and `Control<T>` inherit it. The `WINWRAP_HOOK_CASE(message, call)` macro (defined in
-  `desktop/window/detail/hook_case.hpp`, included by each hook mixin) is the only tool that can simultaneously put a maybe-absent member
+  `desktop/window/mixins/hook_case.hpp`, included by each hook mixin) is the only tool that can simultaneously put a maybe-absent member
   into an unevaluated `requires` and `return`/`break` from the caller's frame — one
   line per case, zero duplication. No vtables; composition is compile-time but
   message matching is runtime. Derived
@@ -181,7 +181,7 @@ app-side GDI (`CreateIconIndirect`); adoption must have an explicit ownership co
     final type is spelled from `self` now that no `Derived` parameter exists).
     A member *named* like the hook whose
     signature doesn't match becomes a compile error instead of a silent no-fire.
-    `CommandMessages` (macro-free) gets the same assert by hand. Limits: pure-typo
+    `WindowCommand` (macro-free) gets the same assert by hand. Limits: pure-typo
     hooks (`on_pain`) still need the synthetic-message Catch2 tests (TECH_DEBT);
     an overloaded hook name evades the check (acceptable edge).
   - **(b) ✅ DONE (2026-07-12) — deducing-this respelling (P0847, MSVC since
@@ -250,7 +250,7 @@ app-side GDI (`CreateIconIndirect`); adoption must have an explicit ownership co
   so the id machinery is invisible library plumbing (like control-notification ids).
   **Escape hatch:** the legacy `add_item(id, text)` overload stays; a picked id with
   no stored handler is re-posted as `WM_COMMAND` to the owner → `on_command(id)` via
-  `CommandMessages` — legacy menus, mixed menus, and accelerators behave exactly as
+  `WindowCommand` — legacy menus, mixed menus, and accelerators behave exactly as
   before. Per item there is exactly one route, chosen by which overload added it.
   User-chosen ids must stay below `0xE000`; on a collision the callback wins.
 - **Tray events exposed raw** (you `switch` on the callback message in
@@ -357,7 +357,7 @@ below; nothing here is a new pillar.
 missing wrappers.** In priority order:
 
 1. **Painting protocol — `on_paint()` hands the user nothing** *(shape to reassess)*.
-   `PaintMessages` fires `self.on_paint()` with no DC, and the library contains no
+   `Paintable` fires `self.on_paint()` with no DC, and the library contains no
    `BeginPaint` adapter. WIL already supplies `wil::BeginPaint`,
    `wil::unique_hdc_paint` and selection guards. Use those first; a proposed
    `on_paint(PaintDc&)` needs to add a useful context/protocol contract, not duplicate
@@ -369,12 +369,12 @@ missing wrappers.** In priority order:
    it directly before reflection exists. Trackbars primarily use `WM_HSCROLL` /
    `WM_VSCROLL`. Prioritize coherent reflection before broadening the catalog. Trips the
    `return 0` ceiling recorded in TECH_DEBT — resolve that at the same time.
-3. **Right-click hooks — the missing half of `Menu`.** `MouseMessages` covers
+3. **Right-click hooks — the missing half of `Menu`.** `MouseInput` covers
    `WM_MOUSEMOVE` / `WM_LBUTTONDOWN` / `WM_LBUTTONUP` only, so a window that owns a
    context `Menu` can't detect the click that should show it. Add `on_rbutton_down` /
    `on_rbutton_up` (and consider `WM_CONTEXTMENU`, which also covers the keyboard menu
    key). *Not* a v0.1 blocker: the tray path delivers `WM_CONTEXTMENU` through
-   `NotifyIcon`'s callback message, not through `MouseMessages`.
+   `NotifyIcon`'s callback message, not through `MouseInput`.
 4. **UTF-8 ↔ UTF-16 conversion is absent.** No `MultiByteToWideChar` /
    `WideCharToMultiByte` anywhere in `include/` or `src/`. The house style mandates
    UTF-8 core / UTF-16 boundary and the whole API takes `const wchar_t*`, yet the
@@ -459,7 +459,7 @@ widget; `Control<T>` supplies the same compile-time `on_*` dispatch as `Window<T
   *additive* layer.~~ **✅ Built (2026-06-30):** the parent's `notification::CommandReflection` mixin now
   bounces the notification back down to the control (`notification::wm_command_reflect`), where the
   control's own mixin fires the callback. Menu / accelerator commands
-  (`lparam == 0`) still go to the window's `on_command(id)` via `CommandMessages`.
+  (`lparam == 0`) still go to the window's `on_command(id)` via `WindowCommand`.
 - **Lifetime** mirrors `Window<T>`: non-movable, `create()` →
   `std::expected<std::unique_ptr<T>, std::error_code>`, held as a `unique_ptr`
   member of the owner window; the parent destroys the child HWND (no

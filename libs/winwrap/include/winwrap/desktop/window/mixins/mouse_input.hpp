@@ -6,13 +6,13 @@
 
 #include <optional>
 
-#include "winwrap/desktop/window/detail/hook_case.hpp"
+#include "winwrap/desktop/window/mixins/hook_case.hpp"
 
 namespace winwrap {
 
 /// Routes the mouse messages to `on_mouse_move` / `on_lbutton_down` /
 /// `on_lbutton_up`, each taking the client-area (x, y) from lparam.
-struct MouseMessages {
+struct MouseInput {
     std::optional<LRESULT> handle_message([[maybe_unused]] this auto& self, UINT msg, WPARAM,
                                           LPARAM lparam) {
         switch (msg) {

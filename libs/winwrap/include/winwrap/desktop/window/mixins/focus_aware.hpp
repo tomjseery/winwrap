@@ -4,16 +4,18 @@
 
 #include <optional>
 
-#include "winwrap/desktop/window/detail/hook_case.hpp"
+#include "winwrap/desktop/window/mixins/hook_case.hpp"
 
 namespace winwrap {
 
-/// Routes `WM_PAINT` to the final type's `on_paint()` when defined.
-struct PaintMessages {
+/// Routes `WM_SETFOCUS` / `WM_KILLFOCUS` to the final type's `on_focus(gained)` --
+/// true on gain, false on loss.
+struct FocusAware {
     std::optional<LRESULT> handle_message([[maybe_unused]] this auto& self, UINT msg, WPARAM,
                                           LPARAM) {
         switch (msg) {
-            WINWRAP_HOOK_CASE(WM_PAINT, self.on_paint());
+            WINWRAP_HOOK_CASE(WM_SETFOCUS, self.on_focus(true));
+            WINWRAP_HOOK_CASE(WM_KILLFOCUS, self.on_focus(false));
             default:
                 break;
         }
