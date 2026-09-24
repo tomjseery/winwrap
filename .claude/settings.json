@@ -1,0 +1,19 @@
+{
+  "extraKnownMarketplaces": {
+    "cpp-agents": {
+      "source": {
+        "source": "github",
+        "repo": "tj-agents/cpp"
+      },
+      "autoUpdate": true
+    }
+  },
+  "enabledPlugins": {
+    "cpp@cpp-agents": true,
+    "msvc@cpp-agents": true,
+    "win32@cpp-agents": true,
+    "base@cpp-agents": false,
+    "gcc@cpp-agents": false,
+    "windows@cpp-agents": false
+  }
+}

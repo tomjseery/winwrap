@@ -7,7 +7,7 @@ compile_commands.json
 !.vscode/extensions.json
 !.vscode/launch.json
 
-# Claude Code local config (settings.local.json, skills, commands) -- not committed.
-# Note: the root CLAUDE.md (project instructions) is tracked deliberately; this is
-# only the .claude/ working dir.
-.claude/
+# Claude Code: the shared settings.json (marketplace + enabled plugins) is committed;
+# per-machine settings stay local.
+.claude/*
+!.claude/settings.json
