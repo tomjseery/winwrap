@@ -29,7 +29,7 @@ Apply Tommy's approved window-subsystem organization and clearer file names. Kee
 ## Work and verification
 
 1. Record current include and CMake references, then move files and update includes, tests, examples, and current guidance.
-2. Resolve the `WW_CASE` umbrella dependency so each focused mixin header can be included by itself.
+2. Resolve the old `WW_CASE` umbrella dependency so each focused mixin header can be included by itself; use the global `WINWRAP_HOOK_CASE` spelling to avoid short-prefix macro collisions.
 3. Integrate the Device parser into its owner and preserve meaningful malformed-input coverage.
 4. Build and run tests with the selected MSVC preset; check standalone public-header compilation and an installed-consumer path if available.
 5. Review the diff for accidental API changes, stale paths, and unrelated working-tree files; update this plan with observed results.

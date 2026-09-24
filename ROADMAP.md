@@ -175,7 +175,7 @@ app-side GDI (`CreateIconIndirect`); adoption must have an explicit ownership co
   typed hooks, dead branches eliminated — not cycles saved.
   Follow-ups:
   - **(a) Additive, recommended — hook-signature hardening.** Extend the macro to
-    `WW_CASE(message, hook, call)`; in the `if constexpr` *else* branch add
+    `WINWRAP_HOOK_CASE(message, hook, call)`; in the `if constexpr` *else* branch add
     `static_assert(!requires { &std::remove_cvref_t<decltype(self)>::hook; },
     "winwrap: '" #hook "' exists but doesn't match the hook signature")` (the
     final type is spelled from `self` now that no `Derived` parameter exists).
@@ -508,7 +508,7 @@ engine, no theming framework, no widget toolkit. Not a Qt/wxWidgets replacement.
   final type defining `on_files_dropped` (`if constexpr (requires …)`), so a
   handler-less compose registers, and leaks, nothing. A drop window is now just
   `Window<T, FileDroppable>` + the hook — no `.ex_style = WS_EX_ACCEPTFILES` at
-  the call site. Registration rides `WM_NCCREATE` as a pass-through: `WW_CASE`
+  the call site. Registration rides `WM_NCCREATE` as a pass-through: `WINWRAP_HOOK_CASE`
   returns 0 (which would abort creation) and the built-in `Lifecycle` already
   claims `WM_CREATE`, so neither hook path was available. Tested against a real
   created window (self-registration bit set).
