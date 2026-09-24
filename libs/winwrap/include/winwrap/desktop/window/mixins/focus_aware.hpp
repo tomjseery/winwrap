@@ -14,8 +14,8 @@ struct FocusAware {
     std::optional<LRESULT> handle_message([[maybe_unused]] this auto& self, UINT msg, WPARAM,
                                           LPARAM) {
         switch (msg) {
-            WINWRAP_HOOK_CASE(WM_SETFOCUS, self.on_focus(true));
-            WINWRAP_HOOK_CASE(WM_KILLFOCUS, self.on_focus(false));
+            WW_CASE(WM_SETFOCUS, self.on_focus(true));
+            WW_CASE(WM_KILLFOCUS, self.on_focus(false));
             default:
                 break;
         }

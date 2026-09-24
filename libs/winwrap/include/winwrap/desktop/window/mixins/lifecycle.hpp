@@ -15,9 +15,9 @@ struct Lifecycle {
     std::optional<LRESULT> handle_message([[maybe_unused]] this auto& self, UINT msg, WPARAM,
                                           LPARAM) {
         switch (msg) {
-            WINWRAP_HOOK_CASE(WM_CREATE, self.on_create());
-            WINWRAP_HOOK_CASE(WM_CLOSE, self.on_close());
-            WINWRAP_HOOK_CASE(WM_DESTROY, self.on_destroy());
+            WW_CASE(WM_CREATE, self.on_create());
+            WW_CASE(WM_CLOSE, self.on_close());
+            WW_CASE(WM_DESTROY, self.on_destroy());
             default:
                 break;
         }

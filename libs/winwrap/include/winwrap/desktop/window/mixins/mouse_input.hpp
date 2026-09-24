@@ -16,11 +16,11 @@ struct MouseInput {
     std::optional<LRESULT> handle_message([[maybe_unused]] this auto& self, UINT msg, WPARAM,
                                           LPARAM lparam) {
         switch (msg) {
-            WINWRAP_HOOK_CASE(WM_MOUSEMOVE,
+            WW_CASE(WM_MOUSEMOVE,
                               self.on_mouse_move(GET_X_LPARAM(lparam), GET_Y_LPARAM(lparam)));
-            WINWRAP_HOOK_CASE(WM_LBUTTONDOWN,
+            WW_CASE(WM_LBUTTONDOWN,
                               self.on_lbutton_down(GET_X_LPARAM(lparam), GET_Y_LPARAM(lparam)));
-            WINWRAP_HOOK_CASE(WM_LBUTTONUP,
+            WW_CASE(WM_LBUTTONUP,
                               self.on_lbutton_up(GET_X_LPARAM(lparam), GET_Y_LPARAM(lparam)));
             default:
                 break;

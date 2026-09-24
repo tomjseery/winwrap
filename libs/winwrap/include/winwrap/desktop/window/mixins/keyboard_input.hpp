@@ -13,7 +13,7 @@ struct KeyboardInput {
     std::optional<LRESULT> handle_message([[maybe_unused]] this auto& self, UINT msg, WPARAM wparam,
                                           LPARAM) {
         switch (msg) {
-            WINWRAP_HOOK_CASE(WM_KEYDOWN, self.on_key_down(static_cast<WORD>(wparam)));
+            WW_CASE(WM_KEYDOWN, self.on_key_down(static_cast<WORD>(wparam)));
             default:
                 break;
         }

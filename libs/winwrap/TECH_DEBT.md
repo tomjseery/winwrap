@@ -40,7 +40,7 @@ entry once its resolution condition is met; Git preserves the history.
 
 ## Dispatch, reflection and headers
 
-- **M2 / result-bearing hooks and setup.** `WINWRAP_HOOK_CASE` discards returns, including
+- **M2 / result-bearing hooks and setup.** `WW_CASE` discards returns, including
   `on_create() == -1`; `on_created()` cannot return setup failure. The router
   itself already supports nonzero LRESULT. **Resolve:** message-specific results,
   correct creation rejection/rollback and fallible setup. WM_NOTIFY, WM_CTLCOLOR,
