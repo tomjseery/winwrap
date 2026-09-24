@@ -1,10 +1,10 @@
 # WinWrap structure and naming update
 
-Owner: `Refactor/Winwrap-Structure`, based on `Feature/Device-Io` because `Device` is not yet on `origin/main`. Continue in this existing worktree and draft PR #8. Do not create another worktree. A fresh Codex session is being launched to take over the remaining review.
+Owner: `Refactor/Winwrap-Structure`, based on `Feature/Device-Io` because `Device` is not yet on `origin/main`. Continue in this existing worktree and draft PR #8. Do not create another worktree. A fresh Codex session is being launched to investigate and fix the reopened mixin layout decision.
 
 ## Authorized outcome
 
-Apply Tommy's approved window-subsystem organization and clearer file names. Keep the descriptive `WindowConfig`, `ControlConfig`, and `NotifyIconConfig` names. Fold the private interface-list parser into the Device component. Preserve runtime behavior and the `winwrap::winwrap` target. Do not touch driver or host machine state.
+Apply Tommy's approved window-subsystem organization and clearer file names. Investigate and fix the inconsistent mixin categorization and naming: `notification::TextChange` is a mixin under `notification/command/`, while other mixins are grouped under `window/mixins/`. Organize by the Win32 behavior or protocol the header represents, with "mixin" treated as a composition mechanism rather than a mandatory folder category. Do not impose `-able` on every mixin; use names that describe each behavior naturally. Keep the descriptive `WindowConfig`, `ControlConfig`, and `NotifyIconConfig` names. Fold the private interface-list parser into the Device component. Preserve runtime behavior and the `winwrap::winwrap` target. Do not touch driver or host machine state.
 
 ## Decisions
 
@@ -20,11 +20,11 @@ Apply Tommy's approved window-subsystem organization and clearer file names. Kee
 - The interface-list parser belongs in `device.hpp`, as Tommy requested. Remove the separate `device_paths.hpp` while retaining the malformed-list tests. Keep the parser in `detail` unless a type-owned public parsing operation has a real consumer; do not expose a test-only Device method.
 - Keep `filesystem/attributes.hpp`; move the Shell operation as described above.
 - Keep `Menu`, `NotifyIcon`, and `Drop` outside the window folder as independent desktop resources. Keep `Device`, filesystem attributes, and generic error support outside desktop.
-- Keep the eight `on_*` hook mixins flat under `desktop/window/mixins/`. The control notification callbacks and reflection stay under their shared `notification/command/` protocol. Split by an actual future shared protocol, not by file count or a speculative taxonomy.
+- Reopened 2026-09-24: the eight `on_*` hook mixins currently sit in `desktop/window/mixins/`, while `TextChange`, `Click`, `SelectionChange`, and `CommandReflection` are also mixins but sit in `notification/command/`. Tommy rejected treating the coding mechanism as an exclusive folder category. Investigate all these components and settle one domain/protocol-based layout before moving files. The previous flat-`mixins/` decision is superseded.
 - Mirror the single library target with `libs/winwrap/` and `tests/winwrap/`; retain the public target and include root.
 - Keep `WW_CASE` as the concise, library-prefixed hook macro. `hook_case.hpp` stays beside the mixins that include it; each public mixin header must compile independently.
 - Name the message fold `MessageRouter` with `route_message`; mixins keep `handle_message`. Use singular behavior names for hook mixins: `Lifecycle`, `SizeChange`, `WindowCommand`, `Paintable`, `MouseInput`, `KeyboardInput`, `FocusAware`, and `FileDroppable`. `-able` is valid for an actual capability; avoid a blanket `*Messages` suffix. The callback mixins remain named for their notifications.
-- Put callback mixins under `desktop/window/notification/command/` with short names in the `notification` namespace: `Click`, `TextChange`, and `SelectionChange`. They expose callbacks for control notifications; the control itself already supports clicks or text changes without the mixin.
+- Callback mixins currently live under `desktop/window/notification/command/` with short names in the `notification` namespace: `Click`, `TextChange`, and `SelectionChange`. They expose callbacks for control notifications; the control itself already supports clicks or text changes without the mixin. Review their placement and names alongside all other mixins rather than assuming this exception is final.
 - Use the established Win32 term *message reflection* for a parent returning a control notification to the child. Scope the current implementation to `WM_COMMAND` with `notification::CommandReflection` under `desktop/window/notification/command/`.
 
 ## Work and verification
@@ -57,6 +57,7 @@ Apply Tommy's approved window-subsystem organization and clearer file names. Kee
 - 2026-09-24 (layout validation): MSVC 19.51 in the VS x64 developer environment rebuilt the library and compiled each public header independently through `winwrap_header_check`; CTest passed 33/33. A fresh install contained `desktop/notify_icon.hpp` and `desktop/shell/change_notification.hpp` and neither old path. A newly configured consumer found the installed `winwrap::winwrap` package, included both new headers, linked, and exited 0. Current source and guidance have no old include paths outside historical plan entries; `git diff --check` passed. `CommandReflection` and the draft PR update remain.
 - 2026-09-24 (reflection review): Tommy agreed to retain `notification::CommandReflection` as a separate mixin from `WindowCommand`. Their `WM_COMMAND` cases have distinct sources and handling; both already compose into `Window`. No reflection code change is needed.
 - 2026-09-24 (PR preparation): Updated draft PR #8's body with the approved resource/protocol layout and current validation. GitHub still reports PR #7 open and draft, so #8 remains based on `Feature/Device-Io`. The verified layout is ready for the branch commit and push; do not merge #8 without a later instruction.
+- 2026-09-24 (mixin layout reopened): Tommy identified that `notification::TextChange` is a mixin despite living under `notification/command/`, while eight other mixins live under `mixins/`. This makes the current directory rule inconsistent. The `-able` suffix is also not universal: `TextChangeable` would obscure the notification's meaning. Tommy requested a fresh handoff to investigate and fix the categorization and naming. At handoff preparation, `git status --short --branch` was clean and synchronized with `origin/Refactor/Winwrap-Structure` at `bd5c968`; the previous layout slice is complete. A new owner will work in this same worktree, with no new worktree and no second active implementation writer.
 
 ## Structure review
 
@@ -65,5 +66,6 @@ Apply Tommy's approved window-subsystem organization and clearer file names. Kee
 
 ## Next Steps
 
-1. Keep draft PR #8 on `Refactor/Winwrap-Structure` for review. Do not merge it without a later instruction.
-2. Once Device PR #7 merges, retarget #8 to the merged base and reconcile its diff and checks. Follow-up in icon-dropper is a separate repository and is not authorized here. The MSVC AddressSanitizer component is missing on this machine; the `dev` preset cannot link until it is installed.
+1. Read `VISION.md`, `ROADMAP.md`, `MIXINS.md`, `MESSAGE_LOOP_DESIGN.md`, and `CODE_CONVENTIONS.md`; inspect every public mixin, its include path, namespace, composed owner, and Win32 message/notification role. Explain the consistent domain/protocol layout and natural naming rule to Tommy, including why `TextChange` belongs with control notifications and whether a `mixins/` directory serves any real navigation purpose. Do not treat the former flat-folder decision as approval.
+2. Implement the agreed layout and names in this same worktree. Update public includes, examples, tests, CMake/header checks, guidance, and draft PR #8. Preserve runtime behavior and native interop. Validate with the available MSVC preset, independent public-header compilation, relevant tests, and an installed consumer; record actual results here.
+3. Keep draft PR #8 open for review and do not merge it without a later instruction. Once Device PR #7 merges, retarget #8 to the merged base and reconcile its diff and checks. Follow-up in icon-dropper is a separate repository and is not authorized here. The MSVC AddressSanitizer component is missing on this machine; the `dev` preset cannot link until it is installed.
