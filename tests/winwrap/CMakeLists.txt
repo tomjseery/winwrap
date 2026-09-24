@@ -45,7 +45,7 @@ set(winwrap_header_units)
 foreach(header IN LISTS winwrap_public_headers)
     string(MAKE_C_IDENTIFIER ${header} unit)
     set(unit_source "#include \"${header}\"\n")
-    if(NOT header MATCHES "/detail/")
+    if(NOT header STREQUAL "winwrap/desktop/window/message/detail/hook_case.hpp")
         string(APPEND unit_source
             "#ifdef WW_CASE\n#error \"${header} leaks WW_CASE\"\n#endif\n")
     endif()
