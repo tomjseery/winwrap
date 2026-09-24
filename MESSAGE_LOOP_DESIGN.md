@@ -8,8 +8,10 @@ limitations and future application-driven loop work are assessed in
 
 ## Status: implemented (2026-07-13)
 
-Built and MSVC-verified in `lib/include/winwrap/message_loop.hpp` (`run()` + `quit()`)
-with four passing Catch2 tests in `tests/message_loop_test.cpp`. Two deltas from the
+Built and MSVC-verified in `libs/winwrap/include/winwrap/desktop/message_loop.hpp`
+(`run()` + `quit()`) with four passing Catch2 tests in
+`tests/winwrap/desktop/message_loop_test.cpp`. Historical paths below record the original
+design. Two deltas from the
 proposal below:
 
 - **`quit(int = 0)` was added** — the proposal's Q5 originally said *not* to (see the

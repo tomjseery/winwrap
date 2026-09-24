@@ -12,7 +12,10 @@ and out of scope for this correction. Live driver work remains prohibited.
 - `Device::paths(GUID)` returns present interface paths. The lab alone requires exactly one.
 - `Device::open(Device::Config)` selects access/share policy; `control` performs synchronous I/O and returns the actual byte count; `handle()` borrows.
 - The lab owns its GUID, IOCTL, IdentityRequest, and Identity::decode. Its `query_identity` is a protocol adapter. Its `open` helper currently supplies fixed lab policy and exception translation; reassess whether that helper earns its place.
-- The private MULTI_SZ helper is `winwrap::detail::paths` in `lib/src/device_paths.hpp`. `detail` is only a C++ convention for implementation code, not enforced privacy.
+- The private `DeviceIoControl` call seam is `winwrap::detail::control` in
+  `libs/winwrap/src/device_control.hpp`; the private MULTI_SZ parser remains
+  `winwrap::detail::paths`, declared in `device.hpp` and defined in `device.cpp`.
+  `detail` is only a C++ convention for implementation code, not enforced privacy.
 
 ## Current evidence
 

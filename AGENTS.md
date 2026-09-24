@@ -12,23 +12,27 @@ Winwrap's public-API conventions are project-specific:
 
 ## Layout
 
-`lib/include/winwrap/` — public headers (`window.hpp`, `control.hpp` + `controls/`,
-`notify_icon.hpp`, `menu.hpp`, `device.hpp`, `mixins.hpp` + `mixins/`,
-`error.hpp`); `lib/src/` —
-three `.cpp`s; `tests/` — Catch2, one file per type. Build from an *x64 Native Tools*
-prompt: `cmake --preset dev`, `cmake --build --preset dev`, `ctest --preset dev`.
+`libs/winwrap/include/winwrap/` — public headers: `desktop/` holds `window/`
+(`Window`, `Control`, controls, mixins, and command notifications), the
+thread's `message_loop.hpp`, `menu.hpp`, `drop.hpp`, `notify_icon.hpp`, and
+`shell/` (Shell change notifications). `device.hpp`,
+`filesystem/attributes.hpp`, `error.hpp`, and `win.hpp` remain at their
+respective non-desktop boundaries. `libs/winwrap/src/` and `tests/winwrap/`
+mirror these owners; tests include a per-header compile check. Build from an
+*x64 Native Tools* prompt: `cmake --preset dev`,
+`cmake --build --preset dev`, `ctest --preset dev`.
 
 ## Terminology
 
 | Term | Means |
 |---|---|
-| **dispatcher** | `MessageDispatcher` — compile-time-composed mixins inspect a runtime `WM_*`, then `default_proc` |
+| **router** | `MessageRouter` — tries each mixin's `handle_message` for a runtime `WM_*`, then `default_proc` |
 | **`handle_message`** | a mixin's message function; returns an engaged `optional<LRESULT>` if it handled it, `nullopt` to keep looking. First match wins |
 | **mixin** | one opt-in behaviour composed into `Window<T, Mixins...>` / `Control<T, Mixins...>` |
 | **`on_*` hook** | the public member the *user's* type defines (`on_paint`); mixins detect it with `requires` |
 | **deducing this** (C++23) | explicit object parameters deduce the receiver's static type; the native bridge must still recover the correct object |
-| **reflection** | bouncing a control notification from parent to control; `WM_COMMAND` implemented, `WM_NOTIFY` pending |
-| **`Config`** | a type-owned designated-initializer record for a multi-argument factory; legacy top-level `*Config` types remain pending migration |
+| **command reflection** | `notification::CommandReflection` sends a child control's `WM_COMMAND` notification from its parent back to the child; `WM_NOTIFY` pending |
+| **`*Config`** | a descriptively named designated-initializer record for a multi-argument factory; keep `WindowConfig`, `ControlConfig`, and `NotifyIconConfig` |
 
 ## Read on demand
 
