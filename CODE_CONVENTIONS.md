@@ -9,15 +9,18 @@ never override:
 
 Where those say *how to write C++*, this says *how winwrap shapes its API*.
 
-## 1. Type-owned names and factories
+## 1. Descriptive names and factories
 
-A name that belongs to one public type nests in that type: `Device::Config`, not
-`DeviceConfig`. Shared names stay in the enclosing namespace. A factory lives on
-the type it produces, as `Device::open` does. Introduce a separate type only when
+A public name must say what it represents at the use site. Keep descriptive
+factory-input names such as `WindowConfig`, `ControlConfig`, and
+`NotifyIconConfig`; a bare `Config` is too ambiguous as a general rule, even when
+it can be qualified by an owning type. `Device::Config` is an existing nested
+form, not a precedent for renaming the other records. A factory lives on the
+type it produces, as `Device::open` does. Introduce a separate type only when
 it enforces a rule, owns a resource, or represents a distinct concept.
 
 When a public factory takes more than about two arguments, or two easily swapped
-arguments of the same type, gather them into a nested `Config` record and use
+arguments of the same type, gather them into a descriptively named input record and use
 C++20 designated initializers. Passive config records collect input; the factory
 performs validation and resource acquisition.
 
@@ -30,9 +33,8 @@ auto device = Device::open({
 ```
 
 This makes call sites clear and leaves room for defaults without positional
-ambiguity. Private helpers with one call site may remain positional. Existing
-top-level `WindowConfig`, `ControlConfig`, and `NotifyIconConfig` predate this
-rule; their migration is tracked in TECH_DEBT.md.
+ambiguity. Private helpers with one call site may remain positional. Keep the
+existing descriptive top-level config names; they are intentional public names.
 
 Accessors use the concept name or `handle()`, without a `get_` prefix.
 A raw handle returned by an accessor is borrowed; the wrapper retains ownership.
@@ -75,10 +77,16 @@ As the library grows, decide *where* a thing belongs by what conceptually needs 
   stays in that wrapper's header, even if the underlying mechanism *looks* generic.
   `notify_icon.hpp` owns `taskbar_created_message()` — only tray icons care about
   the "TaskbarCreated" broadcast.
-- **Cross-cutting concerns live in concept-named shared headers.** A utility every
-  wrapper uses goes in a focused header named for the concept. `error.hpp`
-  (`last_error`, `check`) is the precedent; `fs.hpp` (file attributes) and `shell.hpp`
-  (Explorer notifications) followed.
+- **Name public headers for their owner.** An owning wrapper gets a type-named
+  header, such as `desktop/notify_icon.hpp`. Related free operations without a
+  type owner share a header named for their stable operation family or native
+  protocol: `filesystem/attributes.hpp` owns file-attribute operations and
+  `desktop/shell/change_notification.hpp` owns Shell change-notification calls,
+  currently `notify_folder_changed()`. A header may start with one function;
+  do not add filler APIs or a catchall to increase its count. Add a deeper
+  directory when multiple public headers form a real subsystem, not merely
+  because their implementations call the same Windows DLL. Generic error
+  conversion stays in `error.hpp`.
 
 **The move trigger — the second real consumer.** Keep a thing local until a
 *second* wrapper genuinely needs it; only then lift it into the appropriate shared
@@ -86,11 +94,11 @@ header. This is `LIBRARY_CONVENTIONS.md`'s reactive-extraction rule applied insi
 winwrap: a one-caller "utility" is premature abstraction — you'll guess the shape
 wrong before you've seen two real uses.
 
-Set the **convention** (the destination + naming) early so there's no sprawl and the
-eventual move is mechanical; do the **extraction** late, when the trigger fires. Worked
-example: `taskbar_created_message()` stays on `NotifyIcon` today, but its home when it
-moves is `shell.hpp` — so if an `ITaskbarList3` wrapper ever shares the Explorer-restart
-concern, it moves there with no redesign.
+Set the **placement rule** early so there is no sprawl; choose a precise shared
+header name when real consumers reveal the boundary. Do the **extraction** late,
+when the trigger fires. `taskbar_created_message()` stays on `NotifyIcon` today.
+If another desktop resource needs that broadcast, move the shared operation to
+a concept-named desktop header after that second use establishes its contract.
 
 The second-consumer trigger governs **extracting shared internals**, not adding
 ordinary operations to a public wrapper. Public coverage and native escape hatches

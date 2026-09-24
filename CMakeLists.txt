@@ -52,8 +52,8 @@ set(WIL_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(WIL_BUILD_PACKAGING OFF CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(wil)
 
-add_subdirectory(lib)
+add_subdirectory(libs/winwrap)
 
 if(PROJECT_IS_TOP_LEVEL AND BUILD_TESTING)
-    add_subdirectory(tests)
+    add_subdirectory(tests/winwrap)
 endif()

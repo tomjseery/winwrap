@@ -1,0 +1,174 @@
+#pragma once
+
+#include "winwrap/win.hpp"
+
+#include <expected>
+#include <memory>
+#include <system_error>
+
+#include "winwrap/desktop/window/base_window.hpp"
+#include "winwrap/desktop/window/message/focus_aware.hpp"
+#include "winwrap/desktop/window/message/keyboard_input.hpp"
+#include "winwrap/desktop/window/message/lifecycle.hpp"
+#include "winwrap/desktop/window/message/message_router.hpp"
+#include "winwrap/desktop/window/message/mouse_input.hpp"
+#include "winwrap/desktop/window/message/paintable.hpp"
+#include "winwrap/desktop/window/message/size_change.hpp"
+#include "winwrap/desktop/window/message/window_command.hpp"
+#include "winwrap/desktop/window/notification/command/reflection.hpp"
+#include "winwrap/error.hpp"
+
+namespace winwrap {
+
+/// Per-window settings passed to Window::create -- the CreateWindowExW arguments;
+/// omitted fields take the defaults below.
+struct WindowConfig {
+    const wchar_t* title{L""};         ///< Window title-bar text.
+    DWORD style{WS_OVERLAPPEDWINDOW};  ///< Window styles; the default is not visible -- OR in
+                                       ///< WS_VISIBLE, or call show().
+    DWORD ex_style{0};                 ///< Extended (WS_EX_*) styles.
+    int x{CW_USEDEFAULT};       ///< Left edge in pixels; CW_USEDEFAULT lets Windows place it.
+    int y{CW_USEDEFAULT};       ///< Top edge in pixels; CW_USEDEFAULT lets Windows place it.
+    int width{CW_USEDEFAULT};   ///< Width in pixels; CW_USEDEFAULT lets Windows size it.
+    int height{CW_USEDEFAULT};  ///< Height in pixels; CW_USEDEFAULT lets Windows size it.
+    HWND parent{nullptr};       ///< Owner/parent window; null for a top-level window.
+};
+
+/// CRTP base for a top-level window. Derive as
+/// `class MyWindow : public winwrap::Window<MyWindow>`: the base owns class
+/// registration, the WndProc->object bridge, message routing, and teardown, while
+/// T defines the on_* hooks it cares about (and optionally `configure_class` /
+/// `on_created`). Dispatch resolves at compile time (C++23 deducing this) -- no
+/// virtual, no vtable.
+///
+/// Messages route to the matching hook the window defines, or to DefWindowProcW
+/// when none claims it (see route_message, inherited from MessageRouter). Define
+/// only the hooks you need, as **public** members; they come from the composable
+/// message behaviors in <winwrap/desktop/window/message/>:
+///
+///   - `on_create()` / `on_close()` / `on_destroy()`  -- lifecycle
+///   - `on_size(w, h)`        -- `WM_SIZE` (client width/height)
+///   - `on_command(id)`       -- `WM_COMMAND` from menus and accelerators
+///   - `on_paint()`           -- `WM_PAINT`
+///   - `on_mouse_move(x, y)` / `on_lbutton_down(x, y)` / `on_lbutton_up(x, y)`
+///   - `on_key_down(vk)`      -- `WM_KEYDOWN` (virtual-key code)
+///   - `on_focus(gained)`     -- `WM_SETFOCUS` (true) / `WM_KILLFOCUS` (false)
+///
+/// For a message with a runtime id (e.g. a tray callback), shadow route_message
+/// in T and delegate the rest with `Window::route_message`.
+///
+/// Extra mixins compose *after* the built-ins (first-match-wins, so a built-in
+/// hook always beats an extra on an overlapping message); to intercept a message
+/// a built-in claims, shadow route_message instead.
+///
+/// @tparam T       The derived window type. Must provide
+///                 `static constexpr const wchar_t* window_class_name` and be
+///                 default-constructible.
+/// @tparam Mixins  Extra window mixins to compose (e.g. FileDroppable), tried
+///                 after the built-ins in the order given.
+template <typename T, typename... Mixins>
+class Window
+    : public BaseWindow,
+      public MessageRouter<Lifecycle, SizeChange, WindowCommand, notification::CommandReflection,
+                           Paintable, MouseInput, KeyboardInput, FocusAware, Mixins...> {
+public:
+    Window(const Window&) = delete;
+    Window& operator=(const Window&) = delete;
+    Window(Window&&) = delete;
+    Window& operator=(Window&&) = delete;
+
+    /// Builds the object, creates its window, and runs the post-create hook.
+    /// @param cfg  Per-window settings (title, style, geometry, parent).
+    /// @return     The sole owner of the live window, or the Win32 error
+    ///             (as std::error_code) that stopped creation.
+    [[nodiscard]] static std::expected<std::unique_ptr<T>, std::error_code> create(
+        const WindowConfig& cfg = {}) {
+        auto self = std::unique_ptr<T>{new T{}};
+        if (auto made = self->create_window(cfg); !made)
+            return std::unexpected(made.error());
+        self->on_created();
+        return self;
+    }
+
+    /// The message fallback: hands any message no hook claimed to DefWindowProcW.
+    /// Called by route_message (inherited from MessageRouter); not for direct use.
+    LRESULT default_proc(UINT msg, WPARAM wparam, LPARAM lparam) {
+        return DefWindowProcW(hwnd(), msg, wparam, lparam);
+    }
+
+protected:
+    Window() = default;
+    ~Window() {
+        if (hwnd()) {
+            // Detach first so the destroy messages don't dispatch into a
+            // half-destroyed object.
+            SetWindowLongPtrW(hwnd(), GWLP_USERDATA, 0);
+            DestroyWindow(hwnd());
+        }
+    }
+
+    /// Hook to customise the window class before registration (icon, background
+    /// brush, class styles). Shadow in T; the base default changes nothing.
+    void configure_class(WNDCLASSW& /*wc*/) {}
+
+    /// Hook called once, right after the window exists. Shadow in T for setup
+    /// that needs a live HWND.
+    void on_created() {}
+
+private:
+    std::expected<void, std::error_code> create_window(const WindowConfig& cfg) {
+        // --- Registration (per class name): sensible defaults, then let T tweak.
+        WNDCLASSW wc{};
+        wc.lpfnWndProc = window_proc;
+        wc.hInstance = instance_;
+        wc.lpszClassName = T::window_class_name;
+        wc.style = CS_HREDRAW | CS_VREDRAW;
+        wc.hCursor = LoadCursorW(nullptr, IDC_ARROW);
+        wc.hbrBackground = reinterpret_cast<HBRUSH>(COLOR_WINDOW + 1);
+        static_cast<T*>(this)->configure_class(wc);
+
+        if (RegisterClassW(&wc) == 0) {
+            // A class already registered under this name is fine -- anything else
+            // is a real failure.
+            if (auto ec = last_error(); ec.value() != ERROR_CLASS_ALREADY_EXISTS)
+                return std::unexpected(ec);
+        }
+
+        // --- Creation (per window): `this` rides through so the static callback
+        // can recover the object in WM_NCCREATE.
+        HWND hwnd = CreateWindowExW(cfg.ex_style, T::window_class_name, cfg.title, cfg.style, cfg.x,
+                                    cfg.y, cfg.width, cfg.height, cfg.parent, nullptr, instance_,
+                                    static_cast<T*>(this));
+        if (!hwnd)
+            return std::unexpected(last_error());
+        return {};
+    }
+
+    static LRESULT CALLBACK window_proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
+        T* self{};
+        if (msg == WM_NCCREATE) {
+            auto* cs = reinterpret_cast<CREATESTRUCTW*>(lparam);
+            self = static_cast<T*>(cs->lpCreateParams);
+            self->attach(hwnd);
+            SetWindowLongPtrW(hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(self));
+        } else {
+            self = reinterpret_cast<T*>(GetWindowLongPtrW(hwnd, GWLP_USERDATA));
+        }
+
+        if (self) {
+            LRESULT result = self->route_message(msg, wparam, lparam);
+            if (msg == WM_NCDESTROY) {
+                // The window is gone; sever the link so the destructor won't
+                // DestroyWindow a dead handle.
+                SetWindowLongPtrW(hwnd, GWLP_USERDATA, 0);
+                self->detach();
+            }
+            return result;
+        }
+        return DefWindowProcW(hwnd, msg, wparam, lparam);
+    }
+
+    const HINSTANCE instance_{GetModuleHandleW(nullptr)};
+};
+
+}  // namespace winwrap

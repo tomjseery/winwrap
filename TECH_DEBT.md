@@ -9,8 +9,8 @@ the work queue in [ROADMAP.md](ROADMAP.md), and dated evidence in
 
 | Area | Resolution checklist |
 |---|---|
-| Native binding, lifetime, errors, dispatch, controls, menus, tray and other library protocols | [lib/TECH_DEBT.md](lib/TECH_DEBT.md) |
-| Test fixtures, adversarial coverage and interactive/native integration | [tests/TECH_DEBT.md](tests/TECH_DEBT.md) |
+| Native binding, lifetime, errors, dispatch, controls, menus, tray and other library protocols | [libs/winwrap/TECH_DEBT.md](libs/winwrap/TECH_DEBT.md) |
+| Test fixtures, adversarial coverage and interactive/native integration | [tests/winwrap/TECH_DEBT.md](tests/winwrap/TECH_DEBT.md) |
 | Build/distribution and repository-wide release guidance | This file |
 
 ## Build and installed consumption
@@ -72,13 +72,3 @@ the work queue in [ROADMAP.md](ROADMAP.md), and dated evidence in
   and review-chain reconciliation. Until then, explicitly inspect file-level
   dirtiness, unchanged remote base and the complete exact-head review chain; never
   stage unrelated local configuration or discard real review/CI failures.
-
-
-## Type-owned config names
-
-Existing top-level `WindowConfig`, `ControlConfig`, and `NotifyIconConfig` predate
-the nested one-owner naming rule used by `Device::Config`. Migrate them in a
-separate compatibility PR, including all consumers and compile tests. Close this
-entry when those public factories take nested `Config` records and no references
-to the old names remain, or when an explicit compatibility policy documents why
-a published old name must remain.

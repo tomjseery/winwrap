@@ -52,9 +52,9 @@ define the boundary between wrapper operations and native interoperability.
 A window with a button, wired to a click handler:
 
 ```cpp
-#include <winwrap/controls.hpp>
-#include <winwrap/message_loop.hpp>
-#include <winwrap/window.hpp>
+#include <winwrap/desktop/window/controls/button.hpp>
+#include <winwrap/desktop/message_loop.hpp>
+#include <winwrap/desktop/window/window.hpp>
 
 class MainWindow : public winwrap::Window<MainWindow> {
 public:
@@ -121,12 +121,12 @@ public:
             tray_ = std::move(*icon);
     }
 
-    LRESULT dispatch_message(UINT msg, WPARAM wparam, LPARAM lparam) {
+    LRESULT route_message(UINT msg, WPARAM wparam, LPARAM lparam) {
         if (msg == tray_callback && LOWORD(lparam) == WM_CONTEXTMENU) {
             show_tray_menu();
             return 0;
         }
-        return Window::dispatch_message(msg, wparam, lparam);
+        return Window::route_message(msg, wparam, lparam);
     }
 
 private:
@@ -151,13 +151,16 @@ system icon, or a non-shared `LoadImageW`) — never a shared system handle.
 
 | Header | Gives you |
 |---|---|
-| `winwrap/window.hpp` | `Window<T, Mixins…>` — registration, the callback→object bridge, dispatch, teardown |
-| `winwrap/control.hpp`, `winwrap/controls.hpp` | `Control<T, Mixins…>` and concrete `Button`, `Edit`, `Checkbox`, `ComboBox` |
-| `winwrap/notify_icon.hpp` | `NotifyIcon` — a system-tray icon, plus the Explorer-restart re-add path (`taskbar_created_message()` → `add()`) |
-| `winwrap/menu.hpp` | `Menu` — popup menus, items by id or by lambda |
-| `winwrap/drop.hpp` | `Drop` — the `WM_DROPFILES` query protocol as a type |
-| `winwrap/mixins.hpp` | the composable behaviours (`FileDroppable`, `Paintable`, `Clickable`, …) |
-| `winwrap/message_loop.hpp` | `run()` and `quit()` |
+| `winwrap/desktop/window/window.hpp` | `Window<T, Mixins…>` — registration, the callback→object bridge, dispatch, teardown |
+| `winwrap/desktop/window/control.hpp`, `winwrap/desktop/window/controls/*.hpp` | `Control<T, Mixins…>` and concrete `Button`, `Edit`, `Checkbox`, `ComboBox` |
+| `winwrap/desktop/notify_icon.hpp` | `NotifyIcon` — a system-tray icon, plus the Explorer-restart re-add path (`taskbar_created_message()` → `add()`) |
+| `winwrap/desktop/menu.hpp` | `Menu` — popup menus, items by id or by lambda |
+| `winwrap/desktop/drop.hpp` | `Drop` — the `WM_DROPFILES` query protocol as a type |
+| `winwrap/desktop/window/message/*.hpp` | direct window/control message routing and behaviors (`MessageRouter`, `FileDroppable`, `Paintable`, …) |
+| `winwrap/desktop/window/notification/command/*.hpp` | control notification mixins (`notification::Click`, `TextChange`, `SelectionChange`) and parent-to-child reflection |
+| `winwrap/desktop/message_loop.hpp` | `run()` and `quit()` |
+| `winwrap/desktop/shell/change_notification.hpp` | `notify_folder_changed()` — tell Explorer a folder changed |
+| `winwrap/filesystem/attributes.hpp` | file-attribute queries and updates |
 | `winwrap/device.hpp` | `Device` — present-interface paths, synchronous open and control |
 | `winwrap/error.hpp` | `last_error()` / `check()` — Win32 codes as `std::error_code` |
 
