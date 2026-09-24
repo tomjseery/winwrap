@@ -1,7 +1,8 @@
 # winwrap
 
 A C++23 static library of **thin wrappers over native Win32**: top-level windows,
-native child controls, menus, a system-tray icon. Native-handle interoperability is
+native child controls, menus, a system-tray icon, and synchronous user-mode
+device I/O. Native-handle interoperability is
 part of the intended contract. Not a framework, not cross-platform, not WinRT.
 Experimental v0.1; release readiness and implementation gaps are tracked below.
 
@@ -12,8 +13,9 @@ Winwrap's public-API conventions are project-specific:
 ## Layout
 
 `lib/include/winwrap/` — public headers (`window.hpp`, `control.hpp` + `controls/`,
-`notify_icon.hpp`, `menu.hpp`, `mixins.hpp` + `mixins/`, `error.hpp`); `lib/src/` —
-two `.cpp`s; `tests/` — Catch2, one file per type. Build from an *x64 Native Tools*
+`notify_icon.hpp`, `menu.hpp`, `device.hpp`, `mixins.hpp` + `mixins/`,
+`error.hpp`); `lib/src/` —
+three `.cpp`s; `tests/` — Catch2, one file per type. Build from an *x64 Native Tools*
 prompt: `cmake --preset dev`, `cmake --build --preset dev`, `ctest --preset dev`.
 
 ## Terminology
@@ -26,7 +28,7 @@ prompt: `cmake --preset dev`, `cmake --build --preset dev`, `ctest --preset dev`
 | **`on_*` hook** | the public member the *user's* type defines (`on_paint`); mixins detect it with `requires` |
 | **deducing this** (C++23) | explicit object parameters deduce the receiver's static type; the native bridge must still recover the correct object |
 | **reflection** | bouncing a control notification from parent to control; `WM_COMMAND` implemented, `WM_NOTIFY` pending |
-| **`*Config`** | the designated-initializer struct every public factory takes |
+| **`Config`** | a type-owned designated-initializer record for a multi-argument factory; legacy top-level `*Config` types remain pending migration |
 
 ## Read on demand
 
