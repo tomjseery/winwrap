@@ -137,9 +137,9 @@ app-side GDI (`CreateIconIndirect`); adoption must have an explicit ownership co
   the struct-doc style lives in `base:cpp-style` (all projects).
 - **Errors as `std::expected<T, std::error_code>`** at the public API; Win32 codes
   via `std::system_category()`. WIL stays for RAII handles only, not control flow.
-- **Message dispatch via composable compile-time mixins** (`desktop/window/mixins/` +
+- **Message dispatch via composable compile-time mixins** (`desktop/window/message/` +
   `desktop/window/notification/command/reflection.hpp` +
-  `desktop/window/message_router.hpp`); respelled from CRTP to
+  `desktop/window/message/message_router.hpp`); respelled from CRTP to
   C++23 **deducing this** on 2026-07-12 (see *Dispatch design review* below) —
   mixins are plain structs whose `handle_message` deduces the final type through an
   explicit object parameter (`this auto& self`).
@@ -150,7 +150,7 @@ app-side GDI (`CreateIconIndirect`); adoption must have an explicit ownership co
   expression (`||`), short-circuiting on first match, and its `route_message`
   falls back to the derived type's `default_proc` when no mixin claims the
   message. Both `Window<T>` and `Control<T>` inherit it. The `WW_CASE(message, call)` macro (defined in
-  `desktop/window/mixins/hook_case.hpp`, included by each hook mixin) is the only tool that can simultaneously put a maybe-absent member
+  `desktop/window/message/detail/hook_case.hpp`, included by each hook mixin) is the only tool that can simultaneously put a maybe-absent member
   into an unevaluated `requires` and `return`/`break` from the caller's frame — one
   line per case, zero duplication. No vtables; composition is compile-time but
   message matching is runtime. Derived
@@ -200,7 +200,7 @@ app-side GDI (`CreateIconIndirect`); adoption must have an explicit ownership co
     expands the pack as a template argument instead. GCC/Clang accept the direct
     form; keep the helper for MSVC.
     **Naming (revised 2026-09-23):** engine = `MessageRouter`
-    in `message_router.hpp`, entry = `route_message`, mixin member =
+    in `desktop/window/message/message_router.hpp`, entry = `route_message`, mixin member =
     `handle_message`, shared control-notification match-and-fire =
     `notification::handle_command`. Routing chooses which mixin receives a message;
     handling is the mixin's response. The earlier `MessageDispatcher` /
@@ -471,7 +471,7 @@ widget; `Control<T>` supplies the same compile-time `on_*` dispatch as `Window<T
     - `Button` / `Checkbox` → `notification::Click` (BN_CLICKED)
     - `Edit` → `notification::TextChange` (EN_CHANGE)
     - `ComboBox` → `notification::SelectionChange` (CBN_SELCHANGE)
-  A window-message mixin is one file under `mixins/`; a control-notification
+  A direct window-message behavior is one file under `desktop/window/message/`; a control-notification
   mixin is one file under `desktop/window/notification/command/`; a control is
   one file under `desktop/window/controls/`;
   the reflection path (`desktop/window/notification/command/reflection.hpp` and `protocol.hpp`)

@@ -11,7 +11,8 @@ reflection, header and reentrancy contracts; [ASSESSMENT.md](ASSESSMENT.md) expl
 the recommended evolution.
 
 See also: [VISION.md](VISION.md) (the "on-event callbacks, hiding the `WM_COMMAND`-id
-plumbing" goal), `libs/winwrap/include/winwrap/desktop/window/mixins/` (the mixins) and
+plumbing" goal), `libs/winwrap/include/winwrap/desktop/window/message/` (direct
+window/control message routing) and
 `libs/winwrap/include/winwrap/desktop/window/notification/command/reflection.hpp` (the reflection engine), `CODE_CONVENTIONS.md §3`
 (where shared code lives).
 
@@ -25,6 +26,12 @@ this composition in the literature is **variadic CRTP** — winwrap used it unti
 2026-07; search that, "CRTP", or "C++ mixin" for the talks/articles, and see ROADMAP →
 *Dispatch design review* for the respelling.) They differ in *who supplies the
 handler*:
+
+Mixin is the composition mechanism, not the directory taxonomy. Direct messages handled
+by a window or control live under `desktop/window/message/`; reflected control
+notifications live under their `desktop/window/notification/command/` protocol. A more
+specific native protocol wins over grouping every component by its C++ implementation
+pattern.
 
 - **Hook mixins** (`Paintable`, `MouseInput`, …) — the mixin detects an `on_*` *method*
   the derived type defines, via `if constexpr (requires { self.on_x(); })`. The
@@ -114,8 +121,8 @@ Window features are **hook** mixins (the taxonomy above): the message arrives at
 the window itself — no reflection, no id plumbing — and the natural handler is
 code on the derived window type. `FileDroppable` is the worked example.
 
-1. Add `desktop/window/mixins/<name>.hpp`, same shape as `paintable.hpp`: include
-   `winwrap/desktop/window/mixins/hook_case.hpp` and write a `WW_CASE` per
+1. Add `desktop/window/message/<name>.hpp`, same shape as `paintable.hpp`: include
+   `winwrap/desktop/window/message/detail/hook_case.hpp` and write a `WW_CASE` per
    message. If the message carries a packed payload, unpack it in a local
    `make_*` helper so the hook sees typed values, never raw `WPARAM`/`LPARAM`:
 

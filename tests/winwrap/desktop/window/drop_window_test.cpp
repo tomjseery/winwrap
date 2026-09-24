@@ -1,6 +1,6 @@
 #include <catch2/catch_test_macros.hpp>
 
-#include "winwrap/desktop/window/mixins/file_droppable.hpp"
+#include "winwrap/desktop/window/message/file_droppable.hpp"
 #include "winwrap/desktop/window/window.hpp"
 
 #include <string>

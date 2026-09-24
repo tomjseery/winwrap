@@ -6,7 +6,7 @@
 
 namespace winwrap {
 
-/// The WndProc-shaped entry point over a set of composed message mixins: inherits
+/// The WndProc-shaped entry point over a set of composed message behaviors: inherits
 /// each, and `route_message` tries their `handle_message` in the order listed, stopping
 /// at the first that handles the message (first-match wins). When no mixin claims
 /// the message, falls back to the final type's `default_proc` -- the only thing
@@ -36,8 +36,7 @@ private:
     // rejects expanding the pack inside `self.Mixins::handle_message` in the fold
     // (C7515); a template argument is a position it can expand.
     template <typename Mixin>
-    static std::optional<LRESULT> invoke_mixin(auto& self, UINT msg, WPARAM wparam,
-                                                 LPARAM lparam) {
+    static std::optional<LRESULT> invoke_mixin(auto& self, UINT msg, WPARAM wparam, LPARAM lparam) {
         return self.Mixin::handle_message(msg, wparam, lparam);
     }
 };

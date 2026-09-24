@@ -8,13 +8,13 @@
 #include <memory>
 #include <system_error>
 
-#include "winwrap/error.hpp"
 #include "winwrap/desktop/window/base_window.hpp"
-#include "winwrap/desktop/window/message_router.hpp"
-#include "winwrap/desktop/window/mixins/focus_aware.hpp"
-#include "winwrap/desktop/window/mixins/keyboard_input.hpp"
-#include "winwrap/desktop/window/mixins/mouse_input.hpp"
-#include "winwrap/desktop/window/mixins/paintable.hpp"
+#include "winwrap/desktop/window/message/focus_aware.hpp"
+#include "winwrap/desktop/window/message/keyboard_input.hpp"
+#include "winwrap/desktop/window/message/message_router.hpp"
+#include "winwrap/desktop/window/message/mouse_input.hpp"
+#include "winwrap/desktop/window/message/paintable.hpp"
+#include "winwrap/error.hpp"
 
 namespace winwrap {
 
@@ -39,11 +39,10 @@ struct ControlConfig {
 /// mixins it supports. Dispatch resolves at compile time -- no virtual. Non-movable;
 /// lives as a unique_ptr member of the owner window, created in its on_created().
 ///
-/// Two kinds of message handling, both via the composable mixins in
-/// <winwrap/desktop/window/mixins/>, both dispatched by the same compile-time fold:
+/// Two kinds of message handling, both composed into the same compile-time fold:
 ///
-///   - **Input hooks** every control gets -- define the ones you need as **public**
-///     members on T; absent ones cost nothing:
+///   - **Input hooks** from <winwrap/desktop/window/message/> that every control gets --
+///     define the ones you need as **public** members on T; absent ones cost nothing:
 ///       `on_paint()`            -- `WM_PAINT`
 ///       `on_mouse_move(x, y)`   -- `WM_MOUSEMOVE`
 ///       `on_lbutton_down(x, y)` -- `WM_LBUTTONDOWN`
@@ -52,8 +51,8 @@ struct ControlConfig {
 ///       `on_focus(gained)`      -- `WM_SETFOCUS` (true) / `WM_KILLFOCUS` (false)
 ///   - **Notification mixins** the control opts into via `Mixins...` -- each
 ///     brings a `std::function` callback you assign (e.g. notification::Click -> `on_click`).
-///     The owner window's notification::CommandReflection mixin bounces the notification down so it lands
-///     here. Adding one is mechanical -- see MIXINS.md.
+///     The owner window's notification::CommandReflection mixin bounces the notification down so it
+///     lands here. Adding one is mechanical -- see MIXINS.md.
 ///
 /// Shadow route_message in T for anything the mixins don't cover, and delegate the
 /// rest with `Control::route_message`.
@@ -63,9 +62,8 @@ struct ControlConfig {
 ///                     default-constructible.
 /// @tparam Mixins  Notification mixins to compose (e.g. notification::Click).
 template <typename T, typename... Mixins>
-class Control
-    : public BaseWindow,
-      public MessageRouter<Paintable, MouseInput, KeyboardInput, FocusAware, Mixins...> {
+class Control : public BaseWindow,
+                public MessageRouter<Paintable, MouseInput, KeyboardInput, FocusAware, Mixins...> {
 public:
     Control(const Control&) = delete;
     Control& operator=(const Control&) = delete;

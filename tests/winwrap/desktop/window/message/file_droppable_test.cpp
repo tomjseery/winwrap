@@ -13,7 +13,7 @@
 #include <vector>
 
 #include "winwrap/desktop/drop.hpp"
-#include "winwrap/desktop/window/mixins/file_droppable.hpp"
+#include "winwrap/desktop/window/message/file_droppable.hpp"
 #include "winwrap/desktop/window/window.hpp"
 
 namespace {

@@ -9,7 +9,7 @@
 #include <vector>
 
 #include "winwrap/desktop/drop.hpp"
-#include "winwrap/desktop/window/mixins/hook_case.hpp"
+#include "winwrap/desktop/window/message/detail/hook_case.hpp"
 
 namespace winwrap {
 
