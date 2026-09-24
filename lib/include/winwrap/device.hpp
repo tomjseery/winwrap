@@ -24,6 +24,12 @@ public:
         DWORD share_mode{};
     };
 
+    /// A failed control request and any partial output reported by Windows.
+    struct ControlError {
+        std::error_code code;
+        std::size_t bytes_returned{};  ///< Never exceeds the supplied output buffer.
+    };
+
     /// Snapshot all currently present paths for an interface class; none is success.
     [[nodiscard]] static std::expected<std::vector<std::wstring>, std::error_code> paths(
         const GUID& interface_id);
@@ -37,8 +43,9 @@ public:
     Device& operator=(const Device&) = delete;
 
     /// Perform one synchronous control request and return the number of bytes written.
-    /// Input and output buffers need only remain valid for this call.
-    [[nodiscard]] std::expected<std::size_t, std::error_code> control(
+    /// Input and output buffers need only remain valid for this call. A failure can still
+    /// report partial output through ControlError::bytes_returned.
+    [[nodiscard]] std::expected<std::size_t, ControlError> control(
         DWORD code, std::span<const std::byte> input, std::span<std::byte> output) const;
 
     /// Borrow the native handle; this Device remains its owner.

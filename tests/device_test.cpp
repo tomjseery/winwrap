@@ -1,14 +1,42 @@
 #include "winwrap/device.hpp"
 
-#include <winioctl.h>
+#include <wil/resource.h>
 
 #include <array>
 #include <catch2/catch_test_macros.hpp>
 #include <cstddef>
 #include <filesystem>
 #include <span>
+#include <system_error>
 
+#include "device_control.hpp"
 #include "device_paths.hpp"
+
+namespace {
+
+BOOL WINAPI successful_control(HANDLE, DWORD, LPVOID, DWORD, LPVOID, DWORD, LPDWORD returned,
+                               LPOVERLAPPED) {
+    constexpr DWORD byte_count{2};
+    *returned = byte_count;
+    return TRUE;
+}
+
+BOOL WINAPI partial_control(HANDLE, DWORD, LPVOID, DWORD, LPVOID, DWORD, LPDWORD returned,
+                            LPOVERLAPPED) {
+    constexpr DWORD byte_count{2};
+    *returned = byte_count;
+    ::SetLastError(ERROR_MORE_DATA);
+    return FALSE;
+}
+
+BOOL WINAPI oversized_partial_control(HANDLE, DWORD, LPVOID, DWORD, LPVOID, DWORD output_size,
+                                      LPDWORD returned, LPOVERLAPPED) {
+    *returned = output_size + 1;
+    ::SetLastError(ERROR_MORE_DATA);
+    return FALSE;
+}
+
+}  // namespace
 
 TEST_CASE("paths accepts an empty list") {
     const std::array<wchar_t, 1> empty{L'\0'};
@@ -60,10 +88,14 @@ TEST_CASE("device open reports a missing path") {
     CHECK(device.error().value() == ERROR_FILE_NOT_FOUND);
 }
 
-TEST_CASE("device control returns the actual bytes from a temporary file") {
+TEST_CASE("device open owns a temporary file handle") {
     const auto directory{std::filesystem::temp_directory_path().wstring()};
     std::array<wchar_t, MAX_PATH> path{};
     REQUIRE(::GetTempFileNameW(directory.c_str(), L"wwd", 0, path.data()) != 0);
+    auto cleanup{wil::scope_exit([&] {
+        std::error_code ignored;
+        std::filesystem::remove(path.data(), ignored);
+    })};
 
     {
         const auto device{
@@ -72,11 +104,36 @@ TEST_CASE("device control returns the actual bytes from a temporary file") {
                                    .share_mode = FILE_SHARE_READ | FILE_SHARE_WRITE})};
         REQUIRE(device.has_value());
         CHECK(::GetFileType(device->handle()) == FILE_TYPE_DISK);
-
-        std::array<std::byte, sizeof(USHORT)> output{};
-        const auto returned{device->control(FSCTL_GET_COMPRESSION, {}, output)};
-        REQUIRE(returned.has_value());
-        CHECK(*returned == sizeof(USHORT));
     }
-    CHECK(std::filesystem::remove(path.data()));
+
+    std::error_code error;
+    const bool removed{std::filesystem::remove(path.data(), error)};
+    CHECK(removed);
+    CHECK_FALSE(error);
+    if (removed)
+        cleanup.release();
+}
+
+TEST_CASE("device control returns the actual byte count") {
+    std::array<std::byte, 4> output{};
+    const auto returned{winwrap::detail::control(nullptr, 0, {}, output, &successful_control)};
+    REQUIRE(returned.has_value());
+    CHECK(*returned == 2);
+}
+
+TEST_CASE("device control preserves partial output details on failure") {
+    std::array<std::byte, 4> output{};
+    const auto returned{winwrap::detail::control(nullptr, 0, {}, output, &partial_control)};
+    REQUIRE_FALSE(returned.has_value());
+    CHECK(returned.error().code.value() == ERROR_MORE_DATA);
+    CHECK(returned.error().bytes_returned == 2);
+}
+
+TEST_CASE("device control bounds a failed request's returned byte count") {
+    std::array<std::byte, 4> output{};
+    const auto returned{
+        winwrap::detail::control(nullptr, 0, {}, output, &oversized_partial_control)};
+    REQUIRE_FALSE(returned.has_value());
+    CHECK(returned.error().code.value() == ERROR_MORE_DATA);
+    CHECK(returned.error().bytes_returned == output.size());
 }
