@@ -26,3 +26,5 @@ struct Lifecycle {
 };
 
 }  // namespace winwrap
+
+#undef WW_CASE

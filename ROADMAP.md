@@ -134,9 +134,11 @@ app-side GDI (`CreateIconIndirect`); adoption must have an explicit ownership co
 - **Config-struct factories (generalised):** any public factory with multiple args
   (or any two same-typed args) takes a `*Config` struct + designated initializers —
   `NotifyIconConfig` joins `WindowConfig`. Codified in `CODE_CONVENTIONS.md` (winwrap);
-  the struct-doc style lives in `base:cpp-style` (all projects).
-- **Errors as `std::expected<T, std::error_code>`** at the public API; Win32 codes
-  via `std::system_category()`. WIL stays for RAII handles only, not control flow.
+  the struct-doc style lives in `cpp:style` (all projects).
+- **Errors as `std::expected<T, E>`** at the public API; Win32 codes normally use
+  `std::error_code` via `std::system_category()`, while a focused structured error
+  may preserve additional native result data. WIL stays for RAII handles only, not
+  control flow.
 - **Message dispatch via composable compile-time mixins** (`desktop/window/message/` +
   `desktop/window/notification/command/reflection.hpp` +
   `desktop/window/message/message_router.hpp`); respelled from CRTP to
@@ -149,8 +151,9 @@ app-side GDI (`CreateIconIndirect`); adoption must have an explicit ownership co
   `nullopt` = pass on. `MessageRouter<Mixins...>` chains them via a fold
   expression (`||`), short-circuiting on first match, and its `route_message`
   falls back to the derived type's `default_proc` when no mixin claims the
-  message. Both `Window<T>` and `Control<T>` inherit it. The `WW_CASE(message, call)` macro (defined in
-  `desktop/window/message/detail/hook_case.hpp`, included by each hook mixin) is the only tool that can simultaneously put a maybe-absent member
+  message. Both `Window<T>` and `Control<T>` inherit it. The `WW_CASE(message, call)` macro (defined by the
+  repeatable `desktop/window/message/detail/hook_case.hpp` fragment, then undefined
+  by each hook mixin) is the only tool that can simultaneously put a maybe-absent member
   into an unevaluated `requires` and `return`/`break` from the caller's frame — one
   line per case, zero duplication. No vtables; composition is compile-time but
   message matching is runtime. Derived
@@ -219,7 +222,7 @@ app-side GDI (`CreateIconIndirect`); adoption must have an explicit ownership co
     size" is false on MSVC by default: only the *first* empty base is folded
     away, so the 8-mixin list costs +8 bytes per window (measured 24 vs 16 with
     `__declspec(empty_bases)` on `MessageRouter`). Harmless at our scale;
-    recorded in TECH_DEBT (fix or soften the mixins.hpp doc comment).
+    recorded in TECH_DEBT (fix or soften the hook-mixin documentation).
 - **Class-level config** (the `WNDCLASS`) is customized by a `configure_class`
   hook the derived type shadows — same CRTP mechanism as the `on_*` dispatch.
 - **Doc comments:** Doxygen `///` + `@`-commands on the **public API** only;

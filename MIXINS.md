@@ -122,8 +122,9 @@ the window itself — no reflection, no id plumbing — and the natural handler 
 code on the derived window type. `FileDroppable` is the worked example.
 
 1. Add `desktop/window/message/<name>.hpp`, same shape as `paintable.hpp`: include
-   `winwrap/desktop/window/message/detail/hook_case.hpp` and write a `WW_CASE` per
-   message. If the message carries a packed payload, unpack it in a local
+   the repeatable `winwrap/desktop/window/message/detail/hook_case.hpp` fragment,
+   write a `WW_CASE` per message, then `#undef WW_CASE` after the namespace closes.
+   This keeps the implementation macro local to the header. If the message carries a packed payload, unpack it in a local
    `make_*` helper so the hook sees typed values, never raw `WPARAM`/`LPARAM`:
 
    ```cpp
@@ -147,8 +148,9 @@ code on the derived window type. `FileDroppable` is the worked example.
    };
    ```
 
-2. Keep the header self-contained — it must compile on its own; the per-header
-   check in `tests/winwrap/CMakeLists.txt` enforces that. There is no aggregate
+2. Keep the header self-contained — it must compile on its own and must not leak
+   `WW_CASE`; the per-header check in `tests/winwrap/CMakeLists.txt` enforces both.
+   There is no aggregate
    header to register it in.
 
 3. Compose it through `Window`'s mixin pack — no library edit:

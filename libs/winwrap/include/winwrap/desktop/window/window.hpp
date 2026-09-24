@@ -48,7 +48,7 @@ struct WindowConfig {
 ///
 ///   - `on_create()` / `on_close()` / `on_destroy()`  -- lifecycle
 ///   - `on_size(w, h)`        -- `WM_SIZE` (client width/height)
-///   - `on_command(id)`       -- `WM_COMMAND` (menu / control id)
+///   - `on_command(id)`       -- `WM_COMMAND` from menus and accelerators
 ///   - `on_paint()`           -- `WM_PAINT`
 ///   - `on_mouse_move(x, y)` / `on_lbutton_down(x, y)` / `on_lbutton_up(x, y)`
 ///   - `on_key_down(vk)`      -- `WM_KEYDOWN` (virtual-key code)

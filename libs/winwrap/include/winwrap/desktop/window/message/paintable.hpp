@@ -22,3 +22,5 @@ struct Paintable {
 };
 
 }  // namespace winwrap
+
+#undef WW_CASE

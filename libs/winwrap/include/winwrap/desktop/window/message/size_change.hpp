@@ -23,3 +23,5 @@ struct SizeChange {
 };
 
 }  // namespace winwrap
+
+#undef WW_CASE

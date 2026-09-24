@@ -30,3 +30,5 @@ struct MouseInput {
 };
 
 }  // namespace winwrap
+
+#undef WW_CASE
