@@ -6,6 +6,7 @@
 #include <limits>
 #include <utility>
 
+#include "device_control.hpp"
 #include "device_paths.hpp"
 #include "winwrap/error.hpp"
 
@@ -23,6 +24,30 @@ namespace {
 }  // namespace
 
 namespace detail {
+
+std::expected<std::size_t, Device::ControlError> control(HANDLE handle, DWORD code,
+                                                         std::span<const std::byte> input,
+                                                         std::span<std::byte> output,
+                                                         DeviceControl device_control) {
+    constexpr auto maximum{static_cast<std::size_t>(std::numeric_limits<DWORD>::max())};
+    if (input.size() > maximum || output.size() > maximum)
+        return std::unexpected(Device::ControlError{.code = system_error(ERROR_INVALID_PARAMETER)});
+
+    DWORD returned{};
+    const BOOL succeeded{
+        device_control(handle, code, input.empty() ? nullptr : const_cast<std::byte*>(input.data()),
+                       static_cast<DWORD>(input.size()), output.empty() ? nullptr : output.data(),
+                       static_cast<DWORD>(output.size()), &returned, nullptr)};
+    const auto error{succeeded == FALSE ? last_error() : std::error_code{}};
+    const auto bounded_returned{std::min(static_cast<std::size_t>(returned), output.size())};
+    if (succeeded == FALSE)
+        return std::unexpected(
+            Device::ControlError{.code = error, .bytes_returned = bounded_returned});
+    if (returned > output.size())
+        return std::unexpected(Device::ControlError{.code = system_error(ERROR_INVALID_DATA),
+                                                    .bytes_returned = bounded_returned});
+    return static_cast<std::size_t>(returned);
+}
 
 std::expected<std::vector<std::wstring>, std::error_code> paths(
     std::span<const wchar_t> characters) {
@@ -85,23 +110,9 @@ std::expected<Device, std::error_code> Device::open(const Config& config) {
     return Device{wil::unique_hfile{raw}};
 }
 
-std::expected<std::size_t, std::error_code> Device::control(DWORD code,
-                                                            std::span<const std::byte> input,
-                                                            std::span<std::byte> output) const {
-    constexpr auto maximum{static_cast<std::size_t>(std::numeric_limits<DWORD>::max())};
-    if (input.size() > maximum || output.size() > maximum)
-        return std::unexpected(system_error(ERROR_INVALID_PARAMETER));
-
-    DWORD returned{};
-    const BOOL succeeded{::DeviceIoControl(
-        handle_.get(), code, input.empty() ? nullptr : const_cast<std::byte*>(input.data()),
-        static_cast<DWORD>(input.size()), output.empty() ? nullptr : output.data(),
-        static_cast<DWORD>(output.size()), &returned, nullptr)};
-    if (succeeded == FALSE)
-        return std::unexpected(last_error());
-    if (returned > output.size())
-        return std::unexpected(system_error(ERROR_INVALID_DATA));
-    return static_cast<std::size_t>(returned);
+std::expected<std::size_t, Device::ControlError> Device::control(
+    DWORD code, std::span<const std::byte> input, std::span<std::byte> output) const {
+    return detail::control(handle_.get(), code, input, output, &::DeviceIoControl);
 }
 
 }  // namespace winwrap

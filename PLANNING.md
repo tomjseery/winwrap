@@ -81,7 +81,7 @@ trace the existing native callback bridge before changing it, or compare a small
 virtual-dispatch example with static composition before extending the dispatcher.
 These are learning exercises, not instructions to replace working code wholesale.
 
-At each implementation hand-off, load `base:cpp-learning` and the C++/Win32
+At each implementation hand-off, load `cpp:learning` and the C++/Win32
 knowledge standards; they own mode selection, calibration and evidence of
 understanding. Planning preparation does not choose delivery mode or authorize
 writing novel implementation logic.

@@ -134,9 +134,11 @@ app-side GDI (`CreateIconIndirect`); adoption must have an explicit ownership co
 - **Config-struct factories (generalised):** any public factory with multiple args
   (or any two same-typed args) takes a `*Config` struct + designated initializers —
   `NotifyIconConfig` joins `WindowConfig`. Codified in `CODE_CONVENTIONS.md` (winwrap);
-  the struct-doc style lives in `base:cpp-style` (all projects).
-- **Errors as `std::expected<T, std::error_code>`** at the public API; Win32 codes
-  via `std::system_category()`. WIL stays for RAII handles only, not control flow.
+  the struct-doc style lives in `cpp:style` (all projects).
+- **Errors as `std::expected<T, E>`** at the public API; Win32 codes normally use
+  `std::error_code` via `std::system_category()`, while a focused structured error
+  may preserve additional native result data. WIL stays for RAII handles only, not
+  control flow.
 - **Message dispatch via composable compile-time mixins** (`mixins.hpp` +
   `message_reflection.hpp` + `message_dispatcher.hpp`); respelled from CRTP to
   C++23 **deducing this** on 2026-07-12 (see *Dispatch design review* below) —
