@@ -152,14 +152,14 @@ system icon, or a non-shared `LoadImageW`) — never a shared system handle.
 |---|---|
 | `winwrap/desktop/window/window.hpp` | `Window<T, Mixins…>` — registration, the callback→object bridge, dispatch, teardown |
 | `winwrap/desktop/window/control.hpp`, `winwrap/desktop/window/controls/*.hpp` | `Control<T, Mixins…>` and concrete `Button`, `Edit`, `Checkbox`, `ComboBox` |
-| `winwrap/desktop/shell/notify_icon.hpp` | `NotifyIcon` — a system-tray icon, plus the Explorer-restart re-add path (`taskbar_created_message()` → `add()`) |
+| `winwrap/desktop/notify_icon.hpp` | `NotifyIcon` — a system-tray icon, plus the Explorer-restart re-add path (`taskbar_created_message()` → `add()`) |
 | `winwrap/desktop/menu.hpp` | `Menu` — popup menus, items by id or by lambda |
 | `winwrap/desktop/drop.hpp` | `Drop` — the `WM_DROPFILES` query protocol as a type |
 | `winwrap/desktop/window/mixins/*.hpp` | window message mixins (`FileDroppable`, `Paintable`, …) |
 | `winwrap/desktop/window/message_router.hpp` | routes a message to composed mixins, then the native default procedure |
 | `winwrap/desktop/window/notification/command/*.hpp` | control notification mixins (`notification::Click`, `TextChange`, `SelectionChange`) and parent-to-child reflection |
 | `winwrap/desktop/message_loop.hpp` | `run()` and `quit()` |
-| `winwrap/desktop/shell/folder.hpp` | `notify_folder_changed()` — tell Explorer a folder changed |
+| `winwrap/desktop/shell/change_notification.hpp` | `notify_folder_changed()` — tell Explorer a folder changed |
 | `winwrap/filesystem/attributes.hpp` | file-attribute queries and updates |
 | `winwrap/device.hpp` | `Device` — present-interface paths, synchronous open and control |
 | `winwrap/error.hpp` | `last_error()` / `check()` — Win32 codes as `std::error_code` |

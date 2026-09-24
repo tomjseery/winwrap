@@ -1,4 +1,4 @@
-#include "winwrap/desktop/shell/notify_icon.hpp"
+#include "winwrap/desktop/notify_icon.hpp"
 
 #include <cwchar>
 #include <utility>

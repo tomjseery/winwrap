@@ -77,14 +77,16 @@ As the library grows, decide *where* a thing belongs by what conceptually needs 
   stays in that wrapper's header, even if the underlying mechanism *looks* generic.
   `notify_icon.hpp` owns `taskbar_created_message()` — only tray icons care about
   the "TaskbarCreated" broadcast.
-- **Related free operations share a resource-named header.** Group functions that
-  operate on one resource together, as `filesystem/attributes.hpp` does for file
-  attributes. `desktop/shell/folder.hpp` owns Shell operations on a folder; it
-  currently has `notify_folder_changed()`. Add later folder operations there
-  rather than creating a header per function. A header can start with one
-  function: its stable resource boundary is what lets it grow. Keep unrelated
-  Shell operations in their own resource headers. Generic error conversion stays
-  in `error.hpp`.
+- **Name public headers for their owner.** An owning wrapper gets a type-named
+  header, such as `desktop/notify_icon.hpp`. Related free operations without a
+  type owner share a header named for their stable operation family or native
+  protocol: `filesystem/attributes.hpp` owns file-attribute operations and
+  `desktop/shell/change_notification.hpp` owns Shell change-notification calls,
+  currently `notify_folder_changed()`. A header may start with one function;
+  do not add filler APIs or a catchall to increase its count. Add a deeper
+  directory when multiple public headers form a real subsystem, not merely
+  because their implementations call the same Windows DLL. Generic error
+  conversion stays in `error.hpp`.
 
 **The move trigger — the second real consumer.** Keep a thing local until a
 *second* wrapper genuinely needs it; only then lift it into the appropriate shared
@@ -92,11 +94,11 @@ header. This is `LIBRARY_CONVENTIONS.md`'s reactive-extraction rule applied insi
 winwrap: a one-caller "utility" is premature abstraction — you'll guess the shape
 wrong before you've seen two real uses.
 
-Set the **convention** (the destination + naming) early so there's no sprawl and the
-eventual move is mechanical; do the **extraction** late, when the trigger fires. Worked
-example: `taskbar_created_message()` stays on `NotifyIcon` today, but its home when it
-moves is a `desktop/shell/` header — so if an `ITaskbarList3` wrapper ever shares the
-Explorer-restart concern, it moves there with no redesign.
+Set the **placement rule** early so there is no sprawl; choose a precise shared
+header name when real consumers reveal the boundary. Do the **extraction** late,
+when the trigger fires. `taskbar_created_message()` stays on `NotifyIcon` today.
+If another desktop resource needs that broadcast, move the shared operation to
+a concept-named desktop header after that second use establishes its contract.
 
 The second-consumer trigger governs **extracting shared internals**, not adding
 ordinary operations to a public wrapper. Public coverage and native escape hatches
