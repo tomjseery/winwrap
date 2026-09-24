@@ -309,7 +309,7 @@ into a window (right-click → `show()` → `on_command`); wifi-toggle will cove
 
 ## Task 3 — `NotifyIcon`: the differentiator — ✅ DONE
 
-Delivered in `libs/winwrap/include/winwrap/desktop/shell/notify_icon.hpp` + `libs/winwrap/src/desktop/shell/notify_icon.cpp`:
+Delivered in `libs/winwrap/include/winwrap/desktop/notify_icon.hpp` + `libs/winwrap/src/desktop/notify_icon.cpp`:
 - **`class NotifyIcon final`** — move-only; **hand-written Rule-of-Five** (the shell
   registration is keyed by `(hWnd, uID)`, not an RAII handle — moves neuter the
   source, the destructor runs `NIM_DELETE`). Owns the `HICON` via `wil::unique_hicon`.
@@ -399,7 +399,7 @@ features:
 | `on_dpi_changed` mixin (`WM_DPICHANGED`) | Win32++ explicitly advertises PMv2 support; age is not evidence of missing DPI support | **application-driven** — correct payload/result handling and app-owned awareness/layout policy, not a novelty claim |
 | Label (STATIC), ListBox, ProgressBar, RadioButton | all three | **build after** items 2 and 5 above — these four need no `WM_NOTIFY` |
 | ListView / TreeView / Tab / StatusBar | all three | **defer** — gated on `WM_NOTIFY`, and each is a large surface (WinLamb spends four internal headers on ListView alone) |
-| `ITaskbarList3` progress in a `shell/` header | WinLamb `progress_taskbar.h` | **later** — `desktop/shell/` already owns notification-area and Shell change-notification APIs; give taskbar progress its own focused header when implemented |
+| `ITaskbarList3` progress in a focused desktop header | WinLamb `progress_taskbar.h` | **later** — give taskbar progress its own concept-named header when implemented; `desktop/shell/change_notification.hpp` owns the distinct Shell change-notification protocol |
 
 **Explicitly not building** — recorded so it isn't relitigated. These appear across the
 surveyed libraries because they predate modern C++ / WIL, not because winwrap needs them:
@@ -530,7 +530,7 @@ engine, no theming framework, no widget toolkit. Not a Qt/wxWidgets replacement.
   `set_folder_icon` had bare `…W` calls in its logic; the "wait for a second consumer"
   trigger explicitly does **not** gate wrapping a raw Win32 call (see
   `CODE_CONVENTIONS.md` §3). The current API is
-  `desktop/shell/folder.hpp` with `notify_folder_changed`.
+  `desktop/shell/change_notification.hpp` with `notify_folder_changed`.
 - More **RAII-wrapped Win32 objects** as real projects need them.
 - **Catch2 tests** that exercise behaviour without a live message pump.
 
