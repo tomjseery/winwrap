@@ -32,9 +32,10 @@ Win32, leaving application architecture outside the library.
    (`unique_hmenu`, `unique_hicon`, …) for the plumbing, winwrap's ergonomic
    types layered on top. Factories, attachment and teardown must make ownership
    visible; current implementation gaps live in [TECH_DEBT.md](TECH_DEBT.md).
-5. **Value-based errors.** The public API returns
-   `std::expected<T, std::error_code>` (Win32 codes via `std::system_category()`)
-   — explicit recoverable OS failures. This does not imply exception-disabled
+5. **Value-based errors.** The public API returns `std::expected<T, E>`, normally
+   using `std::error_code` for Win32 codes via `std::system_category()`. A focused
+   structured error preserves additional native result data when callers need it,
+   keeping recoverable OS failures explicit. This does not imply exception-disabled
    support: allocations and user callbacks require a separately specified policy.
 6. **Useful standalone protocols.** A reusable `Shell_NotifyIcon` abstraction accepts
    an HWND; tray events arrive as ordinary window messages. It must remain usable

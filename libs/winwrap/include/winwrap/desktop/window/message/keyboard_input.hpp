@@ -22,3 +22,5 @@ struct KeyboardInput {
 };
 
 }  // namespace winwrap
+
+#undef WW_CASE

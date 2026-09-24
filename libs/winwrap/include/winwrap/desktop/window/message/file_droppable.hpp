@@ -49,3 +49,5 @@ struct FileDroppable {
 };
 
 }  // namespace winwrap
+
+#undef WW_CASE

@@ -26,8 +26,9 @@ the [vision](VISION.md#why-it-exists) separates that value from public adoption.
   with `requires` and resolved by `if constexpr`, with the final type deduced via
   C++23 *deducing this*. Incoming message IDs are still runtime values.
 - **Value-based OS errors.** Factories and supported fallible operations use
-  `std::expected<T, std::error_code>`. The error-contract audit is incomplete;
-  allocation and user callbacks can still throw.
+  `std::expected<T, E>`, normally with `std::error_code`. A small structured error
+  also preserves native result data when the operation's contract requires it.
+  The error-contract audit is incomplete; allocation and user callbacks can still throw.
 - **Explicit native resources.** WIL supplies ownership primitives. Window, Menu,
   NotifyIcon and Drop manage native lifetimes; Control currently leaves child-HWND
   destruction to its parent, a contract under review.
@@ -169,8 +170,10 @@ system icon, or a non-shared `LoadImageW`) — never a shared system handle.
 an empty vector means none are present. `Device::open({.path = ..., .access = ...,
 .share_mode = ...})` owns the `CreateFileW` handle. `control(code, input, output)`
 is synchronous and reports the number of output bytes actually written; callers
-must interpret and validate those bytes for their own protocol. `handle()` borrows
-the native handle without transferring ownership. There is no overlapped-I/O API;
+must interpret and validate those bytes for their own protocol. A failed request
+returns `Device::ControlError`, which preserves the native error and any partial
+byte count reported by Windows, bounded by the output buffer. `handle()` borrows the
+native handle without transferring ownership. There is no overlapped-I/O API;
 asynchronous requests need separate buffer and cancellation lifetimes.
 
 Configuration Manager returns `CONFIGRET`, not a `GetLastError` code. WinWrap

@@ -331,7 +331,7 @@ list.
 1. **Create the header.** `lib/include/winwrap/message_loop.hpp` — `#pragma once`,
    `#include "winwrap/win.hpp"`, then `#include <wil/result_macros.h>`, `namespace
    winwrap {`. Write the Doxygen `///` brief + `@return`/`@note` on `run()` (public
-   API ⇒ documented, per `base:cpp-style`).
+   API ⇒ documented, per `cpp:style`).
 2. **Write `run()`.** Match the sketch in (c): the `constexpr int get_message_failed
    {-1};` named constant (no bare `-1` at the call site, per "named constexpr at its
    contextual boundary" — function-local, its only user), the `while ((status =

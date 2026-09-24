@@ -21,8 +21,8 @@ namespace winwrap {
 /// Settings passed to Control<T>::create, set with designated initializers; omitted
 /// fields take the defaults.
 struct ControlConfig {
-    HWND parent{};             ///< Window the control lives in; gets its `WM_COMMAND`.
-    UINT id{};                 ///< Command id; match it in the parent's on_command.
+    HWND parent{};             ///< Window the control lives in; receives its `WM_COMMAND`.
+    UINT id{};                 ///< Command id reported with the control's `WM_COMMAND`.
     const wchar_t* text{L""};  ///< Initial caption: button label, static text, edit contents.
     int x{0};                  ///< Left edge, in pixels, from the parent's client area.
     int y{0};                  ///< Top edge, in pixels, from the parent's client area.
@@ -82,8 +82,7 @@ public:
         return self;
     }
 
-    /// The control's command id -- what the parent matches in on_command to
-    /// identify this control among its siblings.
+    /// The control's command id, reported with its `WM_COMMAND` notification.
     [[nodiscard]] UINT id() const { return id_; }
 
     /// The message fallback: hands any message no hook claimed to DefSubclassProc.
@@ -134,7 +133,7 @@ private:
         return result;
     }
 
-    UINT id_{};  // command id the parent routes on (see on_command)
+    UINT id_{};  // command id reported with the control's WM_COMMAND notification
 };
 
 }  // namespace winwrap

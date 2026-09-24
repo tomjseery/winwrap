@@ -24,3 +24,5 @@ struct FocusAware {
 };
 
 }  // namespace winwrap
+
+#undef WW_CASE
