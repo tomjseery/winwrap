@@ -39,7 +39,7 @@ struct FileDroppable {
                               })
                     DragAcceptFiles(self.hwnd(), TRUE);
                 break;
-            WINWRAP_HOOK_CASE(WM_DROPFILES,
+            WW_CASE(WM_DROPFILES,
                     self.on_files_dropped(make_dropped_paths(reinterpret_cast<HDROP>(wparam))));
             default:
                 break;

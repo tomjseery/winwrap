@@ -22,6 +22,7 @@ Apply Tommy's approved window-subsystem organization and clearer file names. Kee
 - Keep `filesystem/attributes.hpp`; move the prior `shell/folder.hpp` operation as described above.
 - Keep `Menu`, `NotifyIcon`, and `Drop` outside the window folder as independent desktop resources. Keep `Device`, filesystem attributes, and generic error support outside desktop.
 - Mirror the single library target with `libs/winwrap/` and `tests/winwrap/`; retain the public target and include root.
+- Keep `WW_CASE` as the concise, library-prefixed hook macro. `hook_case.hpp` stays beside the mixins that include it; each public mixin header must compile independently.
 - Name the message fold `MessageRouter` with `route_message`; mixins keep `handle_message`. Use singular behavior names for hook mixins: `Lifecycle`, `SizeChange`, `WindowCommand`, `Paintable`, `MouseInput`, `KeyboardInput`, `FocusAware`, and `FileDroppable`. `-able` is valid for an actual capability; avoid a blanket `*Messages` suffix. The callback mixins remain named for their notifications.
 - Put callback mixins under `desktop/window/notification/command/` with short names in the `notification` namespace: `Click`, `TextChange`, and `SelectionChange`. They expose callbacks for control notifications; the control itself already supports clicks or text changes without the mixin.
 - Use the established Win32 term *message reflection* for a parent returning a control notification to the child. Scope the current implementation to `WM_COMMAND` with `notification::CommandReflection` under `desktop/window/notification/command/`.
@@ -29,7 +30,7 @@ Apply Tommy's approved window-subsystem organization and clearer file names. Kee
 ## Work and verification
 
 1. Record current include and CMake references, then move files and update includes, tests, examples, and current guidance.
-2. Resolve the old `WW_CASE` umbrella dependency so each focused mixin header can be included by itself; use the global `WINWRAP_HOOK_CASE` spelling to avoid short-prefix macro collisions.
+2. Resolve the `WW_CASE` umbrella dependency so each focused mixin header can be included by itself. Keep `WW_CASE` as the concise library-prefixed macro name.
 3. Integrate the Device parser into its owner and preserve meaningful malformed-input coverage.
 4. Build and run tests with the selected MSVC preset; check standalone public-header compilation and an installed-consumer path if available.
 5. Review the diff for accidental API changes, stale paths, and unrelated working-tree files; update this plan with observed results.
@@ -50,6 +51,7 @@ Apply Tommy's approved window-subsystem organization and clearer file names. Kee
 
 - 2026-09-24 (Shell header review): Tommy chose resource grouping for Shell free functions. The existing `notify_folder_changed` moved from `desktop/shell/change_notifications.hpp` to `desktop/shell/folder.hpp`; future folder operations share that header. The `CODE_CONVENTIONS.md` rule now states that resource grouping, not function count, determines a header. This addresses the only public free-function header that had one operation; `filesystem/attributes.hpp`, `desktop/message_loop.hpp`, and `error.hpp` already group related operations. MSVC 14.51 rebuilt the new public header independently. A fresh install had `folder.hpp` and no `change_notifications.hpp`; a fresh `find_package(winwrap)` consumer included the new path, linked, and exited 0. The preceding mixin rename had passed 33/33 tests; the Shell move did not change runtime code.
 - 2026-09-24 (delivery update): Committed Shell grouping as `862d276` and pushed both new commits to draft PR #8 on `Refactor/Winwrap-Structure`. GitHub reported head `862d2767fc493540414bbbea7d7c37fb19c202eb`, base `Feature/Device-Io`, draft status, and no reported status checks. Updated the PR body to describe the singular mixin names and `shell/folder.hpp`, removing the resolved Shell review point. `CommandReflection` remains the open review point.
+- 2026-09-24 (macro name): Tommy clarified that the original `WW_` prefix is sufficient and the longer `WINWRAP_HOOK_CASE` spelling is unnecessary. Restored `WW_CASE` in the current mixin code, header check, debt and guidance; retained the macro's location beside the mixins. Historical entries still record the old intermediate spelling. MSVC 14.51 rebuilt the public-header check and all affected tests; CTest passed 33/33.
 
 ## Next Steps
 

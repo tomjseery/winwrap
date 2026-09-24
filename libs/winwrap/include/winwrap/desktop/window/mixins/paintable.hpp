@@ -13,7 +13,7 @@ struct Paintable {
     std::optional<LRESULT> handle_message([[maybe_unused]] this auto& self, UINT msg, WPARAM,
                                           LPARAM) {
         switch (msg) {
-            WINWRAP_HOOK_CASE(WM_PAINT, self.on_paint());
+            WW_CASE(WM_PAINT, self.on_paint());
             default:
                 break;
         }

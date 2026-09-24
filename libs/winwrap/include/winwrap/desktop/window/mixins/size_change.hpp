@@ -14,7 +14,7 @@ struct SizeChange {
     std::optional<LRESULT> handle_message([[maybe_unused]] this auto& self, UINT msg, WPARAM,
                                           LPARAM lparam) {
         switch (msg) {
-            WINWRAP_HOOK_CASE(WM_SIZE, self.on_size(LOWORD(lparam), HIWORD(lparam)));
+            WW_CASE(WM_SIZE, self.on_size(LOWORD(lparam), HIWORD(lparam)));
             default:
                 break;
         }

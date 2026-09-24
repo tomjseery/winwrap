@@ -115,7 +115,7 @@ the window itself — no reflection, no id plumbing — and the natural handler 
 code on the derived window type. `FileDroppable` is the worked example.
 
 1. Add `desktop/window/mixins/<name>.hpp`, same shape as `paintable.hpp`: include
-   `winwrap/desktop/window/mixins/hook_case.hpp` and write a `WINWRAP_HOOK_CASE` per
+   `winwrap/desktop/window/mixins/hook_case.hpp` and write a `WW_CASE` per
    message. If the message carries a packed payload, unpack it in a local
    `make_*` helper so the hook sees typed values, never raw `WPARAM`/`LPARAM`:
 
@@ -130,7 +130,7 @@ code on the derived window type. `FileDroppable` is the worked example.
                                  })
                        DragAcceptFiles(self.hwnd(), TRUE);
                    break;
-               WINWRAP_HOOK_CASE(WM_DROPFILES,
+               WW_CASE(WM_DROPFILES,
                        self.on_files_dropped(make_dropped_paths(reinterpret_cast<HDROP>(wparam))));
                default:
                    break;

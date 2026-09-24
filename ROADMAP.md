@@ -149,7 +149,7 @@ app-side GDI (`CreateIconIndirect`); adoption must have an explicit ownership co
   `nullopt` = pass on. `MessageRouter<Mixins...>` chains them via a fold
   expression (`||`), short-circuiting on first match, and its `route_message`
   falls back to the derived type's `default_proc` when no mixin claims the
-  message. Both `Window<T>` and `Control<T>` inherit it. The `WINWRAP_HOOK_CASE(message, call)` macro (defined in
+  message. Both `Window<T>` and `Control<T>` inherit it. The `WW_CASE(message, call)` macro (defined in
   `desktop/window/mixins/hook_case.hpp`, included by each hook mixin) is the only tool that can simultaneously put a maybe-absent member
   into an unevaluated `requires` and `return`/`break` from the caller's frame — one
   line per case, zero duplication. No vtables; composition is compile-time but
@@ -175,7 +175,7 @@ app-side GDI (`CreateIconIndirect`); adoption must have an explicit ownership co
   typed hooks, dead branches eliminated — not cycles saved.
   Follow-ups:
   - **(a) Additive, recommended — hook-signature hardening.** Extend the macro to
-    `WINWRAP_HOOK_CASE(message, hook, call)`; in the `if constexpr` *else* branch add
+    `WW_CASE(message, hook, call)`; in the `if constexpr` *else* branch add
     `static_assert(!requires { &std::remove_cvref_t<decltype(self)>::hook; },
     "winwrap: '" #hook "' exists but doesn't match the hook signature")` (the
     final type is spelled from `self` now that no `Derived` parameter exists).
@@ -508,7 +508,7 @@ engine, no theming framework, no widget toolkit. Not a Qt/wxWidgets replacement.
   final type defining `on_files_dropped` (`if constexpr (requires …)`), so a
   handler-less compose registers, and leaks, nothing. A drop window is now just
   `Window<T, FileDroppable>` + the hook — no `.ex_style = WS_EX_ACCEPTFILES` at
-  the call site. Registration rides `WM_NCCREATE` as a pass-through: `WINWRAP_HOOK_CASE`
+  the call site. Registration rides `WM_NCCREATE` as a pass-through: `WW_CASE`
   returns 0 (which would abort creation) and the built-in `Lifecycle` already
   claims `WM_CREATE`, so neither hook path was available. Tested against a real
   created window (self-registration bit set).
