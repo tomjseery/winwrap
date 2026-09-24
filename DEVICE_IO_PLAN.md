@@ -212,7 +212,12 @@ owner and should review any resulting public name/layout edits separately.
    device I/O. The temporary-file test now exercises opening only, with assertion-safe
    cleanup, so success no longer depends on filesystem compression support.
 2. Completed 2026-09-24: MSVC 19.51 built the library and tests in `build/gdb`; CTest
-   passed 36/36, `git diff --check` passed, and no legacy `base:cpp-*` reference remains.
-3. Review and commit the exact correction, push it, update PR #7, and verify its remote
-   head. Then return to `STRUCTURE_PLAN.md` for PR #8 fixes, exact-stack review,
-   dependency-ordered merge, and the authorized standards handoff.
+   passed 37/37 after review remediation, `git diff --check` passed, and no disabled
+   legacy skill identifier remains.
+3. Completed 2026-09-24: review of the first candidate found one missing assertion for
+   the successful-call over-report guard. The remediation test now freezes
+   `ERROR_INVALID_DATA` and the bounded byte count; incremental review found no further
+   issues.
+4. Push the reviewed commits, update PR #7, and verify its remote head. Then return to
+   `STRUCTURE_PLAN.md` for PR #8 fixes, exact-stack review, dependency-ordered merge,
+   and the authorized standards handoff.

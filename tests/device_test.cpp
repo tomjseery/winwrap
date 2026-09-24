@@ -36,6 +36,12 @@ BOOL WINAPI oversized_partial_control(HANDLE, DWORD, LPVOID, DWORD, LPVOID, DWOR
     return FALSE;
 }
 
+BOOL WINAPI oversized_successful_control(HANDLE, DWORD, LPVOID, DWORD, LPVOID, DWORD output_size,
+                                         LPDWORD returned, LPOVERLAPPED) {
+    *returned = output_size + 1;
+    return TRUE;
+}
+
 }  // namespace
 
 TEST_CASE("paths accepts an empty list") {
@@ -135,5 +141,14 @@ TEST_CASE("device control bounds a failed request's returned byte count") {
         winwrap::detail::control(nullptr, 0, {}, output, &oversized_partial_control)};
     REQUIRE_FALSE(returned.has_value());
     CHECK(returned.error().code.value() == ERROR_MORE_DATA);
+    CHECK(returned.error().bytes_returned == output.size());
+}
+
+TEST_CASE("device control rejects an over-reported successful byte count") {
+    std::array<std::byte, 4> output{};
+    const auto returned{
+        winwrap::detail::control(nullptr, 0, {}, output, &oversized_successful_control)};
+    REQUIRE_FALSE(returned.has_value());
+    CHECK(returned.error().code.value() == ERROR_INVALID_DATA);
     CHECK(returned.error().bytes_returned == output.size());
 }
