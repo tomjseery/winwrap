@@ -11,7 +11,7 @@ add_executable(winwrap_test
     device_test.cpp
     desktop/window/window_test.cpp
     desktop/window/drop_window_test.cpp
-    desktop/window/mixins/file_droppable_test.cpp
+    desktop/window/message/file_droppable_test.cpp
     desktop/window/control_test.cpp
     desktop/window/controls/button_test.cpp
     desktop/window/controls/checkbox_test.cpp

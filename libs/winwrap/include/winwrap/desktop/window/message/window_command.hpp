@@ -6,10 +6,11 @@
 
 namespace winwrap {
 
-/// WINDOW mixin. Routes a menu or accelerator command (lparam == 0) to the final
+/// Window message behavior that routes a menu or accelerator command (lparam == 0) to the final
 /// type's `on_command(id)` (low word of wparam). Control notifications (lparam != 0)
-/// are not commands the window handles directly -- notification::CommandReflection bounces those home.
-/// WindowCommand and notification::CommandReflection split `WM_COMMAND` between them by lparam (== 0 here,
+/// are not commands the window handles directly -- notification::CommandReflection bounces those
+/// home. WindowCommand and notification::CommandReflection split `WM_COMMAND` between them by
+/// lparam (== 0 here,
 /// != 0 there). Dispatch is first-match-wins, so if these conditions ever overlap --
 /// or another mixin matches `WM_COMMAND` -- one handler silently steals the other's
 /// messages. Keep the split exact.

@@ -6,17 +6,17 @@
 #include <memory>
 #include <system_error>
 
-#include "winwrap/error.hpp"
 #include "winwrap/desktop/window/base_window.hpp"
-#include "winwrap/desktop/window/message_router.hpp"
+#include "winwrap/desktop/window/message/focus_aware.hpp"
+#include "winwrap/desktop/window/message/keyboard_input.hpp"
+#include "winwrap/desktop/window/message/lifecycle.hpp"
+#include "winwrap/desktop/window/message/message_router.hpp"
+#include "winwrap/desktop/window/message/mouse_input.hpp"
+#include "winwrap/desktop/window/message/paintable.hpp"
+#include "winwrap/desktop/window/message/size_change.hpp"
+#include "winwrap/desktop/window/message/window_command.hpp"
 #include "winwrap/desktop/window/notification/command/reflection.hpp"
-#include "winwrap/desktop/window/mixins/window_command.hpp"
-#include "winwrap/desktop/window/mixins/focus_aware.hpp"
-#include "winwrap/desktop/window/mixins/keyboard_input.hpp"
-#include "winwrap/desktop/window/mixins/lifecycle.hpp"
-#include "winwrap/desktop/window/mixins/mouse_input.hpp"
-#include "winwrap/desktop/window/mixins/paintable.hpp"
-#include "winwrap/desktop/window/mixins/size_change.hpp"
+#include "winwrap/error.hpp"
 
 namespace winwrap {
 
@@ -24,13 +24,14 @@ namespace winwrap {
 /// omitted fields take the defaults below.
 struct WindowConfig {
     const wchar_t* title{L""};         ///< Window title-bar text.
-    DWORD style{WS_OVERLAPPEDWINDOW};  ///< Window styles; the default is not visible -- OR in WS_VISIBLE, or call show().
+    DWORD style{WS_OVERLAPPEDWINDOW};  ///< Window styles; the default is not visible -- OR in
+                                       ///< WS_VISIBLE, or call show().
     DWORD ex_style{0};                 ///< Extended (WS_EX_*) styles.
-    int x{CW_USEDEFAULT};              ///< Left edge in pixels; CW_USEDEFAULT lets Windows place it.
-    int y{CW_USEDEFAULT};              ///< Top edge in pixels; CW_USEDEFAULT lets Windows place it.
-    int width{CW_USEDEFAULT};          ///< Width in pixels; CW_USEDEFAULT lets Windows size it.
-    int height{CW_USEDEFAULT};         ///< Height in pixels; CW_USEDEFAULT lets Windows size it.
-    HWND parent{nullptr};              ///< Owner/parent window; null for a top-level window.
+    int x{CW_USEDEFAULT};       ///< Left edge in pixels; CW_USEDEFAULT lets Windows place it.
+    int y{CW_USEDEFAULT};       ///< Top edge in pixels; CW_USEDEFAULT lets Windows place it.
+    int width{CW_USEDEFAULT};   ///< Width in pixels; CW_USEDEFAULT lets Windows size it.
+    int height{CW_USEDEFAULT};  ///< Height in pixels; CW_USEDEFAULT lets Windows size it.
+    HWND parent{nullptr};       ///< Owner/parent window; null for a top-level window.
 };
 
 /// CRTP base for a top-level window. Derive as
@@ -43,7 +44,7 @@ struct WindowConfig {
 /// Messages route to the matching hook the window defines, or to DefWindowProcW
 /// when none claims it (see route_message, inherited from MessageRouter). Define
 /// only the hooks you need, as **public** members; they come from the composable
-/// mixins in <winwrap/desktop/window/mixins/>:
+/// message behaviors in <winwrap/desktop/window/message/>:
 ///
 ///   - `on_create()` / `on_close()` / `on_destroy()`  -- lifecycle
 ///   - `on_size(w, h)`        -- `WM_SIZE` (client width/height)
@@ -66,9 +67,10 @@ struct WindowConfig {
 /// @tparam Mixins  Extra window mixins to compose (e.g. FileDroppable), tried
 ///                 after the built-ins in the order given.
 template <typename T, typename... Mixins>
-class Window : public BaseWindow,
-               public MessageRouter<Lifecycle, SizeChange, WindowCommand, notification::CommandReflection, Paintable,
-                                        MouseInput, KeyboardInput, FocusAware, Mixins...> {
+class Window
+    : public BaseWindow,
+      public MessageRouter<Lifecycle, SizeChange, WindowCommand, notification::CommandReflection,
+                           Paintable, MouseInput, KeyboardInput, FocusAware, Mixins...> {
 public:
     Window(const Window&) = delete;
     Window& operator=(const Window&) = delete;
@@ -79,8 +81,8 @@ public:
     /// @param cfg  Per-window settings (title, style, geometry, parent).
     /// @return     The sole owner of the live window, or the Win32 error
     ///             (as std::error_code) that stopped creation.
-    [[nodiscard]] static std::expected<std::unique_ptr<T>, std::error_code>
-    create(const WindowConfig& cfg = {}) {
+    [[nodiscard]] static std::expected<std::unique_ptr<T>, std::error_code> create(
+        const WindowConfig& cfg = {}) {
         auto self = std::unique_ptr<T>{new T{}};
         if (auto made = self->create_window(cfg); !made)
             return std::unexpected(made.error());
@@ -134,9 +136,9 @@ private:
 
         // --- Creation (per window): `this` rides through so the static callback
         // can recover the object in WM_NCCREATE.
-        HWND hwnd = CreateWindowExW(cfg.ex_style, T::window_class_name, cfg.title, cfg.style,
-                                    cfg.x, cfg.y, cfg.width, cfg.height, cfg.parent, nullptr,
-                                    instance_, static_cast<T*>(this));
+        HWND hwnd = CreateWindowExW(cfg.ex_style, T::window_class_name, cfg.title, cfg.style, cfg.x,
+                                    cfg.y, cfg.width, cfg.height, cfg.parent, nullptr, instance_,
+                                    static_cast<T*>(this));
         if (!hwnd)
             return std::unexpected(last_error());
         return {};
