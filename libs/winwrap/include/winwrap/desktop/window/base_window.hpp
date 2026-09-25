@@ -15,9 +15,9 @@ namespace winwrap {
 /// window -- its caption, enabled/visible state, and so on -- live here once, so
 /// Window<T> and Control<T> share a single implementation instead of each re-exposing
 /// their own subset. Mirrors ATL's CWindow: it stores the handle and operates on it,
-/// but never manages its lifetime -- the derived wrapper owns that (Window destroys the
-/// window; Control merely unsubclasses it). Holds no vtable; users construct and destroy
-/// the final derived object directly, so the non-virtual destructor is correct.
+/// but never manages its lifetime -- the derived wrapper owns and destroys it. Holds no
+/// vtable; CreationResult destroys the final derived type, so the non-virtual destructor
+/// is correct.
 class BaseWindow {
 public:
     /// The underlying window handle, or nullptr once the window is destroyed.

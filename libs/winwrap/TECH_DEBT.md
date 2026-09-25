@@ -30,12 +30,6 @@ entry once its resolution condition is met; Git preserves the history.
   **Resolve:** an explicit exception-boundary policy, recoverable setup results and
   application error-delivery contract, verified without leaking partial resources
   or silently reporting success.
-- **M1 / control own versus borrow.** Wrapper destruction leaves the native child
-  alive, contradicting the factory's sole-owner claim. **Resolve:** decide and
-  document owning creation versus borrowed attachment/parent ownership; test early
-  wrapper reset and parent-first destruction. Expose a usable borrowed HWND façade
-  if incremental existing-HWND adoption remains a supported audience.
-
 ## Dispatch, reflection and headers
 
 - **M2 / result-bearing hooks and setup.** `WW_CASE` discards returns, including

@@ -1,27 +1,32 @@
-# Pinned-instance window and control creation
+# Stable-owner window and control factories
 
 ## Objective
 
-Remove the `(*made)->op()` double unwrap from every `Window<T>` / `Control<T>` call site, so an
-application can create a window and use it directly, without reaching through a pointer.
-Tommy's words: "refactor our class to allow for a way to do without referencing the pointer".
+Remove the `(*made)->op()` double unwrap from every `Window<T>` / `Control<T>` call site while
+preserving complete static construction, explicit value errors, and the permanent object address
+required by Win32 callbacks.
 
-Today:
+Required public surface:
 
 ```cpp
-auto made = App::create({.title = L"demo"});   // std::expected<std::unique_ptr<App>, std::error_code>
-if (!made)
-    return 1;
-(*made)->show();                               // expected, then pointer
+auto window = App::create({.title = L"demo"});
+if (!window)
+    return window.error().value();
+window->show();
 ```
 
-This resolves `libs/winwrap/TECH_DEBT.md` → "Owned windows are pointers".
+The stable heap allocation remains an intentional lifetime requirement. Winwrap must hide the
+`std::expected<std::unique_ptr<T>, std::error_code>` composition behind one narrow result-owner
+adapter rather than exposing its double indirection.
 
 ## Authorization
 
 - Tommy asked for this work as a handoff on 2026-09-25, straight after PR #10 merged.
 - Tommy approved option 1 on 2026-09-25: construct each non-movable object at its
   permanent address, then call its instance `create`.
+- Tommy withdrew that approval after reviewing the resulting API on 2026-09-25: `create` must
+  actually create and therefore remain a static factory. He then approved the combined
+  result-owner surface shown above.
 - **Authorized:** implement, test, review, and open the PR, following the same lifecycle
   as PR #10.
 - **Still gated:** merge only when Tommy explicitly approves it.
@@ -165,18 +170,24 @@ window.show();
 - **Verdict:** reject. It satisfies the surface syntax by weakening the central
   callback/lifetime contract.
 
-### Option 3 - keep the heap behind a different owner
+### Option 3 - keep the heap behind a combined creation result/owner
 
 - The pointed-to `T` stays stable, so callbacks, destruction, H4 exposure, and the
   current failure model remain unchanged.
-- `std::expected<Owner<T>, E>` still needs `(*made)->show()`. `made->show()` stops at
-  `Owner<T>*`; C++ does not then recursively invoke `Owner<T>::operator->`.
-- Forwarding every operation onto `Owner<T>` duplicates the window API. Replacing
-  `std::expected` with a combined result/owner type contradicts the standard-type
-  boundary and still leaves controls as indirect members.
-- H2, H3, H4, and M1 remain separate defects.
-- **Verdict:** reject for this objective. It renames the pointer owner without
-  removing the second unwrap.
+- `std::expected<Owner<T>, E>` would still need `(*made)->show()`. The required shape is
+  instead one narrow Winwrap type that owns an internal
+  `std::expected<std::unique_ptr<T>, std::error_code>` and forwards `operator->` directly
+  to `T` after the caller checks it.
+- This type exposes expected-like `operator bool`, `has_value`, and `error` operations but
+  does not expose or require callers to move the underlying `unique_ptr`. It adds no native
+  allocation beyond the stable allocation already required by the callback binding.
+- A default-empty state lets the same owner live as a child-control member and receive the
+  static factory result during the parent's `on_created` hook.
+- H2 remains fixed by storing the adjusted final `T*` in subclass data. H3/H4 remain
+  separate correctness work.
+- **Verdict:** selected after rejecting the instance-mutating API. This is the smallest
+  abstraction that simultaneously preserves explicit value errors, static construction,
+  stable addresses, and `window->show()` call sites.
 
 ### Option 4 - call-site alias only
 
@@ -258,11 +269,11 @@ replace the illustrative `creation_error_` handling.
 
 ## Recommendation
 
-Choose **option 1: construct, then create a pinned object** for both `Window<T>` and
-`Control<T>`, and fix H2 in the same implementation. Keep copy and move deleted.
-Define the empty/live transition explicitly and make every operation on the empty state
-continue to report `ERROR_INVALID_WINDOW_HANDLE`. Treat option 4 as the no-API-change
-fallback. Do not build option 2 or 3.
+Choose **option 3: static factories returning a combined creation result/owner** for both
+`Window<T>` and `Control<T>`. The owner moves while the allocated `T` never does, so the
+native callback address remains stable. Keep `T` itself non-copyable and non-movable. Keep
+the H2 adjusted-pointer fix. Do not expose `std::move(result).value()` or the internal
+`unique_ptr` at call sites, and do not restore the option-1 instance lifecycle.
 
 ## Environment
 
@@ -319,6 +330,19 @@ fallback. Do not build option 2 or 3.
 - 2026-09-25: opened PR #11,
   `https://github.com/tomjseery/winwrap/pull/11`. The repository has no remote CI.
   Merge remains gated on Tommy's explicit approval.
+- 2026-09-25: Tommy rejected the delivered instance `create` API because it mutates an
+  already-constructed object and therefore violates the factory meaning. He approved a
+  corrected static inherited factory whose combined result/owner supports error checking
+  followed directly by `window->operation()` without caller-side extraction.
+- 2026-09-25: implemented `CreationResult<T>` over the standard expected/unique-owner
+  composition, restored inherited static `Window<T>::create` / `Control<T>::create`,
+  renamed the derived native-class constant to `class_name`, and migrated call sites to
+  checked direct arrow access. Control now destroys a still-live child HWND after detaching
+  its subclass, resolving M1; tests cover owner-first and parent-first destruction.
+- 2026-09-25: the corrected MSVC `gdb` build and standalone public-header checks pass.
+  The focused creation/ownership suite passes 22/22. The complete run passes 85/87 and
+  reproduces only the two already-documented desktop-Shell `NIM_ADD` fixture failures;
+  the explicit exclusion run passes 85/85.
 
 ## Next Steps
 
@@ -326,9 +350,12 @@ fallback. Do not build option 2 or 3.
    run the `gdb` preset to confirm the 80-test baseline.
 2. [x] Read the required project guidance, debt owner, implementation, tests, and README call sites.
 3. [x] Evaluate and prototype all four options; record evidence, call sites, and a recommendation.
-4. [x] Tommy chose option 1 (construct, then create a pinned object).
-5. [x] Implement the chosen design, including the H2 fix, and update the README, tests,
-   `CODE_CONVENTIONS.md`, `ROADMAP.md`, `MESSAGE_LOOP_DESIGN.md`, and debt/history owners.
-6. [x] Run final formatting and the complete build/test suite; reconcile any failures.
-7. [x] Review the complete diff, resolve findings, and open PR #11.
-8. [ ] Merge only after Tommy explicitly approves it.
+4. [x] Tommy initially chose option 1, then rejected it after reviewing the concrete API.
+5. [x] Tommy selected corrected option 3: inherited static factories plus a combined stable
+   result/owner with direct `operator->` access.
+6. [x] Replace the instance factory implementation and call sites while retaining H2.
+7. [x] Reconcile README, tests, `CODE_CONVENTIONS.md`, `ROADMAP.md`,
+   `MESSAGE_LOOP_DESIGN.md`, and debt/history owners with the corrected contract.
+8. [x] Run formatting and the complete build/test suite; reconcile failures.
+9. [ ] Review the corrected complete diff and update PR #11.
+10. [ ] Merge only after Tommy explicitly approves it.

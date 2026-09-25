@@ -4,9 +4,12 @@
 
 #include <chrono>
 #include <expected>
+#include <memory>
 #include <system_error>
+#include <utility>
 
 #include "winwrap/desktop/window/base_window.hpp"
+#include "winwrap/desktop/window/creation_result.hpp"
 #include "winwrap/desktop/window/message/focus_aware.hpp"
 #include "winwrap/desktop/window/message/keyboard_input.hpp"
 #include "winwrap/desktop/window/message/lifecycle.hpp"
@@ -44,11 +47,9 @@ struct WindowConfig {
 /// `on_created`). Dispatch resolves at compile time (C++23 deducing this) -- no
 /// virtual, no vtable.
 ///
-/// Construct the final object at its permanent address, then call create(). Windows
-/// stores that address in the native window, so Window deliberately cannot be copied
-/// or moved. A default-constructed or previously destroyed object has a null hwnd()
-/// and may be created; calling create() while its window is live fails with
-/// ERROR_ALREADY_EXISTS.
+/// Create the final object with T::create(). The returned CreationResult owns it at
+/// a permanent address because Windows stores that address in the native window;
+/// Window deliberately cannot be copied or moved.
 ///
 /// Messages route to the matching hook the window defines, or to DefWindowProcW
 /// when none claims it (see route_message, inherited from MessageRouter). Define
@@ -73,7 +74,7 @@ struct WindowConfig {
 /// a built-in claims, shadow route_message instead.
 ///
 /// @tparam T       The derived window type. Must provide
-///                 `static constexpr const wchar_t* window_class_name` and be
+///                 `static constexpr const wchar_t* class_name` and be
 ///                 default-constructible.
 /// @tparam Mixins  Extra window mixins to compose (e.g. FileDroppable), tried
 ///                 after the built-ins in the order given.
@@ -88,18 +89,15 @@ public:
     Window(Window&&) = delete;
     Window& operator=(Window&&) = delete;
 
-    /// Creates this object's window and runs the post-create hook. A detached object
-    /// may be retried after failed creation or native destruction.
+    /// Constructs the final object, creates its window, and runs the post-create hook.
     /// @param cfg  Per-window settings (title, style, geometry, parent).
-    /// @return     Nothing, or the Win32 error that stopped creation;
-    ///             ERROR_ALREADY_EXISTS when this object already has a live window.
-    [[nodiscard]] std::expected<void, std::error_code> create(const WindowConfig& cfg = {}) {
-        if (hwnd())
-            return std::unexpected(error::win32(ERROR_ALREADY_EXISTS));
-        if (auto made = create_window(cfg); !made)
-            return std::unexpected(made.error());
-        static_cast<T*>(this)->on_created();
-        return {};
+    /// @return     Stable owner of the live window, or the Win32 creation error.
+    [[nodiscard]] static CreationResult<T> create(const WindowConfig& cfg = {}) {
+        auto self = std::unique_ptr<T>{new T{}};
+        if (auto made = self->create_window(cfg); !made)
+            return CreationResult<T>{made.error()};
+        self->on_created();
+        return CreationResult<T>{std::move(self)};
     }
 
     /// Delegates one message to this window's native fallback (DefWindowProcW).
@@ -163,7 +161,7 @@ private:
         WNDCLASSW wc{};
         wc.lpfnWndProc = window_proc;
         wc.hInstance = instance_;
-        wc.lpszClassName = T::window_class_name;
+        wc.lpszClassName = T::class_name;
         wc.style = CS_HREDRAW | CS_VREDRAW;
         wc.hCursor = LoadCursorW(nullptr, IDC_ARROW);
         wc.hbrBackground = reinterpret_cast<HBRUSH>(COLOR_WINDOW + 1);
@@ -179,7 +177,7 @@ private:
         // --- Creation (per window): `this` rides through so the static callback
         // can recover the object in WM_NCCREATE.
         // The destructor, not the handle, destroys the window: it must detach first.
-        return window::create({.class_name = T::window_class_name,
+        return window::create({.class_name = T::class_name,
                                .title = cfg.title,
                                .style = cfg.style,
                                .ex_style = cfg.ex_style,

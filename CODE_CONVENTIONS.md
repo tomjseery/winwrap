@@ -47,10 +47,11 @@ The verb a function picks tells the reader its contract. The deciding question i
 - **`create`** — an operation that **acquires an OS resource and can fail**. It
   normally returns `std::expected<T, std::error_code>` because a real constructor
   cannot report failure. When the OS must retain the wrapper's address, as for
-  `Window<T>` and `Control<T>`, construct the non-movable object at its permanent
-  address first and let its instance `create` return
-  `std::expected<void, std::error_code>`. The private worker that performs the
-  acquisition takes the same family with a suffix, `create_<thing>`.
+  `Window<T>` and `Control<T>`, their inherited static factory returns
+  `CreationResult<T>`. It combines the expected creation error with the sole owner
+  of a permanently addressed `T`, allowing a checked result to use
+  `result->operation()` without exposing `unique_ptr` extraction. The private worker
+  that performs the acquisition takes the same family with a suffix, `create_<thing>`.
 - **`open`** — acquire a handle to an existing named resource, as `Device::open` does.
 - **`load`** — acquire an owned copy of an existing image resource, as `icon::load`
   does. When the result is a WIL owner such as `wil::unique_hicon`, no Winwrap type
@@ -62,17 +63,19 @@ The verb a function picks tells the reader its contract. The deciding question i
 
 ```cpp
 static std::expected<NotifyIcon, std::error_code> create(const NotifyIconConfig&); // acquires + can fail
-std::expected<void, std::error_code>              create(const WindowConfig&);     // creates pinned object
+static CreationResult<T>                         create(const WindowConfig&); // creates pinned object
 std::expected<void, std::error_code>              create_control(const ControlConfig&); // private worker
-NOTIFYICONDATAW                                   make_data() const noexcept;        // builds a value, can't fail
+NOTIFYICONDATAW                                   make_data() const noexcept; // builds a value, can't fail
 ```
 
-The pinned `Window<T>` / `Control<T>` form is a deliberate two-phase exception:
-Windows stores the final object's address in `GWLP_USERDATA` or subclass reference
-data, and callbacks may capture `this`. Their copy and move operations stay deleted.
-Before creation and after native destruction, `hwnd()` is null and fallible HWND
-operations report `ERROR_INVALID_WINDOW_HANDLE`. `create` rejects a live object with
-`ERROR_ALREADY_EXISTS`, but a detached object may be retried.
+`CreationResult<T>` is the narrow exception to the standard-result boundary. Plain
+`std::expected<std::unique_ptr<T>, E>` exposes two pointer-like layers and cannot
+forward `operator->` through both. The adapter still uses `std::expected` and
+`std::unique_ptr` internally, adds no allocation, and exists only for these callback-
+bound wrappers. Moving the result moves the owner, never `T`; `T` remains non-copyable
+and non-movable because Windows stores its address in `GWLP_USERDATA` or subclass data.
+Default construction supplies an empty member slot for controls created during their
+owner's `on_created()` hook.
 
 Public/private is only a *correlation*: resource factories are usually the public
 entry points and value-builders are usually private helpers — but the name follows

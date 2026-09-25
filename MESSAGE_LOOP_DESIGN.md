@@ -208,7 +208,7 @@ mixin):
 
 ```cpp
 struct MainWindow : winwrap::Window<MainWindow> {
-    static constexpr const wchar_t* window_class_name = L"MainWindow";
+    static constexpr const wchar_t* class_name = L"MainWindow";
     void on_destroy() { winwrap::quit(); }
 };
 ```

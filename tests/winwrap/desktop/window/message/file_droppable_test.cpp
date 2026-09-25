@@ -18,7 +18,7 @@
 
 namespace {
 struct DropWindow : winwrap::Window<DropWindow, winwrap::FileDroppable> {
-    static constexpr const wchar_t* window_class_name = L"WinwrapFileDropTestWindow";
+    static constexpr const wchar_t* class_name = L"WinwrapFileDropTestWindow";
     std::vector<std::wstring> dropped;
     void on_files_dropped(const std::vector<std::wstring>& paths) { dropped = paths; }
 };
@@ -84,9 +84,9 @@ TEST_CASE("Drop moves transfer ownership") {
 }
 
 TEST_CASE("FileDroppable self-registers for drops on a created window") {
-    DropWindow window;
-    REQUIRE(window.create());
-    const auto ex_style = window.ex_style();
+    auto window = DropWindow::create({});
+    REQUIRE(window.has_value());
+    const auto ex_style = window->ex_style();
     REQUIRE(ex_style);
     CHECK((*ex_style & WS_EX_ACCEPTFILES) != 0);
 }

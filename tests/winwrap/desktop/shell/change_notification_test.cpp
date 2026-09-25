@@ -22,7 +22,7 @@ constexpr UINT_PTR timeout_timer{1};
 // Records the Shell events delivered for a watched folder, using the raw registration
 // API (the listening half is not wrapped yet), and stops the loop on the expected one.
 struct ChangeWatcher : winwrap::Window<ChangeWatcher> {
-    static constexpr const wchar_t* window_class_name = L"WinwrapShellChangeWatcher";
+    static constexpr const wchar_t* class_name = L"WinwrapShellChangeWatcher";
     std::vector<LONG> events;
     LONG expected{};
 
@@ -92,9 +92,9 @@ std::filesystem::path make_temp_folder() {
 // Needs a running Explorer: SHChangeNotify events are routed through the Shell.
 TEST_CASE("shell notifications reach a registered Shell listener") {
     const auto folder = make_temp_folder();
-    ChangeWatcher watcher;
-    REQUIRE(watcher.create({.parent = HWND_MESSAGE}));
-    auto& w = watcher;
+    auto watcher = ChangeWatcher::create({.parent = HWND_MESSAGE});
+    REQUIRE(watcher);
+    auto& w = *watcher;
     {
         Registration registration{w.hwnd(), folder};
         const auto file = folder / L"created.txt";

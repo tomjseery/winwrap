@@ -13,6 +13,7 @@ add_executable(winwrap_test
     desktop/notify_icon_test.cpp
     desktop/shell/change_notification_test.cpp
     desktop/window/base_window_test.cpp
+    desktop/window/creation_result_test.cpp
     desktop/window/window_test.cpp
     desktop/window/drop_window_test.cpp
     desktop/window/message/file_droppable_test.cpp

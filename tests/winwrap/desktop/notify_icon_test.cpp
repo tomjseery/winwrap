@@ -8,7 +8,7 @@
 namespace {
 
 struct TrayOwner : winwrap::Window<TrayOwner> {
-    static constexpr const wchar_t* window_class_name = L"WinwrapNotifyIconTest";
+    static constexpr const wchar_t* class_name = L"WinwrapNotifyIconTest";
 };
 
 constexpr UINT tray_callback{WM_APP + 1};
@@ -29,9 +29,9 @@ winwrap::NotifyIcon make_tray_icon(HWND owner) {
 }  // namespace
 
 TEST_CASE("set_icon replaces the tray icon") {
-    TrayOwner owner;
-    REQUIRE(owner.create({.parent = HWND_MESSAGE}));
-    auto tray = make_tray_icon(owner.hwnd());
+    auto owner = TrayOwner::create({.parent = HWND_MESSAGE});
+    REQUIRE(owner);
+    auto tray = make_tray_icon(owner->hwnd());
     auto replacement = winwrap::icon::load(winwrap::SystemIcon::warning, winwrap::IconSize::small);
     REQUIRE(replacement);
 
@@ -39,9 +39,9 @@ TEST_CASE("set_icon replaces the tray icon") {
 }
 
 TEST_CASE("set_icon reports a registration the shell does not know") {
-    TrayOwner owner;
-    REQUIRE(owner.create({.parent = HWND_MESSAGE}));
-    auto tray = make_tray_icon(owner.hwnd());
+    auto owner = TrayOwner::create({.parent = HWND_MESSAGE});
+    REQUIRE(owner);
+    auto tray = make_tray_icon(owner->hwnd());
     auto moved_to = std::move(tray);  // the moved-from icon no longer owns a registration
     auto replacement = winwrap::icon::load(winwrap::SystemIcon::warning, winwrap::IconSize::small);
     REQUIRE(replacement);
