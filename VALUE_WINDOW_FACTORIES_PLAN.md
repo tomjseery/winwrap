@@ -83,6 +83,188 @@ handler that runs while its object is moved or destroyed) rather than reasoning 
 - Name locals holding a window handle `hwnd`, never `window` (it hides `winwrap::window`).
 - Mixins are for inbound message behaviour; outgoing operations are members.
 
+## Investigation results (2026-09-25)
+
+### Prototype evidence
+
+The temporary Catch2 design probes in
+`tests/winwrap/desktop/window/value_factory_design_test.cpp` compile and pass on
+MSVC 19.51:
+
+1. Calling `SetWindowSubclass` again with the same procedure/id replaces
+   `dwRefData`; a control binding can be repointed in the ordinary case.
+2. `SetWindowLongPtrW(GWLP_USERDATA, ...)` likewise repoints a top-level window.
+3. Moving an object that owns a `[this]` callback does **not** retarget the capture:
+   invoking the moved callback still observes the source object's address.
+4. A member handler that moves `*this` continues executing on the moved-from source.
+   Its resource has already transferred to the destination.
+5. An owner type's `operator->` does not make
+   `std::expected<Owner, E>::operator->` reach the owned `T`; a compile-time probe
+   confirms that `made->show()` looks for `show` on `Owner`.
+6. On this MSVC layout, a `Control<T>` base placed after another non-empty base has
+   a different address from `T`. `static_cast<T*>(base)` adjusts it;
+   `reinterpret_cast<T*>(base)` does not. This reproduces H2's premise without
+   dispatching through the invalid pointer.
+
+The first two results show that movable wrappers are mechanically possible in the
+happy path. The next three show why that is not sufficient for a safe public value
+type. In addition, both native rebinding calls can fail, but a C++ move constructor
+has no `std::expected` error channel; a throwing move would weaken `expected`,
+container, and teardown behavior.
+
+### Option 1 - construct, then create a pinned object
+
+Proposed shape:
+
+```cpp
+MainWindow window;
+if (auto created = window.create({.title = L"demo"}); !created)
+    return created.error().value();
+window.show();
+```
+
+- **`this` captures:** safe. The object is at its final address before native
+  creation and never moves afterwards.
+- **Destruction order:** direct control members are destroyed before the derived
+  window reaches its `Window` base destructor. They can remove their subclasses
+  while the parent HWND is still live; the parent then destroys the child HWNDs.
+- **Failed creation:** `create` returns `expected<void, error_code>` and the object
+  remains detached (`hwnd() == nullptr`). The contract must reject a second create
+  while live and state whether retry after failure/destruction is supported.
+- **H2:** fix it while changing control creation: store a `T*`
+  (`static_cast<T*>(this)`) in `dwRefData`, then recover the same type.
+- **H3:** unchanged for top-level windows; `SetWindowLongPtrW` still needs its own
+  checked binding/rollback work. Control's existing subclass-install rollback remains.
+- **H4:** does not solve reentrant destruction, but adds no relocation path and
+  therefore does not make it worse.
+- **M1:** direct control members make wrapper ownership clearer, but whether the
+  wrapper or parent owns child-HWND destruction remains a separate decision.
+- **Cost:** this is two-phase initialization and temporarily permits an empty
+  wrapper, contrary to the normal factory/invariant preference. The stable-address
+  Win32 contract is the reason for that deliberate exception.
+
+### Option 2 - movable wrappers returned as `expected<T, error_code>`
+
+- **Native bindings:** both top-level and subclass bindings can be repointed in the
+  tested happy path; storing `T*` also fixes H2.
+- **`this` captures:** unsafe in the existing API. The README creates a button with
+  `[this]` during `on_created`; a later move transfers the `std::function` but leaves
+  its captured address pointing at the source. Winwrap cannot inspect and rewrite an
+  arbitrary closure.
+- **During dispatch:** a hook that moves its receiver continues on the moved-from
+  object. Destroying that source before the native procedure returns intersects H4's
+  already-unsafe post-callback work.
+- **Move failures:** rebinding is an OS operation. `SetWindowSubclass` reports
+  failure and `SetWindowLongPtrW` has a checked zero/error protocol, but a move
+  constructor cannot return `expected`. Making moves throw would give an ordinary
+  value type surprising failure behavior and reduce container guarantees.
+- **Derived state:** every user `T` and every member must be movable. Moving a parent
+  also moves its control members and invalidates callbacks that captured the parent.
+- **Failed creation:** the factory can still return an error without publishing a
+  value, but it must perform at least the moves needed by `expected<T, E>`; optional
+  NRVO cannot be the correctness mechanism.
+- **Verdict:** reject. It satisfies the surface syntax by weakening the central
+  callback/lifetime contract.
+
+### Option 3 - keep the heap behind a different owner
+
+- The pointed-to `T` stays stable, so callbacks, destruction, H4 exposure, and the
+  current failure model remain unchanged.
+- `std::expected<Owner<T>, E>` still needs `(*made)->show()`. `made->show()` stops at
+  `Owner<T>*`; C++ does not then recursively invoke `Owner<T>::operator->`.
+- Forwarding every operation onto `Owner<T>` duplicates the window API. Replacing
+  `std::expected` with a combined result/owner type contradicts the standard-type
+  boundary and still leaves controls as indirect members.
+- H2, H3, H4, and M1 remain separate defects.
+- **Verdict:** reject for this objective. It renames the pointer owner without
+  removing the second unwrap.
+
+### Option 4 - call-site alias only
+
+```cpp
+auto made = MainWindow::create({.title = L"demo"});
+if (!made)
+    return made.error().value();
+auto& window = **made;
+window.show();
+```
+
+- Preserves today's stable address, factory failure behavior, callback safety, and
+  destruction order with no implementation risk.
+- Does not enable direct control members, does not remove the initial double unwrap,
+  and does not resolve the debt item; H2/H3/H4/M1 are unchanged.
+- **Verdict:** safe fallback only if the two-phase state in option 1 is rejected.
+
+## Before/after call sites
+
+### README top-level window
+
+Current:
+
+```cpp
+auto window = MainWindow::create(
+    {.title = L"winwrap demo", .style = WS_OVERLAPPEDWINDOW | WS_VISIBLE});
+if (!window)
+    return window.error().value();
+
+return winwrap::message_loop::run();
+```
+
+Recommended:
+
+```cpp
+MainWindow window;
+if (auto created = window.create(
+        {.title = L"winwrap demo", .style = WS_OVERLAPPEDWINDOW | WS_VISIBLE});
+    !created)
+    return created.error().value();
+
+return winwrap::message_loop::run();
+```
+
+### Window that owns a control
+
+Current:
+
+```cpp
+void on_created() {
+    auto button = winwrap::Button::create(
+        {.parent = hwnd(), .id = 1, .text = L"Greet"},
+        [this] { set_text(L"Hello from winwrap"); });
+    if (button)
+        greet_ = std::move(*button);
+}
+
+std::unique_ptr<winwrap::Button> greet_;
+```
+
+Recommended:
+
+```cpp
+void on_created() {
+    auto created = greet_.create(
+        {.parent = hwnd(), .id = 1, .text = L"Greet"},
+        [this] { set_text(L"Hello from winwrap"); });
+    if (!created)
+        creation_error_ = created.error();
+}
+
+winwrap::Button greet_;
+std::error_code creation_error_;
+```
+
+This improves storage and use syntax, but it does not solve M2: `on_created()` still
+cannot reject the parent window's creation. A later fallible setup contract should
+replace the illustrative `creation_error_` handling.
+
+## Recommendation
+
+Choose **option 1: construct, then create a pinned object** for both `Window<T>` and
+`Control<T>`, and fix H2 in the same implementation. Keep copy and move deleted.
+Define the empty/live transition explicitly and make every operation on the empty state
+continue to report `ERROR_INVALID_WINDOW_HANDLE`. Treat option 4 as the no-API-change
+fallback. Do not build option 2 or 3.
+
 ## Environment
 
 - Build from an x64 Native Tools environment:
@@ -101,17 +283,29 @@ handler that runs while its object is moved or destroyed) rather than reasoning 
 
 - 2026-09-25: plan written; worktree `.worktrees/Refactor-Value-Window-Factories` created on
   `Refactor/Value-Window-Factories` from `origin/main` at `050c212`. No code changes yet.
+- 2026-09-25: resumed from handoff. The branch was clean at plan commit `cddcca3`, one
+  commit above base `050c212`. Configured and built the `gdb` preset with MSVC 19.51;
+  baseline is 80/80 tests passing. Read the project guidance, current implementation,
+  debt, README, and call sites.
+- 2026-09-25: added temporary design probes for native rebinding, `[this]` capture
+  relocation, move-during-handler state, owner-arrow composition, and H2 pointer
+  adjustment. All focused probes pass. Recorded the four-option evaluation and
+  recommendation above. Awaiting Tommy's design choice; no production API changed.
+- 2026-09-25: the complete 85-test run passed 83 tests and failed the two existing
+  tray-icon tests because the current desktop Shell rejected `NIM_ADD`. Both passed
+  in the earlier 80-test baseline. Isolated reruns failed before `set_icon`, with both
+  message-only and hidden top-level owner windows; the returned last-error value was
+  stale/unspecified as already described by M6. All diagnostic-only edits were removed.
+  A clean rerun excluding those two Shell-dependent cases passed 83/83, including all
+  five design probes.
 
 ## Next Steps
 
-1. Confirm this worktree, branch `Refactor/Value-Window-Factories`, base `050c212` and a clean
-   Git state. Build and run the `gdb` preset to confirm the 80-test baseline.
-2. Read `AGENTS.md`, `CODE_CONVENTIONS.md`, `VISION.md`, `MIXINS.md`, `libs/winwrap/TECH_DEBT.md`
-   (H1–H5, M1, "Owned windows are pointers") and `README.md`'s usage examples.
-3. Evaluate the four options above against the listed criteria, prototyping the risky behaviours
-   as tests. Record the findings, before/after call-site snippets for the README example and a
-   control-owning window, and a recommendation in this plan.
-4. Present the options and recommendation to Tommy and wait for his choice.
-5. Implement the chosen design, including the H2 fix if the address storage changes, update the
+1. [x] Confirm this worktree, branch, base/checkpoint and clean starting Git state; build and
+   run the `gdb` preset to confirm the 80-test baseline.
+2. [x] Read the required project guidance, debt owner, implementation, tests, and README call sites.
+3. [x] Evaluate and prototype all four options; record evidence, call sites, and a recommendation.
+4. [ ] Tommy chooses one of the four options above (recommend option 1).
+5. [ ] Implement the chosen design, including the H2 fix if the address storage changes, update the
    README, tests, `CODE_CONVENTIONS.md`/`ROADMAP.md`/`TECH_DEBT.md` where their truth changes,
    then review, open a PR and merge when Tommy approves. Keep this plan's Progress current.
