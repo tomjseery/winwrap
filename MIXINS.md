@@ -86,7 +86,7 @@ control mixin never changes the parent.
 
    ```cpp
    class Edit final : public Control<Edit, notification::TextChange> {
-       static constexpr const wchar_t* control_class = L"EDIT";
+       static constexpr const wchar_t* class_name = L"EDIT";
    };
    ```
 
