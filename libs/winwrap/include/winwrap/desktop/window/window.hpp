@@ -55,7 +55,8 @@ struct WindowConfig {
 ///   - `on_focus(gained)`     -- `WM_SETFOCUS` (true) / `WM_KILLFOCUS` (false)
 ///
 /// For a message with a runtime id (e.g. a tray callback), shadow route_message
-/// in T and delegate the rest with `Window::route_message`.
+/// in T and delegate the rest with `Window::route_message`. A custom router may
+/// call default_proc directly when it deliberately declines the current message.
 ///
 /// Extra mixins compose *after* the built-ins (first-match-wins, so a built-in
 /// hook always beats an extra on an overlapping message); to intercept a message
@@ -90,9 +91,10 @@ public:
         return self;
     }
 
-    /// The message fallback: hands any message no hook claimed to DefWindowProcW.
-    /// Called by route_message (inherited from MessageRouter); not for direct use.
-    LRESULT default_proc(UINT msg, WPARAM wparam, LPARAM lparam) {
+    /// Delegates one message to this window's native fallback (DefWindowProcW).
+    /// Use from an advanced route_message override when it deliberately declines
+    /// the current message; ordinary routing calls it automatically.
+    [[nodiscard]] LRESULT default_proc(UINT msg, WPARAM wparam, LPARAM lparam) {
         return DefWindowProcW(hwnd(), msg, wparam, lparam);
     }
 
