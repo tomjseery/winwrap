@@ -45,5 +45,7 @@ TEST_CASE("set_icon reports a registration the shell does not know") {
     auto replacement = winwrap::load_icon(winwrap::SystemIcon::warning, winwrap::IconSize::small);
     REQUIRE(replacement);
 
-    CHECK_FALSE(tray.set_icon(std::move(*replacement)));  // NOLINT(bugprone-use-after-move)
+    const auto result = tray.set_icon(std::move(*replacement));  // NOLINT(bugprone-use-after-move)
+    REQUIRE_FALSE(result);
+    CHECK(result.error().value() == ERROR_INVALID_WINDOW_HANDLE);
 }

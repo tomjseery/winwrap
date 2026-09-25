@@ -110,25 +110,24 @@ private:
         DWORD style = WS_CHILD | WS_VISIBLE | cfg.style;
         if constexpr (requires { T::default_style; })
             style |= T::default_style;
-        auto made = create_window({.class_name = T::control_class,
-                                   .title = cfg.text,
-                                   .style = style,
-                                   .x = cfg.x,
-                                   .y = cfg.y,
-                                   .width = cfg.width,
-                                   .height = cfg.height,
-                                   .parent = cfg.parent,
-                                   .child_id = cfg.id});
-        if (!made)
-            return std::unexpected(made.error());
-        // The parent destroys its child windows, so the handle is not kept as an owner.
-        HWND h = made->release();
-        attach(h);
-        id_ = cfg.id;
-        SendMessageW(h, WM_SETFONT, reinterpret_cast<WPARAM>(GetStockObject(DEFAULT_GUI_FONT)),
-                     TRUE);
-        SetWindowSubclass(h, &subclass_proc, 1, reinterpret_cast<DWORD_PTR>(this));
-        return {};
+        return create_window({.class_name = T::control_class,
+                              .title = cfg.text,
+                              .style = style,
+                              .x = cfg.x,
+                              .y = cfg.y,
+                              .width = cfg.width,
+                              .height = cfg.height,
+                              .parent = cfg.parent,
+                              .child_id = cfg.id})
+            .transform([&](wil::unique_hwnd made) {
+                // The parent destroys its child windows, so the handle is not kept as an owner.
+                HWND h = made.release();
+                attach(h);
+                id_ = cfg.id;
+                SendMessageW(h, WM_SETFONT,
+                             reinterpret_cast<WPARAM>(GetStockObject(DEFAULT_GUI_FONT)), TRUE);
+                SetWindowSubclass(h, &subclass_proc, 1, reinterpret_cast<DWORD_PTR>(this));
+            });
     }
     static LRESULT CALLBACK subclass_proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam,
                                           UINT_PTR /*id_subclass*/, DWORD_PTR ref_data) {

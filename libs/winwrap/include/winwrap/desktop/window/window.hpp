@@ -128,6 +128,9 @@ public:
     /// still delivered.
     /// @return Nothing, or the Win32 error, e.g. when no such timer is running.
     std::expected<void, std::error_code> stop_timer(UINT_PTR id) {
+        // KillTimer(nullptr, id) would stop an unrelated thread timer with the same id.
+        if (!hwnd())
+            return std::unexpected(destroyed_window_error());
         return check(KillTimer(hwnd(), id));
     }
 
