@@ -122,6 +122,9 @@ retains `hwnd()` as the raw integration escape hatch.
   test-coverage findings. The repository's isolated-review runtime is not installed in this worktree.
 - 2026-09-25: Pushed the branch and opened draft PR [#9](https://github.com/tomjseery/winwrap/pull/9).
   The PR records the local ASan-runtime limitation and delegates exact-head validation to GitHub.
+- 2026-09-25: GitHub reports no checks for PR #9's exact head. The PR remains draft: the required
+  sanitizer-tier evidence cannot be obtained locally until the MSVC AddressSanitizer runtime is
+  installed, and no repository CI currently supplies it.
 
 ## Next Steps
 
@@ -141,4 +144,5 @@ retains `hwnd()` as the raw integration escape hatch.
    the missing MSVC AddressSanitizer runtime; the non-sanitized MSVC `gdb` preset is green.
    Draft PR [#9](https://github.com/tomjseery/winwrap/pull/9) is open. Next: obtain exact-head PR
    validation and resolve the declared sanitizer-runtime prerequisite before marking it ready or
-   merging.
+   merging. Current gate: GitHub has no PR checks, and installing the missing Visual Studio component
+   requires explicit machine-configuration authority.
