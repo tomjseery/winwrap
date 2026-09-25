@@ -111,3 +111,17 @@ driver in a VM.
 The producer API and local consumer validation are complete. SandboxHwid's maintained plan
 owns the exact remote pin and final PR refresh. Merging and VM-only driver execution remain
 outside the authorized scope.
+
+## Follow-up: named control-code factory
+
+On 2026-09-25 Tommy selected `ControlCode::create(Config)` for the typed,
+infallible value factory. The existing config and native-value constructors remain
+available for compatibility. The generic factory naming rule is owned by
+cpp-agents `cpp:domain-design`; WinWrap's convention documents its local resource
+and value cases. SandboxHwid will use the factory for its shared query code and
+the unsupported-code diagnostic. Probe naming and placement remain for discussion.
+
+Progress: the WinWrap factory, convention, and focused test are implemented.
+MSVC's `gdb` preset builds the library, header checks, and tests. All 11
+device-related tests and the full 84/84 CTest suite pass on the host. The
+SandboxHwid exact pin and real WDK consumer build are pending. No VM work ran.

@@ -93,12 +93,12 @@ TEST_CASE("device::Interface preserves its native identifier") {
 TEST_CASE("device::ControlCode encodes the native control fields") {
     constexpr ULONG device_type{0x8000};
     constexpr ULONG function{0x800};
-    constexpr winwrap::device::ControlCode code{{
+    constexpr auto code{winwrap::device::ControlCode::create({
         .device_type = device_type,
         .function = function,
         .method = winwrap::device::ControlCode::Method::buffered,
         .access = winwrap::device::ControlCode::Access::read,
-    }};
+    })};
 
     STATIC_REQUIRE(code.native() ==
                    CTL_CODE(device_type, function, METHOD_BUFFERED, FILE_READ_DATA));
