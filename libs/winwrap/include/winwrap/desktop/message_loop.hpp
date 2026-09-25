@@ -31,6 +31,8 @@ namespace winwrap::message_loop {
 
 /// Ends the calling thread's message loop: run() returns `exit_code` once the messages
 /// already queued are processed (PostQuitMessage).
-inline void quit(int exit_code = 0) { PostQuitMessage(exit_code); }
+inline void quit(int exit_code = 0) {
+    PostQuitMessage(exit_code);
+}
 
 }  // namespace winwrap::message_loop

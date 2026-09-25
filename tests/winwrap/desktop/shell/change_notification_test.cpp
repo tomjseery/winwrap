@@ -1,15 +1,15 @@
-#include <catch2/catch_test_macros.hpp>
+#include "winwrap/desktop/shell/change_notification.hpp"
 
+#include <algorithm>
+#include <catch2/catch_test_macros.hpp>
 #include <chrono>
 #include <filesystem>
 #include <fstream>
-#include <algorithm>
 #include <functional>
 #include <string>
 #include <vector>
 
 #include "winwrap/desktop/message_loop.hpp"
-#include "winwrap/desktop/shell/change_notification.hpp"
 #include "winwrap/desktop/window/window.hpp"
 
 using namespace std::chrono_literals;
@@ -30,8 +30,8 @@ struct ChangeWatcher : winwrap::Window<ChangeWatcher> {
         if (msg == change_message) {
             PIDLIST_ABSOLUTE* items{};
             LONG event{};
-            if (HANDLE lock = SHChangeNotification_Lock(reinterpret_cast<HANDLE>(wparam),
-                                                        static_cast<DWORD>(lparam), &items, &event)) {
+            if (HANDLE lock = SHChangeNotification_Lock(
+                    reinterpret_cast<HANDLE>(wparam), static_cast<DWORD>(lparam), &items, &event)) {
                 events.push_back(event);
                 SHChangeNotification_Unlock(lock);
             }
@@ -63,8 +63,8 @@ public:
         : folder_{ILCreateFromPathW(folder.c_str())} {
         REQUIRE(folder_ != nullptr);
         const SHChangeNotifyEntry entry{folder_, FALSE};
-        id_ = SHChangeNotifyRegister(hwnd, SHCNRF_ShellLevel | SHCNRF_NewDelivery,
-                                     SHCNE_ALLEVENTS, change_message, 1, &entry);
+        id_ = SHChangeNotifyRegister(hwnd, SHCNRF_ShellLevel | SHCNRF_NewDelivery, SHCNE_ALLEVENTS,
+                                     change_message, 1, &entry);
         REQUIRE(id_ != 0);
     }
     ~Registration() {

@@ -2,10 +2,10 @@
 
 #include "winwrap/win.hpp"
 
+#include <wil/resource.h>
+
 #include <expected>
 #include <system_error>
-
-#include <wil/resource.h>
 
 namespace winwrap {
 
@@ -17,14 +17,14 @@ struct NativeWindowConfig {
     const wchar_t* title{L""};    ///< Title-bar text, or a control's caption.
     DWORD style{};                ///< `WS_*` styles; include `WS_CHILD` for a child window.
     DWORD ex_style{};             ///< Extended (`WS_EX_*`) styles.
-    int x{CW_USEDEFAULT};         ///< Left edge; CW_USEDEFAULT lets Windows place a top-level window.
-    int y{CW_USEDEFAULT};         ///< Top edge; CW_USEDEFAULT lets Windows place a top-level window.
-    int width{CW_USEDEFAULT};     ///< Width; CW_USEDEFAULT lets Windows size a top-level window.
-    int height{CW_USEDEFAULT};    ///< Height; CW_USEDEFAULT lets Windows size a top-level window.
-    HWND parent{};                ///< Parent (child window) or owner (top-level window).
-    HMENU menu{};                 ///< A top-level window's menu bar; ignored with `WS_CHILD`.
-    UINT child_id{};              ///< A child window's id (its `WM_COMMAND` id); needs `WS_CHILD`.
-    void* create_param{};         ///< Passed to `WM_NCCREATE`/`WM_CREATE` as `lpCreateParams`.
+    int x{CW_USEDEFAULT};       ///< Left edge; CW_USEDEFAULT lets Windows place a top-level window.
+    int y{CW_USEDEFAULT};       ///< Top edge; CW_USEDEFAULT lets Windows place a top-level window.
+    int width{CW_USEDEFAULT};   ///< Width; CW_USEDEFAULT lets Windows size a top-level window.
+    int height{CW_USEDEFAULT};  ///< Height; CW_USEDEFAULT lets Windows size a top-level window.
+    HWND parent{};              ///< Parent (child window) or owner (top-level window).
+    HMENU menu{};               ///< A top-level window's menu bar; ignored with `WS_CHILD`.
+    UINT child_id{};            ///< A child window's id (its `WM_COMMAND` id); needs `WS_CHILD`.
+    void* create_param{};       ///< Passed to `WM_NCCREATE`/`WM_CREATE` as `lpCreateParams`.
 };
 
 /// Free operations on windows in general, whichever library created them.

@@ -23,9 +23,8 @@ struct SelectionChange {
     std::function<void(int)> on_selection_changed;  ///< Assign your handler; gets the new index.
 
     std::optional<LRESULT> handle_message(this auto& self, UINT msg, WPARAM wparam, LPARAM) {
-        return handle_command(msg, wparam, CBN_SELCHANGE, self.on_selection_changed, [&self] {
-            return static_cast<int>(self.send(CB_GETCURSEL));
-        });
+        return handle_command(msg, wparam, CBN_SELCHANGE, self.on_selection_changed,
+                              [&self] { return static_cast<int>(self.send(CB_GETCURSEL)); });
     }
 };
 

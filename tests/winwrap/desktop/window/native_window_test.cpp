@@ -1,8 +1,7 @@
-#include <catch2/catch_test_macros.hpp>
-
-#include <string>
-
 #include "winwrap/desktop/window/native_window.hpp"
+
+#include <catch2/catch_test_macros.hpp>
+#include <string>
 
 namespace {
 
@@ -21,9 +20,13 @@ LRESULT CALLBACK rejecting_proc(HWND window, UINT msg, WPARAM wparam, LPARAM lpa
 }  // namespace
 
 TEST_CASE("create_window creates an owned window of a system class") {
-    auto window = winwrap::window::create(
-        {.class_name = L"STATIC", .title = L"native", .style = WS_OVERLAPPED, .x = -20000,
-         .y = -20000, .width = 100, .height = 50});
+    auto window = winwrap::window::create({.class_name = L"STATIC",
+                                           .title = L"native",
+                                           .style = WS_OVERLAPPED,
+                                           .x = -20000,
+                                           .y = -20000,
+                                           .width = 100,
+                                           .height = 50});
 
     REQUIRE(window);
     const HWND raw = window->get();
@@ -39,13 +42,13 @@ TEST_CASE("create_window gives a child window its id") {
     REQUIRE(parent);
 
     auto child = winwrap::window::create({.class_name = L"BUTTON",
-                                                .style = WS_CHILD,
-                                                .x = 0,
-                                                .y = 0,
-                                                .width = 80,
-                                                .height = 24,
-                                                .parent = parent->get(),
-                                                .child_id = 42});
+                                          .style = WS_CHILD,
+                                          .x = 0,
+                                          .y = 0,
+                                          .width = 80,
+                                          .height = 24,
+                                          .parent = parent->get(),
+                                          .child_id = 42});
 
     REQUIRE(child);
     CHECK(GetDlgCtrlID(child->get()) == 42);
@@ -66,8 +69,8 @@ TEST_CASE("create_window reports a window procedure that refuses creation") {
     wc.lpszClassName = L"WinwrapRejectingClass";
     REQUIRE((RegisterClassW(&wc) != 0 || GetLastError() == ERROR_CLASS_ALREADY_EXISTS));
 
-    auto window = winwrap::window::create(
-        {.class_name = L"WinwrapRejectingClass", .parent = HWND_MESSAGE});
+    auto window =
+        winwrap::window::create({.class_name = L"WinwrapRejectingClass", .parent = HWND_MESSAGE});
 
     REQUIRE_FALSE(window);
     CHECK(window.error().value() == ERROR_INVALID_HANDLE);  // what Windows records

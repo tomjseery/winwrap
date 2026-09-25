@@ -1,6 +1,6 @@
-#include <catch2/catch_test_macros.hpp>
-
 #include "winwrap/module.hpp"
+
+#include <catch2/catch_test_macros.hpp>
 
 TEST_CASE("module::current is the running executable") {
     const HMODULE module = winwrap::module::current();

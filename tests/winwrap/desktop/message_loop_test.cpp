@@ -51,6 +51,7 @@ TEST_CASE("run() drains all queued messages in order, then quits") {
 TEST_CASE("closing the window exits run() via on_destroy -> quit") {
     auto window = ClosableWindow::create({.parent = HWND_MESSAGE});
     REQUIRE(window.has_value());
-    REQUIRE(winwrap::message::post((*window)->hwnd(), WM_CLOSE, 0, 0));  // WM_CLOSE -> DefWindowProc destroys it
+    REQUIRE(winwrap::message::post((*window)->hwnd(), WM_CLOSE, 0,
+                                   0));  // WM_CLOSE -> DefWindowProc destroys it
     CHECK(winwrap::message_loop::run() == 0);
 }

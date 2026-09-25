@@ -6,7 +6,9 @@
 namespace winwrap {
 
 std::expected<Menu, std::error_code> Menu::create() {
-    return error::nonzero_or_last(CreatePopupMenu()).transform([](HMENU h) { return Menu{wil::unique_hmenu{h}}; });
+    return error::nonzero_or_last(CreatePopupMenu()).transform([](HMENU h) {
+        return Menu{wil::unique_hmenu{h}};
+    });
 }
 
 std::expected<void, std::error_code> Menu::add_item(UINT id, const wchar_t* text) {
@@ -15,9 +17,8 @@ std::expected<void, std::error_code> Menu::add_item(UINT id, const wchar_t* text
 
 std::expected<void, std::error_code> Menu::add_item(const wchar_t* text,
                                                     std::function<void()> handler) {
-    return error::nonzero_or_last(AppendMenuW(handle_.get(), MF_STRING, next_id_, text)).transform([&] {
-        handlers_.emplace(next_id_++, std::move(handler));
-    });
+    return error::nonzero_or_last(AppendMenuW(handle_.get(), MF_STRING, next_id_, text))
+        .transform([&] { handlers_.emplace(next_id_++, std::move(handler)); });
 }
 
 void Menu::show(HWND owner) {

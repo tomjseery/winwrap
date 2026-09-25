@@ -23,7 +23,7 @@ TEST_CASE("Edit fires on_text_changed on a reflected EN_CHANGE") {
     edit->on_text_changed = [&] { changed = true; };
 
     winwrap::message::send((*host)->hwnd(), WM_COMMAND, MAKEWPARAM(edit_id, EN_CHANGE),
-                 reinterpret_cast<LPARAM>(edit->hwnd()));
+                           reinterpret_cast<LPARAM>(edit->hwnd()));
 
     REQUIRE(changed);
 }

@@ -17,14 +17,10 @@ public:
     static constexpr DWORD default_style = CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP;
 
     /// Appends an item to the end of the list (CB_ADDSTRING).
-    void add_item(const wchar_t* text) {
-        send(CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(text));
-    }
+    void add_item(const wchar_t* text) { send(CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(text)); }
 
     /// The index of the selected item, or CB_ERR (-1) when nothing is selected.
-    [[nodiscard]] int selection() const {
-        return static_cast<int>(send(CB_GETCURSEL));
-    }
+    [[nodiscard]] int selection() const { return static_cast<int>(send(CB_GETCURSEL)); }
 
     /// Selects the item at `index` (CB_SETCURSEL); pass -1 to clear the selection.
     void set_selection(int index) { send(CB_SETCURSEL, static_cast<WPARAM>(index)); }

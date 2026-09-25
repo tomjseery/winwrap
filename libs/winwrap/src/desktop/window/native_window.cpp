@@ -11,8 +11,8 @@ std::expected<wil::unique_hwnd, std::error_code> create(const NativeWindowConfig
                                  : config.menu;
     return error::result_or_last([&] {
                return CreateWindowExW(config.ex_style, config.class_name, config.title,
-                                      config.style, config.x, config.y, config.width,
-                                      config.height, config.parent, menu_or_id, module::current(),
+                                      config.style, config.x, config.y, config.width, config.height,
+                                      config.parent, menu_or_id, module::current(),
                                       config.create_param);
            })
         .and_then([](HWND hwnd) -> std::expected<wil::unique_hwnd, std::error_code> {
