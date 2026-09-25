@@ -21,7 +21,7 @@ LRESULT CALLBACK rejecting_proc(HWND window, UINT msg, WPARAM wparam, LPARAM lpa
 }  // namespace
 
 TEST_CASE("create_window creates an owned window of a system class") {
-    auto window = winwrap::native_window::create(
+    auto window = winwrap::window::create(
         {.class_name = L"STATIC", .title = L"native", .style = WS_OVERLAPPED, .x = -20000,
          .y = -20000, .width = 100, .height = 50});
 
@@ -35,10 +35,10 @@ TEST_CASE("create_window creates an owned window of a system class") {
 }
 
 TEST_CASE("create_window gives a child window its id") {
-    auto parent = winwrap::native_window::create({.class_name = L"STATIC", .parent = HWND_MESSAGE});
+    auto parent = winwrap::window::create({.class_name = L"STATIC", .parent = HWND_MESSAGE});
     REQUIRE(parent);
 
-    auto child = winwrap::native_window::create({.class_name = L"BUTTON",
+    auto child = winwrap::window::create({.class_name = L"BUTTON",
                                                 .style = WS_CHILD,
                                                 .x = 0,
                                                 .y = 0,
@@ -53,7 +53,7 @@ TEST_CASE("create_window gives a child window its id") {
 }
 
 TEST_CASE("create_window reports an unregistered class") {
-    auto window = winwrap::native_window::create({.class_name = L"WinwrapNoSuchClass"});
+    auto window = winwrap::window::create({.class_name = L"WinwrapNoSuchClass"});
 
     REQUIRE_FALSE(window);
     CHECK(window.error().value() == ERROR_CANNOT_FIND_WND_CLASS);
@@ -66,7 +66,7 @@ TEST_CASE("create_window reports a window procedure that refuses creation") {
     wc.lpszClassName = L"WinwrapRejectingClass";
     REQUIRE((RegisterClassW(&wc) != 0 || GetLastError() == ERROR_CLASS_ALREADY_EXISTS));
 
-    auto window = winwrap::native_window::create(
+    auto window = winwrap::window::create(
         {.class_name = L"WinwrapRejectingClass", .parent = HWND_MESSAGE});
 
     REQUIRE_FALSE(window);

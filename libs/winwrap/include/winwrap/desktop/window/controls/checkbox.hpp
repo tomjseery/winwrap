@@ -16,6 +16,10 @@ public:
     static constexpr const wchar_t* control_class = L"BUTTON";
     static constexpr DWORD default_style = BS_AUTOCHECKBOX | WS_TABSTOP;
 
+    /// Clicks the box as the user would (`BM_CLICK`): Windows toggles it, and the parent's
+    /// reflected `BN_CLICKED` fires on_click before this returns.
+    void click() const { send(BM_CLICK); }
+
     /// Whether the box is currently ticked (`BM_GETCHECK`).
     [[nodiscard]] bool checked() const {
         return send(BM_GETCHECK) == BST_CHECKED;

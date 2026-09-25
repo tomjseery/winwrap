@@ -174,7 +174,7 @@ private:
         // --- Creation (per window): `this` rides through so the static callback
         // can recover the object in WM_NCCREATE.
         // The destructor, not the handle, destroys the window: it must detach first.
-        return native_window::create({.class_name = T::window_class_name,
+        return window::create({.class_name = T::window_class_name,
                                        .title = cfg.title,
                                        .style = cfg.style,
                                        .ex_style = cfg.ex_style,

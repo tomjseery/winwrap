@@ -110,7 +110,7 @@ private:
         DWORD style = WS_CHILD | WS_VISIBLE | cfg.style;
         if constexpr (requires { T::default_style; })
             style |= T::default_style;
-        return native_window::create({.class_name = T::control_class,
+        return window::create({.class_name = T::control_class,
                               .title = cfg.text,
                               .style = style,
                               .x = cfg.x,
@@ -121,8 +121,6 @@ private:
                               .child_id = cfg.id})
             .and_then([&](wil::unique_hwnd made) -> std::expected<void, std::error_code> {
                 const HWND h = made.get();
-                message::send(h, WM_SETFONT,
-                             reinterpret_cast<WPARAM>(GetStockObject(DEFAULT_GUI_FONT)), TRUE);
                 // Until the subclass is installed the control is unbound; on failure `made`
                 // destroys it, so no live window is left without its wrapper.
                 return error::result_or_last([&] {
@@ -139,6 +137,7 @@ private:
                         // The parent destroys its child windows, so the handle is not kept.
                         attach(made.release());
                         id_ = cfg.id;
+                        set_font(static_cast<HFONT>(GetStockObject(DEFAULT_GUI_FONT)));
                     });
             });
     }

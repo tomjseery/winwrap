@@ -133,10 +133,18 @@ operations need the same SDK call, one wrapper makes it and the rest reuse that 
 For a handle whose operations are useful without the owning class, that wrapper is a
 free function taking the raw handle, and the class delegates to it. `module.hpp` is the
 precedent: `module::current()`, `module::loaded()` and `module::path()` own the SDK calls,
-and `Module`, `Window`, `native_window::create` and `icon::load` call them. Likewise
-`message::send`/`post`, `native_window::create` and `error::*` are the only callers of
+and `Module`, `Window`, `window::create` and `icon::load` call them. Likewise
+`message::send`/`post`, `window::create` and `error::*` are the only callers of
 `SendMessageW`/`PostMessageW`, `CreateWindowExW` and `SetLastError`. Do not also
 re-implement the native call in a member.
+
+**Give each message Winwrap uses a typed operation.** `WPARAM`/`LPARAM` are two untyped
+numbers whose meaning depends on the message, so they appear only inside the operation
+that owns the message (`set_font` for `WM_SETFONT`, `Button::click` for `BM_CLICK`,
+`Checkbox::set_checked` for `BM_SETCHECK`) or in deliberate pass-through such as command
+reflection forwarding a `WM_COMMAND` unchanged. The generic `message::send`/`post` and
+`BaseWindow::send`/`post` remain the escape hatch for messages Winwrap does not wrap,
+such as an application's own `WM_APP + n`.
 
 **Raw handles are the escape hatch, not the normal operation API.** An unsupported
 operation or integration with another HWND-based library may use a borrowed
@@ -201,8 +209,10 @@ is about state that is *implied by composing the mixin*, not general per-window 
 ## 6. Namespaces — types in `winwrap`, free-function families in their own
 
 Types live directly in `winwrap::` (`Window`, `Module`, `NotifyIcon`, `SystemIcon`):
-a type already groups its own operations as members. Each family of **free functions**
-lives in a nested namespace named for how it is used, matching its header:
+a type already groups its own operations as members. **Free functions** live in a nested
+namespace that names their subsystem, for how they are used. Within it, each header
+names one protocol or operation family, so a namespace can span a folder of headers
+(`winwrap::shell` covers every header in `desktop/shell/`):
 
 | Namespace | Header | Examples |
 |---|---|---|
@@ -211,9 +221,9 @@ lives in a nested namespace named for how it is used, matching its header:
 | `winwrap::message_loop` | `desktop/message_loop.hpp` | `message_loop::run()`, `message_loop::quit()` |
 | `winwrap::module` | `module.hpp` | `module::current()`, `module::loaded(name)`, `module::path(module)` |
 | `winwrap::icon` | `desktop/icon.hpp` | `icon::load(...)` |
-| `winwrap::native_window` | `desktop/window/native_window.hpp` | `native_window::create(config)` |
-| `winwrap::filesystem` | `filesystem/attributes.hpp` | `filesystem::attributes(path)` |
-| `winwrap::shell` | `desktop/shell/change_notification.hpp` | `shell::notify_folder_changed(folder)` |
+| `winwrap::window` | `desktop/window/native_window.hpp` | `window::create(config)`; later `window::find`, `window::foreground` in their own protocol headers |
+| `winwrap::filesystem` | `filesystem/*.hpp` | `filesystem::attributes(path)` (`attributes.hpp`) |
+| `winwrap::shell` | `desktop/shell/*.hpp` | `shell::notify_file_created(path)`, `shell::notify_folder_changed(folder)` (`change_notification.hpp`) |
 
 - **The namespace carries the noun**, so function names do not repeat it:
   `module::path(h)`, not `module_path(h)`. Typing `winwrap::module::` lists the family.
@@ -224,7 +234,9 @@ lives in a nested namespace named for how it is used, matching its header:
   `SendMessage`) are macros, which ignore namespaces; snake_case names never collide with
   them.
 - **Avoid a local variable or parameter named like a family** (`error`, `icon`,
-  `message`) in code that calls that family: the local hides the namespace.
+  `message`, `window`) in code that calls that family: the local hides the namespace.
+  Inside Winwrap a window handle is named `hwnd`. Callers who qualify
+  (`winwrap::window::create`) are unaffected.
 - Add a new namespace only for a real operation family, not one per header or folder
   (`cpp:style`). Types and mixins stay in `winwrap::`; `winwrap::notification` and
   `winwrap::detail` keep their existing roles.

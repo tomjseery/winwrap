@@ -13,7 +13,7 @@ struct CheckboxHost : winwrap::Window<CheckboxHost> {
 constexpr UINT checkbox_id = 1;
 }  // namespace
 
-TEST_CASE("Checkbox reuses notification::Click -- on_click fires through the parent's reflection") {
+TEST_CASE("Checkbox::click toggles the box and fires on_click through reflection") {
     auto host = CheckboxHost::create();
     REQUIRE(host);
 
@@ -25,10 +25,12 @@ TEST_CASE("Checkbox reuses notification::Click -- on_click fires through the par
     bool clicked = false;
     checkbox->on_click = [&] { clicked = true; };
 
-    winwrap::message::send((*host)->hwnd(), WM_COMMAND, MAKEWPARAM(checkbox_id, BN_CLICKED),
-                 reinterpret_cast<LPARAM>(checkbox->hwnd()));
+    checkbox->click();
 
     REQUIRE(clicked);
+    CHECK(checkbox->checked());  // the native control toggled itself
+    checkbox->click();
+    CHECK_FALSE(checkbox->checked());
 }
 
 TEST_CASE("Checkbox check state round-trips through set_checked / checked") {

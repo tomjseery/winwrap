@@ -47,7 +47,7 @@ changing comments, or wrapping one function.
   the operation on that owner unless the contract demonstrates otherwise.
 - Encapsulate connected APIs together. Acquisition, cleanup, retry/buffer protocols, state
   transitions, and related calls should form a coherent type rather than unrelated aliases.
-- Keep mixins for opt-in inbound window-message behavior. Do not turn ordinary outgoing operations
+- Keep mixins for inbound window-message behavior. Do not turn ordinary outgoing operations
   into mixins.
 - Use focused free functions only for independent process/thread/system operations or transformations
   without an honest object owner.
@@ -270,16 +270,29 @@ Raw calls that Winwrap's **tests** make as consumers:
     `error::{last, win32, nonzero_or_last, result_or_last}` (formerly `last_error`,
     `win32_error`, `check`, `check_last_error`), `message::{send, post}` (header moved to
     `desktop/message.hpp`), `message_loop::{run, quit}`, `module::{current, loaded, path}`,
-    `icon::load`, `native_window::create`, `filesystem::{attributes, set_attributes,
+    `icon::load`, `window::create` (first named `native_window::create`), `filesystem::{attributes, set_attributes,
     add_attributes, remove_attributes}`, `shell::notify_folder_changed`. `make_dropped_paths`
     was removed; `FileDroppable` uses `Drop{hdrop}.paths()` directly. This breaks the
     previous flat names before 1.0; icon-dropper (already drifted, F9) is the only
     consumer of the renamed pre-existing functions. A struct of static functions was
     rejected: these families hold no state or invariant.
-11. **Tests** mirror the headers: `desktop/window/base_window_test.cpp`,
+11. **Shell notifications**: `shell::notify_file_created`/`deleted`/`renamed`/`changed`,
+    `notify_folder_created`/`deleted`/`renamed`/`changed` and `notify_associations_changed`
+    complete the "tell the Shell" half of the change-notification protocol. File and folder
+    variants are separate because the Shell uses different events and a deleted path cannot
+    be inspected. The test registers a raw `SHChangeNotifyRegister` listener and confirms six
+    events arrive through Explorer (stable over five repeats). The listening half
+    (`ShellChangeListener`) is deferred.
+12. **Typed message operations**: `BaseWindow::set_font`/`font` (`WM_SETFONT`/`WM_GETFONT`;
+    only controls and dialogs store a font) and `Button::click` / `Checkbox::click`
+    (`BM_CLICK`). Click tests now press the native controls instead of faking `WM_COMMAND`.
+    `CODE_CONVENTIONS.md` §4 records the rule: `WPARAM`/`LPARAM` appear only in the
+    operation that owns a message, or in deliberate pass-through.
+13. **Tests** mirror the headers: `desktop/window/base_window_test.cpp`,
    `desktop/window/message/timer_tick_test.cpp`, `desktop/icon_test.cpp`,
    `desktop/notify_icon_test.cpp` (adds a real tray icon briefly, so it needs a running shell),
    `desktop/window/native_window_test.cpp`, `desktop/message_test.cpp`,
+    `desktop/shell/change_notification_test.cpp`,
    `module_test.cpp`; `file_droppable_test.cpp` now
    uses `ex_style()`.
 
@@ -291,6 +304,8 @@ Raw calls that Winwrap's **tests** make as consumers:
 | Borrowed window view for foreign `HWND`s (F6) | No consumer holds a foreign HWND; M1 owns the adoption decision | M1 |
 | Subclass-free "plain window" (F7) | Behaviour needs callbacks or hooks; class fields are per class name, not per window | `winwrap/richer-desktop` workstream |
 | Owned module loading (`LoadLibraryExW` via `wil::unique_hmodule`) | No consumer loads a plugin DLL yet; mixing borrowed and owned in `Module` would blur who frees | `module.hpp` when a consumer appears |
+| Shell change listener (`SHChangeNotifyRegister`) | A registration with lifetime and message decoding; no consumer yet | `desktop/shell/change_notification.hpp` when an app needs it |
+| More `window::` free functions (`find`, `foreground`, `from_point`, `enumerate`) | No consumer yet | `winwrap::window` protocol headers |
 | Tray callback decoding (F5) | Overlaps tray keyboard/anchor and recovery debt | "Tray cached state / keyboard protocol" debt |
 | `destroy()` window member | H4 teardown during dispatch is unresolved | H4 |
 | Ownerless system families (metrics, message boxes, known folders, clipboard) | No consumer evidence (F0) | wrapper-first candidates for later application needs |
@@ -302,7 +317,7 @@ Raw calls that Winwrap's **tests** make as consumers:
 - The sanitizer `dev` preset still cannot link locally (`clang_rt.asan_dynamic_runtime_thunk-x86_64.lib`
   is missing: the MSVC AddressSanitizer runtime is not installed), as recorded by PR #9.
 - The MSVC x64 `gdb` preset (Debug, no sanitizers) builds cleanly, including every public
-  header check. CTest: 76/76 passed, up from the 39-test baseline at `813ed55`.
+  header check. CTest: 80/80 passed, up from the 39-test baseline at `813ed55`.
 - Review of `813ed55..b18bed0` (parent-only; no review runtime or agents in this repository)
   found four defects, all fixed in the follow-up commit: `stop_timer` on a destroyed window
   could stop an unrelated thread timer (null guard added); `set_icon` on a moved-from

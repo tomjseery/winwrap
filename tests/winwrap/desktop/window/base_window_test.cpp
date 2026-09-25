@@ -103,6 +103,14 @@ TEST_CASE("focus gives the window keyboard focus") {
     CHECK(GetFocus() == window->hwnd());
 }
 
+TEST_CASE("a plain window stores no font") {
+    auto window = make_plain_window();
+
+    window->set_font(static_cast<HFONT>(GetStockObject(DEFAULT_GUI_FONT)), false);
+
+    CHECK(window->font() == nullptr);  // DefWindowProcW ignores WM_SETFONT
+}
+
 TEST_CASE("style and ex_style report the window's style bits") {
     auto window = make_plain_window(WS_EX_TOOLWINDOW);
 

@@ -117,7 +117,7 @@ app-side GDI (`CreateIconIndirect`); adoption must have an explicit ownership co
   `result_or_last`) owns every conversion of a Win32 failure into `std::error_code`.
 - **Namespaces (2026-09-25)** — free-function families moved into use-named namespaces
   (`message_loop::run`, `message::send`, `module::current`, `icon::load`,
-  `native_window::create`, `filesystem::attributes`, `shell::notify_folder_changed`);
+  `window::create`, `filesystem::attributes`, `shell::notify_folder_changed`);
   see `CODE_CONVENTIONS.md` §6.
 - **`message_loop.hpp`** — ✅ **Done (2026-07-13).** Header-only `run()` (the message
   pump; returns `msg.wParam`; `-1` → `FAIL_FAST_IF`) + `quit(int = 0)` (over

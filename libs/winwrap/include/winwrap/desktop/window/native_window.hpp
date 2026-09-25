@@ -9,7 +9,7 @@
 
 namespace winwrap {
 
-/// Settings passed to native_window::create -- the CreateWindowExW arguments by name, set
+/// Settings passed to window::create -- the CreateWindowExW arguments by name, set
 /// with designated initializers; omitted fields take the defaults below.
 struct NativeWindowConfig {
     const wchar_t* class_name{};  ///< A registered class: a system class such as `L"BUTTON"`
@@ -27,8 +27,8 @@ struct NativeWindowConfig {
     void* create_param{};         ///< Passed to `WM_NCCREATE`/`WM_CREATE` as `lpCreateParams`.
 };
 
-/// Creating windows directly from any registered window class.
-namespace native_window {
+/// Free operations on windows in general, whichever library created them.
+namespace window {
 
 /// Creates a window (CreateWindowExW), owned by the returned handle, which destroys it
 /// (DestroyWindow) when reset. Native messages such as `WM_NCCREATE` and `WM_CREATE` are sent
@@ -46,6 +46,6 @@ namespace native_window {
 [[nodiscard]] std::expected<wil::unique_hwnd, std::error_code> create(
     const NativeWindowConfig& config);
 
-}  // namespace native_window
+}  // namespace window
 
 }  // namespace winwrap
