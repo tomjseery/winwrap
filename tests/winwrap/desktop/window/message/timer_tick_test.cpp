@@ -57,7 +57,7 @@ TEST_CASE("a raw SetTimer callback keeps its ticks away from on_timer") {
     CHECK(timer_proc_called);
 
     // A WM_TIMER that names a procedure is not claimed as an on_timer tick either.
-    SendMessageW((*window)->hwnd(), WM_TIMER, 3, reinterpret_cast<LPARAM>(&record_timer_proc));
+    winwrap::send_message((*window)->hwnd(), WM_TIMER, 3, reinterpret_cast<LPARAM>(&record_timer_proc));
     CHECK((*window)->ticks.empty());
 }
 

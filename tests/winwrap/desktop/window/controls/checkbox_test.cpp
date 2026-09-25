@@ -25,7 +25,7 @@ TEST_CASE("Checkbox reuses notification::Click -- on_click fires through the par
     bool clicked = false;
     checkbox->on_click = [&] { clicked = true; };
 
-    SendMessageW((*host)->hwnd(), WM_COMMAND, MAKEWPARAM(checkbox_id, BN_CLICKED),
+    winwrap::send_message((*host)->hwnd(), WM_COMMAND, MAKEWPARAM(checkbox_id, BN_CLICKED),
                  reinterpret_cast<LPARAM>(checkbox->hwnd()));
 
     REQUIRE(clicked);

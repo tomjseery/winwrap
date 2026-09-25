@@ -18,7 +18,7 @@ std::expected<wil::unique_hwnd, std::error_code> create_window(const NativeWindo
         .and_then([](HWND window) -> std::expected<wil::unique_hwnd, std::error_code> {
             // Null with no recorded error: a window procedure refused creation silently.
             if (!window)
-                return std::unexpected(std::error_code{ERROR_CANCELLED, std::system_category()});
+                return std::unexpected(win32_error(ERROR_CANCELLED));
             return wil::unique_hwnd{window};
         });
 }

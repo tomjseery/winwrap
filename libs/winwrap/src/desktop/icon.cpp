@@ -38,7 +38,7 @@ std::expected<wil::unique_hicon, std::error_code> load_icon(SystemIcon icon, Ico
 std::expected<wil::unique_hicon, std::error_code> load_icon(HMODULE module, WORD resource_id,
                                                             IconSize size) {
     if (!module)
-        return std::unexpected(std::error_code{ERROR_INVALID_HANDLE, std::system_category()});
+        return std::unexpected(win32_error(ERROR_INVALID_HANDLE));
     return load(module, MAKEINTRESOURCEW(resource_id), size, 0);
 }
 

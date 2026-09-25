@@ -1,5 +1,6 @@
 #include "winwrap/desktop/menu.hpp"
 
+#include "winwrap/desktop/window/messaging.hpp"
 #include "winwrap/error.hpp"
 
 namespace winwrap {
@@ -26,7 +27,8 @@ void Menu::show(HWND owner) {
     const auto picked = static_cast<UINT>(
         TrackPopupMenuEx(handle_.get(), TPM_RIGHTBUTTON | TPM_RETURNCMD | TPM_NONOTIFY, pt.x,
                          pt.y, owner, nullptr));
-    PostMessageW(owner, WM_NULL, 0, 0);
+    // Best effort: the empty message only lets a background owner dismiss the menu.
+    static_cast<void>(post_message(owner, WM_NULL));
     if (picked == 0)
         return;
     if (auto it = handlers_.find(picked); it != handlers_.end()) {
@@ -36,7 +38,8 @@ void Menu::show(HWND owner) {
         handler();
         return;
     }
-    PostMessageW(owner, WM_COMMAND, picked, 0);
+    // An unreported failure here is existing debt M5 (menu posting failures).
+    static_cast<void>(post_message(owner, WM_COMMAND, picked));
 }
 
 }  // namespace winwrap

@@ -114,11 +114,10 @@ public:
     std::expected<void, std::error_code> start_timer(UINT_PTR id,
                                                      std::chrono::milliseconds interval) {
         if (interval.count() < 0 || interval.count() > USER_TIMER_MAXIMUM)
-            return std::unexpected(
-                std::error_code{ERROR_INVALID_PARAMETER, std::system_category()});
+            return std::unexpected(win32_error(ERROR_INVALID_PARAMETER));
         // SetTimer(nullptr, ...) would start a thread timer instead of failing.
         if (!hwnd())
-            return std::unexpected(destroyed_window_error());
+            return std::unexpected(win32_error(ERROR_INVALID_WINDOW_HANDLE));
         if (SetTimer(hwnd(), id, static_cast<UINT>(interval.count()), nullptr) == 0)
             return std::unexpected(last_error());
         return {};
@@ -130,7 +129,7 @@ public:
     std::expected<void, std::error_code> stop_timer(UINT_PTR id) {
         // KillTimer(nullptr, id) would stop an unrelated thread timer with the same id.
         if (!hwnd())
-            return std::unexpected(destroyed_window_error());
+            return std::unexpected(win32_error(ERROR_INVALID_WINDOW_HANDLE));
         return check(KillTimer(hwnd(), id));
     }
 

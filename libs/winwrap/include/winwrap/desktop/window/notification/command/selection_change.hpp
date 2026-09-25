@@ -24,7 +24,7 @@ struct SelectionChange {
 
     std::optional<LRESULT> handle_message(this auto& self, UINT msg, WPARAM wparam, LPARAM) {
         return handle_command(msg, wparam, CBN_SELCHANGE, self.on_selection_changed, [&self] {
-            return static_cast<int>(SendMessageW(self.hwnd(), CB_GETCURSEL, 0, 0));
+            return static_cast<int>(self.send(CB_GETCURSEL));
         });
     }
 };

@@ -17,7 +17,7 @@ std::expected<HMODULE, std::error_code> loaded_module(const std::filesystem::pat
 
 std::expected<std::filesystem::path, std::error_code> module_path(HMODULE module) {
     if (!module)
-        return std::unexpected(std::error_code{ERROR_INVALID_HANDLE, std::system_category()});
+        return std::unexpected(win32_error(ERROR_INVALID_HANDLE));
 
     // The documented limit for an extended-length Windows path.
     constexpr DWORD maximum_characters{32768};
@@ -34,7 +34,7 @@ std::expected<std::filesystem::path, std::error_code> module_path(HMODULE module
         }
         if (capacity >= maximum_characters)
             return std::unexpected(
-                std::error_code{ERROR_INSUFFICIENT_BUFFER, std::system_category()});
+                win32_error(ERROR_INSUFFICIENT_BUFFER));
         buffer.resize(std::min<std::size_t>(buffer.size() * 2, maximum_characters));
     }
 }
