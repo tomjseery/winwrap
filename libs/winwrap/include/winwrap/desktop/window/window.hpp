@@ -4,7 +4,6 @@
 
 #include <chrono>
 #include <expected>
-#include <memory>
 #include <system_error>
 
 #include "winwrap/desktop/window/base_window.hpp"
@@ -45,6 +44,12 @@ struct WindowConfig {
 /// `on_created`). Dispatch resolves at compile time (C++23 deducing this) -- no
 /// virtual, no vtable.
 ///
+/// Construct the final object at its permanent address, then call create(). Windows
+/// stores that address in the native window, so Window deliberately cannot be copied
+/// or moved. A default-constructed or previously destroyed object has a null hwnd()
+/// and may be created; calling create() while its window is live fails with
+/// ERROR_ALREADY_EXISTS.
+///
 /// Messages route to the matching hook the window defines, or to DefWindowProcW
 /// when none claims it (see route_message, inherited from MessageRouter). Define
 /// only the hooks you need, as **public** members; they come from the composable
@@ -83,17 +88,18 @@ public:
     Window(Window&&) = delete;
     Window& operator=(Window&&) = delete;
 
-    /// Builds the object, creates its window, and runs the post-create hook.
+    /// Creates this object's window and runs the post-create hook. A detached object
+    /// may be retried after failed creation or native destruction.
     /// @param cfg  Per-window settings (title, style, geometry, parent).
-    /// @return     The sole owner of the live window, or the Win32 error
-    ///             (as std::error_code) that stopped creation.
-    [[nodiscard]] static std::expected<std::unique_ptr<T>, std::error_code> create(
-        const WindowConfig& cfg = {}) {
-        auto self = std::unique_ptr<T>{new T{}};
-        if (auto made = self->create_window(cfg); !made)
+    /// @return     Nothing, or the Win32 error that stopped creation;
+    ///             ERROR_ALREADY_EXISTS when this object already has a live window.
+    [[nodiscard]] std::expected<void, std::error_code> create(const WindowConfig& cfg = {}) {
+        if (hwnd())
+            return std::unexpected(error::win32(ERROR_ALREADY_EXISTS));
+        if (auto made = create_window(cfg); !made)
             return std::unexpected(made.error());
-        self->on_created();
-        return self;
+        static_cast<T*>(this)->on_created();
+        return {};
     }
 
     /// Delegates one message to this window's native fallback (DefWindowProcW).

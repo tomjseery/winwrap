@@ -13,10 +13,6 @@ entry once its resolution condition is met; Git preserves the history.
   **Resolve:** define supported registration/module ownership, validate or reject
   incompatible classes/configuration, and test same-type reuse, foreign classes
   and different final types sharing a name.
-- **H2 / adjusted Control pointer.** Subclass data stores `Control<T>*` and recovers
-  `T*` without adjustment. A nonzero base offset was demonstrated.
-  **Resolve:** store/recover compatible pointer types and test multiple inheritance
-  with the Control base at a nonzero offset.
 - **H3 / binding failures.** `Window` ignores its `SetWindowLongPtrW` results; failed
   setup can publish success without destruction invalidation. (`Control` now checks
   `SetWindowSubclass` and destroys the unbound child on failure, but that path has no
@@ -39,13 +35,6 @@ entry once its resolution condition is met; Git preserves the history.
   document owning creation versus borrowed attachment/parent ownership; test early
   wrapper reset and parent-first destruction. Expose a usable borrowed HWND façade
   if incremental existing-HWND adoption remains a supported audience.
-
-- **Owned windows are pointers.** Because the OS stores the wrapper's address,
-  `Window<T>`/`Control<T>` are immovable and `create` returns
-  `std::expected<std::unique_ptr<T>, ...>`, forcing `(*made)->op()` at every call site.
-  **Resolve:** a value-returning factory (movable wrappers that re-point
-  `GWLP_USERDATA`/subclass data on move, or an equivalent owner) with tests for moves
-  during and outside dispatch, coordinated with H4.
 
 ## Dispatch, reflection and headers
 

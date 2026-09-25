@@ -61,24 +61,25 @@ public:
     static constexpr const wchar_t* window_class_name = L"winwrap_demo";
 
     void on_created() {
-        auto button = winwrap::Button::create(
+        auto created = greet_.create(
             {.parent = hwnd(), .id = 1, .text = L"Greet", .x = 12, .y = 12},
             [this] { set_text(L"Hello from winwrap"); });
-        if (button)
-            greet_ = std::move(*button);
+        if (!created)
+            winwrap::message_loop::quit(created.error().value());
     }
 
     void on_destroy() { winwrap::message_loop::quit(); }
 
 private:
-    std::unique_ptr<winwrap::Button> greet_;
+    winwrap::Button greet_;
 };
 
 int wWinMain(HINSTANCE, HINSTANCE, PWSTR, int) {
-    auto window = MainWindow::create(
-        {.title = L"winwrap demo", .style = WS_OVERLAPPEDWINDOW | WS_VISIBLE});
-    if (!window)
-        return window.error().value();
+    MainWindow window;
+    if (auto created = window.create(
+            {.title = L"winwrap demo", .style = WS_OVERLAPPEDWINDOW | WS_VISIBLE});
+        !created)
+        return created.error().value();
 
     return winwrap::message_loop::run();
 }

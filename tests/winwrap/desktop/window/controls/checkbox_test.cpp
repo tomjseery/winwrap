@@ -14,36 +14,33 @@ constexpr UINT checkbox_id = 1;
 }  // namespace
 
 TEST_CASE("Checkbox::click toggles the box and fires on_click through reflection") {
-    auto host = CheckboxHost::create();
-    REQUIRE(host);
+    CheckboxHost host;
+    REQUIRE(host.create());
 
-    auto made = winwrap::Checkbox::create(
-        {.parent = (*host)->hwnd(), .id = checkbox_id, .text = L"Enable"});
-    REQUIRE(made);
-    auto& checkbox = *made;
+    winwrap::Checkbox checkbox;
+    REQUIRE(checkbox.create({.parent = host.hwnd(), .id = checkbox_id, .text = L"Enable"}));
 
     bool clicked = false;
-    checkbox->on_click = [&] { clicked = true; };
+    checkbox.on_click = [&] { clicked = true; };
 
-    checkbox->click();
+    checkbox.click();
 
     REQUIRE(clicked);
-    CHECK(checkbox->checked());  // the native control toggled itself
-    checkbox->click();
-    CHECK_FALSE(checkbox->checked());
+    CHECK(checkbox.checked());  // the native control toggled itself
+    checkbox.click();
+    CHECK_FALSE(checkbox.checked());
 }
 
 TEST_CASE("Checkbox check state round-trips through set_checked / checked") {
-    auto host = CheckboxHost::create();
-    REQUIRE(host);
+    CheckboxHost host;
+    REQUIRE(host.create());
 
-    auto made = winwrap::Checkbox::create({.parent = (*host)->hwnd(), .id = checkbox_id});
-    REQUIRE(made);
-    auto& checkbox = *made;
+    winwrap::Checkbox checkbox;
+    REQUIRE(checkbox.create({.parent = host.hwnd(), .id = checkbox_id}));
 
-    REQUIRE_FALSE(checkbox->checked());
-    checkbox->set_checked(true);
-    REQUIRE(checkbox->checked());
-    checkbox->set_checked(false);
-    REQUIRE_FALSE(checkbox->checked());
+    REQUIRE_FALSE(checkbox.checked());
+    checkbox.set_checked(true);
+    REQUIRE(checkbox.checked());
+    checkbox.set_checked(false);
+    REQUIRE_FALSE(checkbox.checked());
 }

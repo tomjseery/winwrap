@@ -84,9 +84,9 @@ TEST_CASE("Drop moves transfer ownership") {
 }
 
 TEST_CASE("FileDroppable self-registers for drops on a created window") {
-    auto window = DropWindow::create({});
-    REQUIRE(window.has_value());
-    const auto ex_style = (*window)->ex_style();
+    DropWindow window;
+    REQUIRE(window.create());
+    const auto ex_style = window.ex_style();
     REQUIRE(ex_style);
     CHECK((*ex_style & WS_EX_ACCEPTFILES) != 0);
 }

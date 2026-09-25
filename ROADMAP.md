@@ -278,8 +278,8 @@ app-side GDI (`CreateIconIndirect`); adoption must have an explicit ownership co
 
 ## Task 1 — `Window<T>`: configurability + lifetime + error model — ✅ DONE
 
-Delivered in `libs/winwrap/include/winwrap/desktop/window/window.hpp`: `WindowConfig` struct; `create()`
-returning `std::expected<std::unique_ptr<T>, std::error_code>`; two-layer
+Delivered in `libs/winwrap/include/winwrap/desktop/window/window.hpp`: `WindowConfig` struct; pinned
+instance `create()` returning `std::expected<void, std::error_code>`; two-layer
 registration/creation; `last_error()` helper; `RegisterClassW`/`CreateWindowExW`
 error propagation (tolerating `ERROR_CLASS_ALREADY_EXISTS`); `configure_class`
 hook; `WM_NCDESTROY` lifetime fix (no dangling `hwnd_`). Verified: builds clean,
@@ -465,9 +465,9 @@ widget; `Control<T>` supplies the same compile-time `on_*` dispatch as `Window<T
   bounces the notification back down to the control (`notification::wm_command_reflect`), where the
   control's own mixin fires the callback. Menu / accelerator commands
   (`lparam == 0`) still go to the window's `on_command(id)` via `WindowCommand`.
-- **Lifetime** mirrors `Window<T>`: non-movable, `create()` →
-  `std::expected<std::unique_ptr<T>, std::error_code>`, held as a `unique_ptr`
-  member of the owner window; the parent destroys the child HWND (no
+- **Lifetime** mirrors `Window<T>`: non-movable, instance `create()` →
+  `std::expected<void, std::error_code>`, held as a direct member of the owner
+  window; the parent destroys the child HWND (no
   `DestroyWindow`); the dtor / `WM_NCDESTROY` just `RemoveWindowSubclass`.
 - **`Control<T>` + a mixin-composed control catalog (revised 2026-06-30).** The
   earlier "no pre-built controls, extract only reactively" stance is **superseded.**

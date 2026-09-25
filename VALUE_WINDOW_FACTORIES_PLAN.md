@@ -1,4 +1,4 @@
-# Value-returning window factories
+# Pinned-instance window and control creation
 
 ## Objective
 
@@ -20,13 +20,11 @@ This resolves `libs/winwrap/TECH_DEBT.md` → "Owned windows are pointers".
 ## Authorization
 
 - Tommy asked for this work as a handoff on 2026-09-25, straight after PR #10 merged.
-- **Authorized now:** investigate, prototype in tests, and write the design options with a
-  recommendation into this plan.
-- **Needs Tommy's choice before implementation:** which design to build. Tommy has been making
-  each public API decision in turn (names, namespaces, free function vs. member), so present the
-  options with before/after call-site snippets and wait for his pick.
-- **After he picks:** implement, test, review, open the PR and merge when Tommy says so,
-  following the same lifecycle as PR #10.
+- Tommy approved option 1 on 2026-09-25: construct each non-movable object at its
+  permanent address, then call its instance `create`.
+- **Authorized:** implement, test, review, and open the PR, following the same lifecycle
+  as PR #10.
+- **Still gated:** merge only when Tommy explicitly approves it.
 
 ## Current mechanics (verified at `050c212`)
 
@@ -87,9 +85,10 @@ handler that runs while its object is moved or destroyed) rather than reasoning 
 
 ### Prototype evidence
 
-The temporary Catch2 design probes in
-`tests/winwrap/desktop/window/value_factory_design_test.cpp` compile and pass on
-MSVC 19.51:
+The temporary Catch2 design probes that were originally in
+`tests/winwrap/desktop/window/value_factory_design_test.cpp` compiled and passed on
+MSVC 19.51. They were removed after the decision; permanent contract regressions
+remain with the production owners:
 
 1. Calling `SetWindowSubclass` again with the same procedure/id replaces
    `dwRefData`; a control binding can be repointed in the ordinary case.
@@ -298,6 +297,20 @@ fallback. Do not build option 2 or 3.
   stale/unspecified as already described by M6. All diagnostic-only edits were removed.
   A clean rerun excluding those two Shell-dependent cases passed 83/83, including all
   five design probes.
+- 2026-09-25: Tommy approved the recommended option 1. Implementation is authorized:
+  pinned `Window<T>`/`Control<T>` objects with instance `create(...)`, deleted copy/move,
+  direct control members, and the H2 adjusted-pointer fix. Merge remains gated on
+  Tommy's explicit approval.
+- 2026-09-25: implemented the pinned instance API, migrated library tests and README
+  examples to direct objects, added live-object rejection and recreate-after-destruction
+  coverage, and fixed H2 by storing the adjusted final `T*` in subclass data. The real
+  multiple-inheritance dispatch regression passes. Removed the temporary design-probe
+  test after preserving production contract coverage.
+- 2026-09-25: final MSVC `gdb` configure/build completed without warnings. The
+  window/control-focused suite passed 49/49 and the suite excluding the two known
+  desktop-Shell tray cases passed 83/83. The complete 85-test run reproduced only
+  those two environment-dependent `NIM_ADD` fixture failures already diagnosed during
+  investigation; no implementation test failed.
 
 ## Next Steps
 
@@ -305,7 +318,9 @@ fallback. Do not build option 2 or 3.
    run the `gdb` preset to confirm the 80-test baseline.
 2. [x] Read the required project guidance, debt owner, implementation, tests, and README call sites.
 3. [x] Evaluate and prototype all four options; record evidence, call sites, and a recommendation.
-4. [ ] Tommy chooses one of the four options above (recommend option 1).
-5. [ ] Implement the chosen design, including the H2 fix if the address storage changes, update the
-   README, tests, `CODE_CONVENTIONS.md`/`ROADMAP.md`/`TECH_DEBT.md` where their truth changes,
-   then review, open a PR and merge when Tommy approves. Keep this plan's Progress current.
+4. [x] Tommy chose option 1 (construct, then create a pinned object).
+5. [x] Implement the chosen design, including the H2 fix, and update the README, tests,
+   `CODE_CONVENTIONS.md`, `ROADMAP.md`, `MESSAGE_LOOP_DESIGN.md`, and debt/history owners.
+6. [x] Run final formatting and the complete build/test suite; reconcile any failures.
+7. [ ] Review the complete diff, resolve findings, and open the PR.
+8. [ ] Merge only after Tommy explicitly approves it.

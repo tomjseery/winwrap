@@ -29,9 +29,9 @@ winwrap::NotifyIcon make_tray_icon(HWND owner) {
 }  // namespace
 
 TEST_CASE("set_icon replaces the tray icon") {
-    auto owner = TrayOwner::create({.parent = HWND_MESSAGE});
-    REQUIRE(owner);
-    auto tray = make_tray_icon((*owner)->hwnd());
+    TrayOwner owner;
+    REQUIRE(owner.create({.parent = HWND_MESSAGE}));
+    auto tray = make_tray_icon(owner.hwnd());
     auto replacement = winwrap::icon::load(winwrap::SystemIcon::warning, winwrap::IconSize::small);
     REQUIRE(replacement);
 
@@ -39,9 +39,9 @@ TEST_CASE("set_icon replaces the tray icon") {
 }
 
 TEST_CASE("set_icon reports a registration the shell does not know") {
-    auto owner = TrayOwner::create({.parent = HWND_MESSAGE});
-    REQUIRE(owner);
-    auto tray = make_tray_icon((*owner)->hwnd());
+    TrayOwner owner;
+    REQUIRE(owner.create({.parent = HWND_MESSAGE}));
+    auto tray = make_tray_icon(owner.hwnd());
     auto moved_to = std::move(tray);  // the moved-from icon no longer owns a registration
     auto replacement = winwrap::icon::load(winwrap::SystemIcon::warning, winwrap::IconSize::small);
     REQUIRE(replacement);

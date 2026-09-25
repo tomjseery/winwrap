@@ -5,7 +5,6 @@
 #include <commctrl.h>
 
 #include <expected>
-#include <memory>
 #include <system_error>
 
 #include "winwrap/desktop/window/base_window.hpp"
@@ -38,7 +37,10 @@ struct ControlConfig {
 /// owns creation, the SetWindowSubclass->object bridge, message routing, and teardown,
 /// while T provides `static constexpr const wchar_t* control_class` and composes the
 /// mixins it supports. Dispatch resolves at compile time -- no virtual. Non-movable;
-/// lives as a unique_ptr member of the owner window, created in its on_created().
+/// lives as a direct member of the owner window, created in its on_created().
+/// A default-constructed or previously destroyed control has a null hwnd() and may
+/// be created; calling create() while its child window is live fails with
+/// ERROR_ALREADY_EXISTS.
 ///
 /// Two kinds of message handling, both composed into the same compile-time fold:
 ///
@@ -72,16 +74,15 @@ public:
     Control(Control&&) = delete;
     Control& operator=(Control&&) = delete;
 
-    /// Creates the child control and sets the default GUI font.
+    /// Creates this object's child control and sets the default GUI font. A detached
+    /// object may be retried after failed creation or native destruction.
     /// @param cfg  Control settings (parent, id, text, geometry, style).
-    /// @return     Sole owner of the live control, or the Win32 error
-    ///             (as std::error_code) that stopped creation.
-    [[nodiscard]] static std::expected<std::unique_ptr<T>, std::error_code> create(
-        const ControlConfig& cfg) {
-        auto self = std::unique_ptr<T>{new T{}};
-        if (auto make = self->create_control(cfg); !make)
-            return std::unexpected(make.error());
-        return self;
+    /// @return     Nothing, or the Win32 error that stopped creation;
+    ///             ERROR_ALREADY_EXISTS when this object already has a live control.
+    [[nodiscard]] std::expected<void, std::error_code> create(const ControlConfig& cfg) {
+        if (hwnd())
+            return std::unexpected(error::win32(ERROR_ALREADY_EXISTS));
+        return create_control(cfg);
     }
 
     /// The control's command id, reported with its `WM_COMMAND` notification.
@@ -124,8 +125,9 @@ private:
                 // Until the subclass is installed the control is unbound; on failure `made`
                 // destroys it, so no live window is left without its wrapper.
                 return error::result_or_last([&] {
-                           return SetWindowSubclass(h, &subclass_proc, 1,
-                                                    reinterpret_cast<DWORD_PTR>(this));
+                           return SetWindowSubclass(
+                               h, &subclass_proc, 1,
+                               reinterpret_cast<DWORD_PTR>(static_cast<T*>(this)));
                        })
                     .and_then([](BOOL installed) -> std::expected<void, std::error_code> {
                         // SetWindowSubclass documents no error code for its FALSE result.

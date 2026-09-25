@@ -92,9 +92,9 @@ std::filesystem::path make_temp_folder() {
 // Needs a running Explorer: SHChangeNotify events are routed through the Shell.
 TEST_CASE("shell notifications reach a registered Shell listener") {
     const auto folder = make_temp_folder();
-    auto watcher = ChangeWatcher::create({.parent = HWND_MESSAGE});
-    REQUIRE(watcher);
-    auto& w = **watcher;
+    ChangeWatcher watcher;
+    REQUIRE(watcher.create({.parent = HWND_MESSAGE}));
+    auto& w = watcher;
     {
         Registration registration{w.hwnd(), folder};
         const auto file = folder / L"created.txt";
