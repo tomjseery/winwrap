@@ -123,10 +123,10 @@ Call site (the whole point — `wWinMain` shrinks to this):
 
 ```cpp
 int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int nShowCmd) {
-    MainWindow window;
-    if (!window.create({.title = L"Hello, winwrap"}))
-        return EXIT_FAILURE;
-    window.show(nShowCmd);
+    auto window = MainWindow::create({.title = L"Hello, winwrap"});
+    if (!window)
+        return window.error().value();
+    window->show(nShowCmd);
     return winwrap::run();
 }
 ```

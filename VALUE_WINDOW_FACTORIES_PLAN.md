@@ -52,7 +52,7 @@ adapter rather than exposing its double indirection.
   `Button::create(..., [this] { set_text(...); })`. **A design that moves a live window
   would leave those captures dangling.** Treat this as a first-class constraint, not an edge case.
 
-## Design options to evaluate (not decided)
+## Design options evaluated
 
 1. **Construct, then create (pinned object).** The user declares the object (`App app;`, or a
    member `Button ok;`) and calls `app.create(cfg)`, which returns `std::expected<void, error_code>`.
@@ -209,32 +209,34 @@ window.show();
 
 ### README top-level window
 
-Current:
+Before:
 
 ```cpp
-auto window = MainWindow::create(
+auto made = MainWindow::create(
     {.title = L"winwrap demo", .style = WS_OVERLAPPEDWINDOW | WS_VISIBLE});
-if (!window)
-    return window.error().value();
+if (!made)
+    return made.error().value();
+
+(*made)->show();
 
 return winwrap::message_loop::run();
 ```
 
-Recommended:
+After:
 
 ```cpp
-MainWindow window;
-if (auto created = window.create(
-        {.title = L"winwrap demo", .style = WS_OVERLAPPEDWINDOW | WS_VISIBLE});
-    !created)
-    return created.error().value();
+auto window = MainWindow::create(
+    {.title = L"winwrap demo"});
+if (!window)
+    return window.error().value();
 
+window->show();
 return winwrap::message_loop::run();
 ```
 
 ### Window that owns a control
 
-Current:
+Before:
 
 ```cpp
 void on_created() {
@@ -248,24 +250,22 @@ void on_created() {
 std::unique_ptr<winwrap::Button> greet_;
 ```
 
-Recommended:
+After:
 
 ```cpp
 void on_created() {
-    auto created = greet_.create(
+    greet_ = winwrap::Button::create(
         {.parent = hwnd(), .id = 1, .text = L"Greet"},
         [this] { set_text(L"Hello from winwrap"); });
-    if (!created)
-        creation_error_ = created.error();
 }
 
-winwrap::Button greet_;
-std::error_code creation_error_;
+winwrap::CreationResult<winwrap::Button> greet_;
 ```
 
-This improves storage and use syntax, but it does not solve M2: `on_created()` still
-cannot reject the parent window's creation. A later fallible setup contract should
-replace the illustrative `creation_error_` handling.
+This removes the double unwrap and preserves static creation, but it does not solve M2:
+`on_created()` still cannot reject the parent window's creation. The README therefore
+quits the application when a required child factory fails; a later fallible setup contract
+should provide direct propagation.
 
 ## Recommendation
 
@@ -343,6 +343,10 @@ the H2 adjusted-pointer fix. Do not expose `std::move(result).value()` or the in
   The focused creation/ownership suite passes 22/22. The complete run passes 85/87 and
   reproduces only the two already-documented desktop-Shell `NIM_ADD` fixture failures;
   the explicit exclusion run passes 85/85.
+- 2026-09-25: after adding deterministic top-level and control factory error propagation
+  checks, the final suite excluding the two known desktop-Shell cases passes 87/87.
+  Review found and corrected three stale instance-factory examples in the plan and design
+  documentation; the implementation itself had no review finding.
 
 ## Next Steps
 
