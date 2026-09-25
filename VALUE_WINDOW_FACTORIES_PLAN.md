@@ -311,6 +311,14 @@ fallback. Do not build option 2 or 3.
   desktop-Shell tray cases passed 83/83. The complete 85-test run reproduced only
   those two environment-dependent `NIM_ADD` fixture failures already diagnosed during
   investigation; no implementation test failed.
+- 2026-09-25: the full review at `9b3bb9b` found one low-severity test gap for
+  retry after failed native creation. Added deterministic failure-then-retry coverage
+  for both wrappers in `762891b`; the incremental review is approved with no open
+  findings. At that pushed head, the focused suite passed 51/51 and the suite excluding
+  the two known tray cases passed 85/85.
+- 2026-09-25: opened PR #11,
+  `https://github.com/tomjseery/winwrap/pull/11`. The repository has no remote CI.
+  Merge remains gated on Tommy's explicit approval.
 
 ## Next Steps
 
@@ -322,5 +330,5 @@ fallback. Do not build option 2 or 3.
 5. [x] Implement the chosen design, including the H2 fix, and update the README, tests,
    `CODE_CONVENTIONS.md`, `ROADMAP.md`, `MESSAGE_LOOP_DESIGN.md`, and debt/history owners.
 6. [x] Run final formatting and the complete build/test suite; reconcile any failures.
-7. [ ] Review the complete diff, resolve findings, and open the PR.
+7. [x] Review the complete diff, resolve findings, and open PR #11.
 8. [ ] Merge only after Tommy explicitly approves it.
