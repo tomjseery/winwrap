@@ -300,7 +300,6 @@ Raw calls that Winwrap's **tests** make as consumers:
 
 | Family | Why deferred | Recommended owner |
 |---|---|---|
-| Value-returning window factories: no more `(*made)->op()` | Needs movable wrappers that re-point `GWLP_USERDATA`/subclass data, which touches the H4 teardown contract. Tommy asked for it as the next refactor | `libs/winwrap/TECH_DEBT.md` "Owned windows are pointers" |
 | Borrowed window view for foreign `HWND`s (F6) | No consumer holds a foreign HWND; M1 owns the adoption decision | M1 |
 | Subclass-free "plain window" (F7) | Behaviour needs callbacks or hooks; class fields are per class name, not per window | `winwrap/richer-desktop` workstream |
 | Owned module loading (`LoadLibraryExW` via `wil::unique_hmodule`) | No consumer loads a plugin DLL yet; mixing borrowed and owned in `Module` would blur who frees | `module.hpp` when a consumer appears |
@@ -332,9 +331,9 @@ Raw calls that Winwrap's **tests** make as consumers:
 Progress (2026-09-25): steps 1-5 are done and reviewed (see *Implemented batch* and
 *Validation evidence*). All steps are complete. PR #10 (https://github.com/tomjseery/winwrap/pull/10) was reviewed
 (four defects fixed in `f0b822f`; the later delta's formatting finding fixed in `5b02043`)
-and merged at Tommy's instruction. The follow-on is the value-returning window factory
-refactor ("Owned windows are pointers" in `libs/winwrap/TECH_DEBT.md`), plus the deferred
-families listed above.
+and merged at Tommy's instruction. The follow-on stable-owner window creation
+refactor is tracked under `VALUE_WINDOW_FACTORIES_PLAN.md`; the deferred families
+listed above remain.
 
 1. Confirm the worktree, branch, base, and clean/unexplained Git state above.
 2. Read `AGENTS.md`, `VISION.md`, `ROADMAP.md`, `CODE_CONVENTIONS.md`, `PLANNING.md`, `MIXINS.md`,

@@ -13,7 +13,7 @@ namespace winwrap {
 /// style gives it a visible border and horizontal scrolling for over-long input.
 class Edit final : public Control<Edit, notification::TextChange> {
 public:
-    static constexpr const wchar_t* control_class = L"EDIT";
+    static constexpr const wchar_t* class_name = L"EDIT";
     static constexpr DWORD default_style = WS_BORDER | ES_AUTOHSCROLL | WS_TABSTOP;
 };
 
