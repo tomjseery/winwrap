@@ -12,7 +12,9 @@ namespace winwrap {
 /// the message, falls back to the final type's `default_proc` -- the only thing
 /// that varies between wrappers is which default proc closes the gap. Compose a
 /// wrapper as `class C : public MessageRouter<Paintable, MouseInput, ...>` and
-/// route its WndProc to `route_message`.
+/// route its WndProc to `route_message`. A custom router may also call its
+/// wrapper's supported `default_proc` directly when it deliberately declines a
+/// message it inspected.
 ///
 /// The final type is never named here: `route_message` takes an explicit object
 /// parameter (C++23 deducing this), so `self` is deduced as the most-derived type

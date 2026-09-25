@@ -55,7 +55,8 @@ struct ControlConfig {
 ///     lands here. Adding one is mechanical -- see MIXINS.md.
 ///
 /// Shadow route_message in T for anything the mixins don't cover, and delegate the
-/// rest with `Control::route_message`.
+/// rest with `Control::route_message`. A custom router may call default_proc
+/// directly when it deliberately declines the current message.
 ///
 /// @tparam T           The derived control type. Must provide
 ///                     `static constexpr const wchar_t* control_class` and be
@@ -85,9 +86,10 @@ public:
     /// The control's command id, reported with its `WM_COMMAND` notification.
     [[nodiscard]] UINT id() const { return id_; }
 
-    /// The message fallback: hands any message no hook claimed to DefSubclassProc.
-    /// Called by route_message (inherited from MessageRouter); not for direct use.
-    LRESULT default_proc(UINT msg, WPARAM wparam, LPARAM lparam) {
+    /// Delegates one message to this control's native fallback (DefSubclassProc).
+    /// Use from an advanced route_message override when it deliberately declines
+    /// the current message; ordinary routing calls it automatically.
+    [[nodiscard]] LRESULT default_proc(UINT msg, WPARAM wparam, LPARAM lparam) {
         return DefSubclassProc(hwnd(), msg, wparam, lparam);
     }
 
