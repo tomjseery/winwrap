@@ -183,9 +183,12 @@ an empty vector means none are present. `Device::open({.path = ..., .access = ..
 is synchronous and reports the number of output bytes actually written; callers
 must interpret and validate those bytes for their own protocol. A failed request
 returns `Device::ControlError`, which preserves the native error and any partial
-byte count reported by Windows, bounded by the output buffer. `handle()` borrows the
-native handle without transferring ownership. There is no overlapped-I/O API;
-asynchronous requests need separate buffer and cancellation lifetimes.
+byte count in two forms: `bytes_returned` is bounded by the output buffer, while
+`native_bytes_returned` is the exact diagnostic count from Windows and is absent only
+when WinWrap rejects the request before making the native call. Input and output pointers
+are preserved independently from their lengths, including storage-backed zero-length
+spans. `handle()` borrows the native handle without transferring ownership. There is no
+overlapped-I/O API; asynchronous requests need separate buffer and cancellation lifetimes.
 
 Configuration Manager returns `CONFIGRET`, not a `GetLastError` code. WinWrap
 uses `CM_MapCrToWin32Err` and `std::system_category()` for those failures.
