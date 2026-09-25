@@ -12,40 +12,38 @@ constexpr UINT combobox_id = 1;
 }  // namespace
 
 TEST_CASE("ComboBox selection round-trips through set_selection / selection") {
-    auto host = ComboBoxHost::create();
-    REQUIRE(host);
+    ComboBoxHost host;
+    REQUIRE(host.create());
 
-    auto made = winwrap::ComboBox::create({.parent = (*host)->hwnd(), .id = combobox_id});
-    REQUIRE(made);
-    auto& combo = *made;
+    winwrap::ComboBox combo;
+    REQUIRE(combo.create({.parent = host.hwnd(), .id = combobox_id}));
 
-    combo->add_item(L"Alpha");
-    combo->add_item(L"Beta");
-    combo->add_item(L"Gamma");
+    combo.add_item(L"Alpha");
+    combo.add_item(L"Beta");
+    combo.add_item(L"Gamma");
 
-    REQUIRE(combo->selection() == CB_ERR);  // nothing selected yet
-    combo->set_selection(1);
-    REQUIRE(combo->selection() == 1);
+    REQUIRE(combo.selection() == CB_ERR);  // nothing selected yet
+    combo.set_selection(1);
+    REQUIRE(combo.selection() == 1);
 }
 
 TEST_CASE("ComboBox fires on_selection_changed with the selected index") {
-    auto host = ComboBoxHost::create();
-    REQUIRE(host);
+    ComboBoxHost host;
+    REQUIRE(host.create());
 
-    auto made = winwrap::ComboBox::create({.parent = (*host)->hwnd(), .id = combobox_id});
-    REQUIRE(made);
-    auto& combo = *made;
+    winwrap::ComboBox combo;
+    REQUIRE(combo.create({.parent = host.hwnd(), .id = combobox_id}));
 
-    combo->add_item(L"Alpha");
-    combo->add_item(L"Beta");
-    combo->add_item(L"Gamma");
-    combo->set_selection(2);  // the payload the mixin will read back via CB_GETCURSEL
+    combo.add_item(L"Alpha");
+    combo.add_item(L"Beta");
+    combo.add_item(L"Gamma");
+    combo.set_selection(2);  // the payload the mixin will read back via CB_GETCURSEL
 
     int got = -1;
-    combo->on_selection_changed = [&](int index) { got = index; };
+    combo.on_selection_changed = [&](int index) { got = index; };
 
-    winwrap::message::send((*host)->hwnd(), WM_COMMAND, MAKEWPARAM(combobox_id, CBN_SELCHANGE),
-                           reinterpret_cast<LPARAM>(combo->hwnd()));
+    winwrap::message::send(host.hwnd(), WM_COMMAND, MAKEWPARAM(combobox_id, CBN_SELCHANGE),
+                           reinterpret_cast<LPARAM>(combo.hwnd()));
 
     REQUIRE(got == 2);
 }

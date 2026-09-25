@@ -27,31 +27,31 @@ TEST_CASE("run() returns the posted exit code when WM_QUIT is already queued") {
 }
 
 TEST_CASE("run() dispatches a posted message to the window before it quits") {
-    auto window = PumpWindow::create({.parent = HWND_MESSAGE});
-    REQUIRE(window.has_value());
-    REQUIRE(winwrap::message::post((*window)->hwnd(), WM_COMMAND, 7, 0));
+    PumpWindow window;
+    REQUIRE(window.create({.parent = HWND_MESSAGE}));
+    REQUIRE(winwrap::message::post(window.hwnd(), WM_COMMAND, 7, 0));
     winwrap::message_loop::quit(0);
     CHECK(winwrap::message_loop::run() == 0);
-    REQUIRE((*window)->commands.size() == 1);
-    CHECK((*window)->commands.front() == 7);
+    REQUIRE(window.commands.size() == 1);
+    CHECK(window.commands.front() == 7);
 }
 
 TEST_CASE("run() drains all queued messages in order, then quits") {
-    auto window = PumpWindow::create({.parent = HWND_MESSAGE});
-    REQUIRE(window.has_value());
-    const HWND hwnd = (*window)->hwnd();
+    PumpWindow window;
+    REQUIRE(window.create({.parent = HWND_MESSAGE}));
+    const HWND hwnd = window.hwnd();
     REQUIRE(winwrap::message::post(hwnd, WM_COMMAND, 1, 0));
     REQUIRE(winwrap::message::post(hwnd, WM_COMMAND, 2, 0));
     REQUIRE(winwrap::message::post(hwnd, WM_COMMAND, 3, 0));
     winwrap::message_loop::quit(0);
     CHECK(winwrap::message_loop::run() == 0);
-    CHECK((*window)->commands == std::vector<UINT>{1, 2, 3});
+    CHECK(window.commands == std::vector<UINT>{1, 2, 3});
 }
 
 TEST_CASE("closing the window exits run() via on_destroy -> quit") {
-    auto window = ClosableWindow::create({.parent = HWND_MESSAGE});
-    REQUIRE(window.has_value());
-    REQUIRE(winwrap::message::post((*window)->hwnd(), WM_CLOSE, 0,
+    ClosableWindow window;
+    REQUIRE(window.create({.parent = HWND_MESSAGE}));
+    REQUIRE(winwrap::message::post(window.hwnd(), WM_CLOSE, 0,
                                    0));  // WM_CLOSE -> DefWindowProc destroys it
     CHECK(winwrap::message_loop::run() == 0);
 }

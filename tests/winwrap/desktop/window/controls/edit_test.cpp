@@ -12,31 +12,29 @@ constexpr UINT edit_id = 1;
 }  // namespace
 
 TEST_CASE("Edit fires on_text_changed on a reflected EN_CHANGE") {
-    auto host = EditHost::create();
-    REQUIRE(host);
+    EditHost host;
+    REQUIRE(host.create());
 
-    auto made = winwrap::Edit::create({.parent = (*host)->hwnd(), .id = edit_id});
-    REQUIRE(made);
-    auto& edit = *made;
+    winwrap::Edit edit;
+    REQUIRE(edit.create({.parent = host.hwnd(), .id = edit_id}));
 
     bool changed = false;
-    edit->on_text_changed = [&] { changed = true; };
+    edit.on_text_changed = [&] { changed = true; };
 
-    winwrap::message::send((*host)->hwnd(), WM_COMMAND, MAKEWPARAM(edit_id, EN_CHANGE),
-                           reinterpret_cast<LPARAM>(edit->hwnd()));
+    winwrap::message::send(host.hwnd(), WM_COMMAND, MAKEWPARAM(edit_id, EN_CHANGE),
+                           reinterpret_cast<LPARAM>(edit.hwnd()));
 
     REQUIRE(changed);
 }
 
 TEST_CASE("Edit contents round-trip through set_text / text") {
-    auto host = EditHost::create();
-    REQUIRE(host);
+    EditHost host;
+    REQUIRE(host.create());
 
-    auto made = winwrap::Edit::create({.parent = (*host)->hwnd(), .id = edit_id});
-    REQUIRE(made);
-    auto& edit = *made;
+    winwrap::Edit edit;
+    REQUIRE(edit.create({.parent = host.hwnd(), .id = edit_id}));
 
-    REQUIRE(edit->text().empty());
-    edit->set_text(L"hello");
-    REQUIRE(edit->text() == L"hello");
+    REQUIRE(edit.text().empty());
+    edit.set_text(L"hello");
+    REQUIRE(edit.text() == L"hello");
 }

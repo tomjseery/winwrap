@@ -1,8 +1,6 @@
 #include "winwrap/desktop/window/controls/button.hpp"
 
 #include <catch2/catch_test_macros.hpp>
-#include <memory>
-#include <utility>
 
 #include "winwrap/desktop/window/window.hpp"
 
@@ -14,10 +12,11 @@ struct ClickFixture : winwrap::notification::Click {};
 // can run for real.
 struct ClickHost : winwrap::Window<ClickHost> {
     static constexpr const wchar_t* window_class_name = L"WinwrapClickHost";
-    std::unique_ptr<winwrap::Button> button;
+    winwrap::Button button;
+    bool button_created{};
     void on_created() {
-        if (auto made = winwrap::Button::create({.parent = hwnd(), .id = button_id, .text = L"OK"}))
-            button = std::move(*made);
+        button_created =
+            button.create({.parent = hwnd(), .id = button_id, .text = L"OK"}).has_value();
     }
     static constexpr UINT button_id = 1;
 };
@@ -52,38 +51,38 @@ TEST_CASE("notification::Click with no handler swallows the click without crashi
 }
 
 TEST_CASE("Button::create(cfg, handler) wires on_click in one call") {
-    auto host = ClickHost::create();
-    REQUIRE(host);
+    ClickHost host;
+    REQUIRE(host.create());
 
     bool clicked = false;
-    auto made = winwrap::Button::create({.parent = (*host)->hwnd(), .id = 2, .text = L"Go"},
-                                        [&] { clicked = true; });
-    REQUIRE(made);
+    winwrap::Button button;
+    REQUIRE(
+        button.create({.parent = host.hwnd(), .id = 2, .text = L"Go"}, [&] { clicked = true; }));
 
-    (*made)->click();
+    button.click();
     REQUIRE(clicked);
 }
 
 TEST_CASE("Button::click presses the native button and fires on_click") {
-    auto host = ClickHost::create();
-    REQUIRE(host);
-    REQUIRE((*host)->button);
+    ClickHost host;
+    REQUIRE(host.create());
+    REQUIRE(host.button_created);
 
     int clicks = 0;
-    (*host)->button->on_click = [&] { ++clicks; };
+    host.button.on_click = [&] { ++clicks; };
 
     // BM_CLICK makes the native button send BN_CLICKED to its parent, which reflects it.
-    (*host)->button->click();
-    (*host)->button->click();
+    host.button.click();
+    host.button.click();
 
     CHECK(clicks == 2);
 }
 
 TEST_CASE("a control starts with the GUI font and set_font replaces it") {
-    auto host = ClickHost::create();
-    REQUIRE(host);
-    REQUIRE((*host)->button);
-    auto& button = *(*host)->button;
+    ClickHost host;
+    REQUIRE(host.create());
+    REQUIRE(host.button_created);
+    auto& button = host.button;
     const auto system = static_cast<HFONT>(GetStockObject(SYSTEM_FONT));
 
     CHECK(button.font() == static_cast<HFONT>(GetStockObject(DEFAULT_GUI_FONT)));
@@ -92,18 +91,17 @@ TEST_CASE("a control starts with the GUI font and set_font replaces it") {
 }
 
 TEST_CASE("Button on_click fires through the parent window's reflection") {
-    auto host = ClickHost::create();
-    REQUIRE(host);
-    REQUIRE((*host)->button);
+    ClickHost host;
+    REQUIRE(host.create());
+    REQUIRE(host.button_created);
 
     bool clicked = false;
-    (*host)->button->on_click = [&] { clicked = true; };
+    host.button.on_click = [&] { clicked = true; };
 
     // Windows delivers a click to the parent as WM_COMMAND; SendMessageW runs the
     // whole reflect -> notification::Click path synchronously, so no message pump is needed.
-    winwrap::message::send((*host)->hwnd(), WM_COMMAND,
-                           MAKEWPARAM(ClickHost::button_id, BN_CLICKED),
-                           reinterpret_cast<LPARAM>((*host)->button->hwnd()));
+    winwrap::message::send(host.hwnd(), WM_COMMAND, MAKEWPARAM(ClickHost::button_id, BN_CLICKED),
+                           reinterpret_cast<LPARAM>(host.button.hwnd()));
 
     REQUIRE(clicked);
 }
