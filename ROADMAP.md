@@ -39,6 +39,12 @@ permanent limit on desktop coverage.
 
 ## Existing application backlog and specifications
 
+### Active device work
+
+- [ ] `winwrap/driver-device` — extend the existing user-mode `Device` with shared typed
+  interface/control-code values and a kernel-safe `winwrap::driver` surface, then prove both
+  sides in SandboxHwid. Execution and evidence are owned by [DRIVER_DEVICE_PLAN.md](DRIVER_DEVICE_PLAN.md).
+
 > **The road to v0.1 is now a punch list: [`PRE_V01_PROMPTS.md`](PRE_V01_PROMPTS.md)**
 > — historical session briefs (5 structural, 3 additive). Reconcile them with the
 > assessment and current debt before execution; they are not standing guidance.
