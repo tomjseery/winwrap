@@ -2,7 +2,11 @@
 
 #include "winwrap/win.hpp"
 
+#include <expected>
 #include <string>
+#include <system_error>
+
+#include "winwrap/error.hpp"
 
 namespace winwrap {
 
@@ -42,6 +46,84 @@ public:
     /// Whether the window is currently visible (WS_VISIBLE set up its parent chain).
     [[nodiscard]] bool is_visible() const noexcept { return IsWindowVisible(hwnd_) != FALSE; }
 
+    /// Hides the window (`ShowWindow(SW_HIDE)`); show() makes it visible again.
+    void hide() noexcept { ShowWindow(hwnd_, SW_HIDE); }
+
+    /// Whether the window accepts mouse and keyboard input (IsWindowEnabled).
+    [[nodiscard]] bool is_enabled() const noexcept { return IsWindowEnabled(hwnd_) != FALSE; }
+
+    /// The client area in client coordinates (GetClientRect): `left` and `top` are always
+    /// 0, so `right` and `bottom` are its width and height.
+    [[nodiscard]] std::expected<RECT, std::error_code> client_rect() const {
+        RECT rect{};
+        return check(GetClientRect(hwnd_, &rect)).transform([&] { return rect; });
+    }
+
+    /// The whole window, including its frame, in screen coordinates (GetWindowRect).
+    [[nodiscard]] std::expected<RECT, std::error_code> window_rect() const {
+        RECT rect{};
+        return check(GetWindowRect(hwnd_, &rect)).transform([&] { return rect; });
+    }
+
+    /// Moves the window's top-left corner without resizing, reordering or activating it
+    /// (`SetWindowPos` with `SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE`).
+    /// @note A top-level window moves in screen coordinates; a child window moves in its
+    ///       parent's client coordinates.
+    std::expected<void, std::error_code> move(int x, int y) {
+        return check(
+            SetWindowPos(hwnd_, nullptr, x, y, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE));
+    }
+
+    /// Resizes the whole window, frame included, without moving, reordering or activating
+    /// it (`SetWindowPos` with `SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE`).
+    std::expected<void, std::error_code> resize(int width, int height) {
+        return check(SetWindowPos(hwnd_, nullptr, 0, 0, width, height,
+                                  SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE));
+    }
+
+    /// Marks the whole client area for repainting (`InvalidateRect(hwnd, nullptr, erase)`).
+    /// `WM_PAINT` follows once the thread's message queue is otherwise empty.
+    /// @param erase  Whether the background is erased (`WM_ERASEBKGND`) before painting.
+    void invalidate(bool erase = true) noexcept {
+        // A null HWND would invalidate every window on the desktop.
+        if (hwnd_)
+            InvalidateRect(hwnd_, nullptr, erase);
+    }
+
+    /// Gives this window the keyboard focus (SetFocus).
+    /// @return Nothing, or the Win32 error, e.g. when the window belongs to another thread.
+    ///         SetFocus's null result also means "nothing had focus before", so only a
+    ///         null result with a recorded error counts as failure.
+    std::expected<void, std::error_code> focus() {
+        // SetFocus(nullptr) would clear the thread's focus instead of failing.
+        if (!hwnd_)
+            return std::unexpected(destroyed_window_error());
+        return check_last_error([&] { return SetFocus(hwnd_); }).transform([](HWND) {});
+    }
+
+    /// Whether this window has the calling thread's keyboard focus (GetFocus).
+    [[nodiscard]] bool has_focus() const noexcept { return hwnd_ && GetFocus() == hwnd_; }
+
+    /// Asks the window to close as if the user clicked its close button: posts `WM_CLOSE`,
+    /// so `on_close` (or the default destroy) runs later from the message loop, never
+    /// inside this call.
+    std::expected<void, std::error_code> request_close() {
+        // PostMessageW(nullptr, ...) would post to the thread queue instead of failing.
+        if (!hwnd_)
+            return std::unexpected(destroyed_window_error());
+        return check(PostMessageW(hwnd_, WM_CLOSE, 0, 0));
+    }
+
+    /// The window's `WS_*` style bits (`GetWindowLongPtrW(GWL_STYLE)`).
+    [[nodiscard]] std::expected<DWORD, std::error_code> style() const {
+        return window_long(GWL_STYLE);
+    }
+
+    /// The window's `WS_EX_*` extended style bits (`GetWindowLongPtrW(GWL_EXSTYLE)`).
+    [[nodiscard]] std::expected<DWORD, std::error_code> ex_style() const {
+        return window_long(GWL_EXSTYLE);
+    }
+
 protected:
     BaseWindow() = default;
     BaseWindow(const BaseWindow&) = default;
@@ -54,11 +136,23 @@ protected:
     /// WndProc / subclass bridge).
     void attach(HWND h) noexcept { hwnd_ = h; }
 
+    /// The error an operation reports when a null HWND has a different native meaning
+    /// (e.g. SetFocus clears focus, PostMessageW posts to the thread).
+    [[nodiscard]] static std::error_code destroyed_window_error() {
+        return {ERROR_INVALID_WINDOW_HANDLE, std::system_category()};
+    }
+
     /// Severs the handle when the window is gone, so no stale operation can fire on a
     /// dead HWND.
     void detach() noexcept { hwnd_ = nullptr; }
 
 private:
+    // A zero window long is also a legitimate value (check_last_error).
+    [[nodiscard]] std::expected<DWORD, std::error_code> window_long(int index) const {
+        return check_last_error([&] { return GetWindowLongPtrW(hwnd_, index); })
+            .transform([](LONG_PTR value) { return static_cast<DWORD>(value); });
+    }
+
     HWND hwnd_{};
 };
 

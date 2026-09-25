@@ -59,6 +59,13 @@ std::expected<void, std::error_code> NotifyIcon::set_tooltip(const wchar_t* text
     return check(Shell_NotifyIconW(NIM_MODIFY, &nid));
 }
 
+std::expected<void, std::error_code> NotifyIcon::set_icon(wil::unique_hicon icon) {
+    NOTIFYICONDATAW nid = make_data();
+    nid.uFlags = NIF_ICON;
+    nid.hIcon = icon.get();
+    return check(Shell_NotifyIconW(NIM_MODIFY, &nid)).transform([&] { icon_ = std::move(icon); });
+}
+
 std::expected<void, std::error_code> NotifyIcon::add() {
     NOTIFYICONDATAW nid = make_data();
     nid.uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP | NIF_SHOWTIP;

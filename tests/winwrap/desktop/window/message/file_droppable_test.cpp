@@ -83,14 +83,10 @@ TEST_CASE("Drop moves transfer ownership") {
     CHECK(second.path(0) == L"C:\\a.txt");
 }
 
-namespace {
-bool accepts_drops(HWND hwnd) {
-    return (GetWindowLongPtrW(hwnd, GWL_EXSTYLE) & WS_EX_ACCEPTFILES) != 0;
-}
-}  // namespace
-
 TEST_CASE("FileDroppable self-registers for drops on a created window") {
     auto window = DropWindow::create({});
     REQUIRE(window.has_value());
-    CHECK(accepts_drops((*window)->hwnd()));
+    const auto ex_style = (*window)->ex_style();
+    REQUIRE(ex_style);
+    CHECK((*ex_style & WS_EX_ACCEPTFILES) != 0);
 }
