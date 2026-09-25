@@ -330,8 +330,11 @@ Raw calls that Winwrap's **tests** make as consumers:
 ## Next Steps
 
 Progress (2026-09-25): steps 1-5 are done and reviewed (see *Implemented batch* and
-*Validation evidence*). PR #10 (https://github.com/tomjseery/winwrap/pull/10) is open at `f0b822f`. Next: merge
-once Tommy has reviewed it, then start the value-returning window factory refactor.
+*Validation evidence*). All steps are complete. PR #10 (https://github.com/tomjseery/winwrap/pull/10) was reviewed
+(four defects fixed in `f0b822f`; the later delta's formatting finding fixed in `5b02043`)
+and merged at Tommy's instruction. The follow-on is the value-returning window factory
+refactor ("Owned windows are pointers" in `libs/winwrap/TECH_DEBT.md`), plus the deferred
+families listed above.
 
 1. Confirm the worktree, branch, base, and clean/unexplained Git state above.
 2. Read `AGENTS.md`, `VISION.md`, `ROADMAP.md`, `CODE_CONVENTIONS.md`, `PLANNING.md`, `MIXINS.md`,
