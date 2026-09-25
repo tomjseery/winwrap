@@ -119,14 +119,27 @@ private:
                               .height = cfg.height,
                               .parent = cfg.parent,
                               .child_id = cfg.id})
-            .transform([&](wil::unique_hwnd made) {
-                // The parent destroys its child windows, so the handle is not kept as an owner.
-                HWND h = made.release();
-                attach(h);
-                id_ = cfg.id;
-                SendMessageW(h, WM_SETFONT,
+            .and_then([&](wil::unique_hwnd made) -> std::expected<void, std::error_code> {
+                const HWND h = made.get();
+                send_message(h, WM_SETFONT,
                              reinterpret_cast<WPARAM>(GetStockObject(DEFAULT_GUI_FONT)), TRUE);
-                SetWindowSubclass(h, &subclass_proc, 1, reinterpret_cast<DWORD_PTR>(this));
+                // Until the subclass is installed the control is unbound; on failure `made`
+                // destroys it, so no live window is left without its wrapper.
+                return check_last_error([&] {
+                           return SetWindowSubclass(h, &subclass_proc, 1,
+                                                    reinterpret_cast<DWORD_PTR>(this));
+                       })
+                    .and_then([](BOOL installed) -> std::expected<void, std::error_code> {
+                        // SetWindowSubclass documents no error code for its FALSE result.
+                        if (!installed)
+                            return std::unexpected(win32_error(ERROR_GEN_FAILURE));
+                        return {};
+                    })
+                    .transform([&] {
+                        // The parent destroys its child windows, so the handle is not kept.
+                        attach(made.release());
+                        id_ = cfg.id;
+                    });
             });
     }
     static LRESULT CALLBACK subclass_proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam,

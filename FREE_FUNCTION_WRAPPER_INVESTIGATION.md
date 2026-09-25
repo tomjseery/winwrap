@@ -253,10 +253,23 @@ Raw calls that Winwrap's **tests** make as consumers:
 6. **Ambiguous-zero results**: `check_last_error(call)` in `error.hpp` is the only
    `SetLastError(ERROR_SUCCESS)` in the library, used by `style`/`ex_style`, `focus` and
    `create_window`.
-7. **Tests** mirror the headers: `desktop/window/base_window_test.cpp`,
+7. **Window messages** (Tommy: one owner per native call): `send_message` / `post_message` in
+   `desktop/window/messaging.hpp` are the only `SendMessageW` / `PostMessageW` calls, with
+   `BaseWindow::send` / `post` delegating. `post_message` returns `std::expected` and rejects a
+   null window, which `PostMessageW` would post to the calling thread. Checkbox, combobox,
+   reflection, control font, menu and `request_close` use them.
+8. **Win32 error codes**: `win32_error(code)` in `error.hpp` is the only place that builds a
+   `std::error_code` from an `ERROR_*` value; it replaces six hand-written constructions and
+   `device.cpp`'s private helper.
+9. **H3 for controls**: `Control` creation checks `SetWindowSubclass`. On failure the
+   still-unbound child window is destroyed and creation reports the error, instead of returning
+   a live-looking unbound control. There is no deterministic way to make `SetWindowSubclass` fail
+   in a test, so this path is covered only by inspection.
+10. **Tests** mirror the headers: `desktop/window/base_window_test.cpp`,
    `desktop/window/message/timer_tick_test.cpp`, `desktop/icon_test.cpp`,
    `desktop/notify_icon_test.cpp` (adds a real tray icon briefly, so it needs a running shell),
-   `desktop/window/native_window_test.cpp`, `module_test.cpp`; `file_droppable_test.cpp` now
+   `desktop/window/native_window_test.cpp`, `desktop/window/messaging_test.cpp`,
+   `module_test.cpp`; `file_droppable_test.cpp` now
    uses `ex_style()`.
 
 ### Deferred families (recorded, not implemented)
@@ -278,7 +291,7 @@ Raw calls that Winwrap's **tests** make as consumers:
 - The sanitizer `dev` preset still cannot link locally (`clang_rt.asan_dynamic_runtime_thunk-x86_64.lib`
   is missing: the MSVC AddressSanitizer runtime is not installed), as recorded by PR #9.
 - The MSVC x64 `gdb` preset (Debug, no sanitizers) builds cleanly, including every public
-  header check. CTest: 72/72 passed, up from the 39-test baseline at `813ed55`.
+  header check. CTest: 76/76 passed, up from the 39-test baseline at `813ed55`.
 - Review of `813ed55..b18bed0` (parent-only; no review runtime or agents in this repository)
   found four defects, all fixed in the follow-up commit: `stop_timer` on a destroyed window
   could stop an unrelated thread timer (null guard added); `set_icon` on a moved-from

@@ -18,12 +18,12 @@ public:
 
     /// Whether the box is currently ticked (`BM_GETCHECK`).
     [[nodiscard]] bool checked() const {
-        return SendMessageW(hwnd(), BM_GETCHECK, 0, 0) == BST_CHECKED;
+        return send(BM_GETCHECK) == BST_CHECKED;
     }
 
     /// Ticks or unticks the box (`BM_SETCHECK`).
     void set_checked(bool checked) {
-        SendMessageW(hwnd(), BM_SETCHECK, checked ? BST_CHECKED : BST_UNCHECKED, 0);
+        send(BM_SETCHECK, checked ? BST_CHECKED : BST_UNCHECKED);
     }
 };
 

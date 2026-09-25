@@ -17,10 +17,12 @@ entry once its resolution condition is met; Git preserves the history.
   `T*` without adjustment. A nonzero base offset was demonstrated.
   **Resolve:** store/recover compatible pointer types and test multiple inheritance
   with the Control base at a nonzero offset.
-- **H3 / binding failures.** `SetWindowSubclass` and `SetWindowLongPtrW` results are
-  ignored; failed setup can publish success without destruction invalidation.
-  **Resolve:** correct API-specific error handling and resource rollback; prove
-  failure cannot return a live-looking unbound wrapper.
+- **H3 / binding failures.** `Window` ignores its `SetWindowLongPtrW` results; failed
+  setup can publish success without destruction invalidation. (`Control` now checks
+  `SetWindowSubclass` and destroys the unbound child on failure, but that path has no
+  deterministic test.) **Resolve:** API-specific error handling and rollback for
+  `Window`'s binding, plus a call seam that lets tests prove neither wrapper can return
+  a live-looking unbound object.
 - **H4 / reentrancy and teardown.** Native callbacks use `self` after user code on
   NC destruction. Synchronous APIs, derived/member teardown and modal menu tracking
   can reenter before owners are safe. Current base-destructor detach is insufficient

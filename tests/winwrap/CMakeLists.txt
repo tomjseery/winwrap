@@ -16,6 +16,7 @@ add_executable(winwrap_test
     desktop/window/drop_window_test.cpp
     desktop/window/message/file_droppable_test.cpp
     desktop/window/message/timer_tick_test.cpp
+    desktop/window/messaging_test.cpp
     desktop/window/native_window_test.cpp
     module_test.cpp
     desktop/window/control_test.cpp

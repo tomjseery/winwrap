@@ -18,16 +18,16 @@ public:
 
     /// Appends an item to the end of the list (CB_ADDSTRING).
     void add_item(const wchar_t* text) {
-        SendMessageW(hwnd(), CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(text));
+        send(CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(text));
     }
 
     /// The index of the selected item, or CB_ERR (-1) when nothing is selected.
     [[nodiscard]] int selection() const {
-        return static_cast<int>(SendMessageW(hwnd(), CB_GETCURSEL, 0, 0));
+        return static_cast<int>(send(CB_GETCURSEL));
     }
 
     /// Selects the item at `index` (CB_SETCURSEL); pass -1 to clear the selection.
-    void set_selection(int index) { SendMessageW(hwnd(), CB_SETCURSEL, static_cast<WPARAM>(index), 0); }
+    void set_selection(int index) { send(CB_SETCURSEL, static_cast<WPARAM>(index)); }
 };
 
 }  // namespace winwrap

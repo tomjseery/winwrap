@@ -60,7 +60,7 @@ TEST_CASE("Button::create(cfg, handler) wires on_click in one call") {
                                         [&] { clicked = true; });
     REQUIRE(made);
 
-    SendMessageW((*host)->hwnd(), WM_COMMAND, MAKEWPARAM(2, BN_CLICKED),
+    winwrap::send_message((*host)->hwnd(), WM_COMMAND, MAKEWPARAM(2, BN_CLICKED),
                  reinterpret_cast<LPARAM>((*made)->hwnd()));
     REQUIRE(clicked);
 }
@@ -75,7 +75,7 @@ TEST_CASE("Button on_click fires through the parent window's reflection") {
 
     // Windows delivers a click to the parent as WM_COMMAND; SendMessageW runs the
     // whole reflect -> notification::Click path synchronously, so no message pump is needed.
-    SendMessageW((*host)->hwnd(), WM_COMMAND, MAKEWPARAM(ClickHost::button_id, BN_CLICKED),
+    winwrap::send_message((*host)->hwnd(), WM_COMMAND, MAKEWPARAM(ClickHost::button_id, BN_CLICKED),
                  reinterpret_cast<LPARAM>((*host)->button->hwnd()));
 
     REQUIRE(clicked);

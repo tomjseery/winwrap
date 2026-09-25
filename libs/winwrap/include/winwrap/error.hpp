@@ -10,10 +10,15 @@
 
 namespace winwrap {
 
+/// A Win32 error code (`ERROR_*`) as a std::error_code in std::system_category().
+[[nodiscard]] inline std::error_code win32_error(DWORD code) {
+    return std::error_code{static_cast<int>(code), std::system_category()};
+}
+
 /// The most recent Win32 error (GetLastError) as a std::error_code -- the
 /// std-native carrier for a Win32 failure.
 inline std::error_code last_error() {
-    return std::error_code{static_cast<int>(GetLastError()), std::system_category()};
+    return win32_error(GetLastError());
 }
 
 /// Wraps a Win32 call that returns a handle/pointer: the value on success, or

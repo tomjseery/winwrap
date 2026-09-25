@@ -6,6 +6,7 @@
 #include <string>
 #include <system_error>
 
+#include "winwrap/desktop/window/messaging.hpp"
 #include "winwrap/error.hpp"
 
 namespace winwrap {
@@ -97,7 +98,7 @@ public:
     std::expected<void, std::error_code> focus() {
         // SetFocus(nullptr) would clear the thread's focus instead of failing.
         if (!hwnd_)
-            return std::unexpected(destroyed_window_error());
+            return std::unexpected(win32_error(ERROR_INVALID_WINDOW_HANDLE));
         return check_last_error([&] { return SetFocus(hwnd_); }).transform([](HWND) {});
     }
 
@@ -107,11 +108,18 @@ public:
     /// Asks the window to close as if the user clicked its close button: posts `WM_CLOSE`,
     /// so `on_close` (or the default destroy) runs later from the message loop, never
     /// inside this call.
-    std::expected<void, std::error_code> request_close() {
-        // PostMessageW(nullptr, ...) would post to the thread queue instead of failing.
-        if (!hwnd_)
-            return std::unexpected(destroyed_window_error());
-        return check(PostMessageW(hwnd_, WM_CLOSE, 0, 0));
+    std::expected<void, std::error_code> request_close() { return post(WM_CLOSE); }
+
+    /// Sends `msg` to this window and waits for the result (send_message).
+    LRESULT send(UINT msg, WPARAM wparam = 0, LPARAM lparam = 0) const {
+        return send_message(hwnd_, msg, wparam, lparam);
+    }
+
+    /// Queues `msg` for this window and returns immediately (post_message); safe from any
+    /// thread, e.g. a worker reporting `WM_APP + n` back to its window.
+    [[nodiscard]] std::expected<void, std::error_code> post(UINT msg, WPARAM wparam = 0,
+                                                            LPARAM lparam = 0) const {
+        return post_message(hwnd_, msg, wparam, lparam);
     }
 
     /// The window's `WS_*` style bits (`GetWindowLongPtrW(GWL_STYLE)`).
@@ -135,12 +143,6 @@ protected:
     /// Binds the handle once the OS has created the window (called from the derived
     /// WndProc / subclass bridge).
     void attach(HWND h) noexcept { hwnd_ = h; }
-
-    /// The error an operation reports when a null HWND has a different native meaning
-    /// (e.g. SetFocus clears focus, PostMessageW posts to the thread).
-    [[nodiscard]] static std::error_code destroyed_window_error() {
-        return {ERROR_INVALID_WINDOW_HANDLE, std::system_category()};
-    }
 
     /// Severs the handle when the window is gone, so no stale operation can fire on a
     /// dead HWND.
