@@ -21,6 +21,7 @@ add_executable(winwrap_test
     desktop/window/native_window_test.cpp
     module_test.cpp
     desktop/window/control_test.cpp
+    desktop/window/value_factory_design_test.cpp
     desktop/window/controls/button_test.cpp
     desktop/window/controls/checkbox_test.cpp
     desktop/window/controls/edit_test.cpp
