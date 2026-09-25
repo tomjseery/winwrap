@@ -1,6 +1,6 @@
 #pragma once
 
-#include "winwrap/device_types.hpp"
+#include "winwrap/device/interface.hpp"
 #include "winwrap/driver/result.hpp"
 
 namespace winwrap::driver {
@@ -104,7 +104,7 @@ public:
     }
 
     /// Publish a device-interface class that user-mode clients can discover.
-    [[nodiscard]] NTSTATUS publish_interface(const DeviceInterface& interface_id) const noexcept {
+    [[nodiscard]] NTSTATUS publish_interface(const device::Interface& interface_id) const noexcept {
         return WdfDeviceCreateDeviceInterface(native_, &interface_id.native(), nullptr);
     }
 

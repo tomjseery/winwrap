@@ -169,7 +169,8 @@ checked `icon::load` result to `set_icon`.
 | `winwrap/desktop/shell/change_notification.hpp` | `shell::notify_file_created` / `_deleted` / `_renamed` / `_changed`, the folder equivalents and `notify_associations_changed` — tell Explorer what changed |
 | `winwrap/filesystem/attributes.hpp` | `filesystem::attributes` and add/remove/set — file-attribute queries and updates |
 | `winwrap/module.hpp` | `module::current` / `loaded` / `path` and the borrowed `Module` view |
-| `winwrap/device_types.hpp` | `DeviceInterface` and `DeviceControlCode` — shared client/driver protocol values |
+| `winwrap/device/interface.hpp` | `device::Interface` — shared client/driver interface-class value |
+| `winwrap/device/control_code.hpp` | `device::ControlCode` — shared client/driver IOCTL value |
 | `winwrap/device.hpp` | `Device` — user-mode present-interface paths, synchronous open and control |
 | `winwrap/driver/*.hpp` | `driver::Driver`, `Device`, `Queue`, and `Request` — kernel-safe borrowed KMDF adapters |
 | `winwrap/error.hpp` | `error::last()`, `error::win32(code)`, `error::nonzero_or_last(result)`, `error::result_or_last(call)` — Win32 failures as `std::error_code` |
@@ -181,7 +182,7 @@ live in a namespace named for their use (`winwrap::icon`, `winwrap::message`, �
 
 Device support has two sides. `winwrap::Device` owns a user-mode file handle. The
 `winwrap::driver` types borrow KMDF framework handles because KMDF owns their lifetime. Shared
-`DeviceInterface` and `DeviceControlCode` values keep the published GUID and complete IOCTL
+`device::Interface` and `device::ControlCode` values keep the published GUID and complete IOCTL
 consistent across both binaries.
 
 `Device::paths(interface_id)` snapshots all currently present interface paths;
