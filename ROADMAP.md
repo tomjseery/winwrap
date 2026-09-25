@@ -278,8 +278,8 @@ app-side GDI (`CreateIconIndirect`); adoption must have an explicit ownership co
 
 ## Task 1 — `Window<T>`: configurability + lifetime + error model — ✅ DONE
 
-Delivered in `libs/winwrap/include/winwrap/desktop/window/window.hpp`: `WindowConfig` struct; pinned
-instance `create()` returning `std::expected<void, std::error_code>`; two-layer
+Delivered in `libs/winwrap/include/winwrap/desktop/window/window.hpp`: `WindowConfig` struct;
+inherited static `create()` returning a stable `CreationResult<T>` owner; two-layer
 registration/creation; `last_error()` helper; `RegisterClassW`/`CreateWindowExW`
 error propagation (tolerating `ERROR_CLASS_ALREADY_EXISTS`); `configure_class`
 hook; `WM_NCDESTROY` lifetime fix (no dangling `hwnd_`). Verified: builds clean,
@@ -465,10 +465,11 @@ widget; `Control<T>` supplies the same compile-time `on_*` dispatch as `Window<T
   bounces the notification back down to the control (`notification::wm_command_reflect`), where the
   control's own mixin fires the callback. Menu / accelerator commands
   (`lparam == 0`) still go to the window's `on_command(id)` via `WindowCommand`.
-- **Lifetime** mirrors `Window<T>`: non-movable, instance `create()` →
-  `std::expected<void, std::error_code>`, held as a direct member of the owner
-  window; the parent destroys the child HWND (no
-  `DestroyWindow`); the dtor / `WM_NCDESTROY` just `RemoveWindowSubclass`.
+- **Lifetime** mirrors `Window<T>`: the wrapper is non-movable at a permanent address;
+  inherited static `create()` returns a movable `CreationResult<T>` that owns that
+  address. A parent stores the result owner as a member. The control owner detaches its
+  subclass and destroys a still-live child HWND; parent-first native destruction detaches
+  the wrapper at `WM_NCDESTROY`.
 - **`Control<T>` + a mixin-composed control catalog (revised 2026-06-30).** The
   earlier "no pre-built controls, extract only reactively" stance is **superseded.**
   `Control<T>` stays the base, but the library now *does* ship concrete `final`

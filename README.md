@@ -25,25 +25,25 @@ the [vision](VISION.md#why-it-exists) separates that value from public adoption.
   message maps. Messages route to named `on_*` methods your window defines, detected
   with `requires` and resolved by `if constexpr`, with the final type deduced via
   C++23 *deducing this*. Incoming message IDs are still runtime values.
-- **Value-based OS errors.** Factories and supported fallible operations use
-  `std::expected<T, E>`, normally with `std::error_code`. A small structured error
-  also preserves native result data when the operation's contract requires it.
+- **Value-based OS errors.** Factories and supported fallible operations normally use
+  `std::expected<T, E>` with `std::error_code`. Stable window/control factories use
+  `CreationResult<T>`, which combines that explicit error with the permanent owner.
+  A small structured error also preserves native result data when required.
   The error-contract audit is incomplete; allocation and user callbacks can still throw.
-- **Explicit native resources.** WIL supplies ownership primitives. Window, Menu,
-  NotifyIcon and Drop manage native lifetimes; Control currently leaves child-HWND
-  destruction to its parent, a contract under review.
+- **Explicit native resources.** WIL supplies ownership primitives. Window, Control,
+  Menu, NotifyIcon and Drop manage native lifetimes; raw handles remain borrowed views.
 - **One header-only library dependency** (WIL). No separate Winwrap runtime DLL;
   application dependencies and CRT linkage still determine deployment.
 - **Unicode only**, UTF-16 at the boundary, `…W` APIs throughout.
 
 ## Quick start
 
-For an existing window object, ordinary operations are member calls:
+For a created window owner, ordinary operations use pointer syntax:
 
 ```cpp
-window.show();
-window.set_text(L"Ready");
-window.enable(true);
+window->show();
+window->set_text(L"Ready");
+window->enable(true);
 ```
 
 The [API conventions](CODE_CONVENTIONS.md#4-wrapper-first-apis--abstract-the-operation-preserve-the-escape-hatch)
@@ -58,29 +58,28 @@ A window with a button, wired to a click handler:
 
 class MainWindow : public winwrap::Window<MainWindow> {
 public:
-    static constexpr const wchar_t* window_class_name = L"winwrap_demo";
+    static constexpr const wchar_t* class_name = L"winwrap_demo";
 
     void on_created() {
-        auto created = greet_.create(
+        greet_ = winwrap::Button::create(
             {.parent = hwnd(), .id = 1, .text = L"Greet", .x = 12, .y = 12},
             [this] { set_text(L"Hello from winwrap"); });
-        if (!created)
-            winwrap::message_loop::quit(created.error().value());
+        if (!greet_)
+            winwrap::message_loop::quit(greet_.error().value());
     }
 
     void on_destroy() { winwrap::message_loop::quit(); }
 
 private:
-    winwrap::Button greet_;
+    winwrap::CreationResult<winwrap::Button> greet_;
 };
 
 int wWinMain(HINSTANCE, HINSTANCE, PWSTR, int) {
-    MainWindow window;
-    if (auto created = window.create(
-            {.title = L"winwrap demo", .style = WS_OVERLAPPEDWINDOW | WS_VISIBLE});
-        !created)
-        return created.error().value();
+    auto window = MainWindow::create({.title = L"winwrap demo"});
+    if (!window)
+        return window.error().value();
 
+    window->show();
     return winwrap::message_loop::run();
 }
 ```
@@ -92,7 +91,7 @@ only when you want them. Extra behaviour composes as a mixin:
 ```cpp
 class DropTarget : public winwrap::Window<DropTarget, winwrap::FileDroppable> {
 public:
-    static constexpr const wchar_t* window_class_name = L"winwrap_drop";
+    static constexpr const wchar_t* class_name = L"winwrap_drop";
 
     void on_files_dropped(const std::vector<std::wstring>& paths) { /* … */ }
 };
@@ -109,7 +108,7 @@ message you pick an id for.
 ```cpp
 class TrayWindow : public winwrap::Window<TrayWindow> {
 public:
-    static constexpr const wchar_t* window_class_name = L"winwrap_tray";
+    static constexpr const wchar_t* class_name = L"winwrap_tray";
 
     void on_created() {
         auto image = winwrap::icon::load(winwrap::SystemIcon::application, winwrap::IconSize::small);

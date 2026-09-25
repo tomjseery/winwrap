@@ -331,8 +331,8 @@ Raw calls that Winwrap's **tests** make as consumers:
 Progress (2026-09-25): steps 1-5 are done and reviewed (see *Implemented batch* and
 *Validation evidence*). All steps are complete. PR #10 (https://github.com/tomjseery/winwrap/pull/10) was reviewed
 (four defects fixed in `f0b822f`; the later delta's formatting finding fixed in `5b02043`)
-and merged at Tommy's instruction. The follow-on pinned-instance window creation
-refactor was completed under `VALUE_WINDOW_FACTORIES_PLAN.md`; the deferred families
+and merged at Tommy's instruction. The follow-on stable-owner window creation
+refactor is tracked under `VALUE_WINDOW_FACTORIES_PLAN.md`; the deferred families
 listed above remain.
 
 1. Confirm the worktree, branch, base, and clean/unexplained Git state above.

@@ -2,9 +2,8 @@
 
 #include "winwrap/win.hpp"
 
-#include <expected>
 #include <functional>
-#include <system_error>
+#include <utility>
 
 #include "winwrap/desktop/window/control.hpp"
 #include "winwrap/desktop/window/notification/command/click.hpp"
@@ -17,7 +16,7 @@ namespace winwrap {
 /// on_click is a plain std::function, so it is reassignable at any time and defaults to
 /// unset (an unhandled click does nothing):
 ///
-///     button.on_click = [] { /* ... */ };
+///     button->on_click = [] { /* ... */ };
 ///
 /// The click reaches the parent window as `BN_CLICKED`; the window's
 /// notification::CommandReflection mixin bounces it back here, where the composed
@@ -25,7 +24,7 @@ namespace winwrap {
 /// <winwrap/desktop/window/notification/command/click.hpp>).
 class Button final : public Control<Button, notification::Click> {
 public:
-    static constexpr const wchar_t* control_class = L"BUTTON";
+    static constexpr const wchar_t* class_name = L"BUTTON";
 
     using Control::create;  // keep the handler-less create(cfg); see below re: name hiding
 
@@ -38,10 +37,13 @@ public:
     /// reassignable afterwards.
     /// @param cfg       Control settings (parent, id, text, geometry, style).
     /// @param handler  Handler invoked on each click; moved into the button's on_click.
-    /// @return          Nothing, or the Win32 error that stopped creation.
-    [[nodiscard]] std::expected<void, std::error_code> create(const ControlConfig& cfg,
-                                                              std::function<void()> handler) {
-        return Control::create(cfg).transform([&] { on_click = std::move(handler); });
+    /// @return          Stable owner of the live button, or the Win32 creation error.
+    [[nodiscard]] static CreationResult<Button> create(const ControlConfig& cfg,
+                                                       std::function<void()> handler) {
+        auto button = Control::create(cfg);
+        if (button)
+            button->on_click = std::move(handler);
+        return button;
     }
 };
 

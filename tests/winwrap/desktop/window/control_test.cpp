@@ -1,6 +1,7 @@
+#include "winwrap/desktop/window/control.hpp"
+
 #include <catch2/catch_test_macros.hpp>
 
-#include "winwrap/desktop/window/control.hpp"
 #include "winwrap/desktop/window/window.hpp"
 
 namespace {
@@ -11,17 +12,17 @@ namespace {
 // the if-constexpr detection get checked. Exercising a control for real needs a
 // live message pump; see CONTROL_PLAN.md section 8.
 struct TestControl : winwrap::Control<TestControl> {
-    static constexpr const wchar_t* control_class = L"BUTTON";
+    static constexpr const wchar_t* class_name = L"BUTTON";
     void on_paint() {}
     void on_mouse_move(int /*x*/, int /*y*/) {}
 };
 
 struct ControlHost : winwrap::Window<ControlHost> {
-    static constexpr const wchar_t* window_class_name = L"WinwrapDefaultProcControlHost";
+    static constexpr const wchar_t* class_name = L"WinwrapDefaultProcControlHost";
 };
 
 struct RoutedControl : winwrap::Control<RoutedControl> {
-    static constexpr const wchar_t* control_class = L"BUTTON";
+    static constexpr const wchar_t* class_name = L"BUTTON";
     bool delegated_to_default{};
 
     LRESULT route_message(UINT msg, WPARAM wparam, LPARAM lparam) {
@@ -35,7 +36,7 @@ struct LeadingBase {
 };
 
 struct OffsetControl : LeadingBase, winwrap::Control<OffsetControl> {
-    static constexpr const wchar_t* control_class = L"BUTTON";
+    static constexpr const wchar_t* class_name = L"BUTTON";
     static constexpr UINT probe_message{WM_APP + 1};
     bool received{};
 
@@ -55,62 +56,58 @@ TEST_CASE("Control<T> compiles and links") {
 }
 
 TEST_CASE("Control custom routing can delegate to its subclass default procedure") {
-    ControlHost host;
-    REQUIRE(host.create({.parent = HWND_MESSAGE}));
-    RoutedControl control;
-    REQUIRE(control.create({.parent = host.hwnd(), .id = 1}));
+    auto host = ControlHost::create({.parent = HWND_MESSAGE});
+    REQUIRE(host);
+    auto control = RoutedControl::create({.parent = host->hwnd(), .id = 1});
+    REQUIRE(control);
 
-    control.delegated_to_default = false;
-    const LRESULT dialog_code = winwrap::message::send(control.hwnd(), WM_GETDLGCODE, 0, 0);
+    control->delegated_to_default = false;
+    const LRESULT dialog_code = winwrap::message::send(control->hwnd(), WM_GETDLGCODE, 0, 0);
 
-    REQUIRE(control.delegated_to_default);
+    REQUIRE(control->delegated_to_default);
     CHECK((dialog_code & DLGC_BUTTON) != 0);
 }
 
+TEST_CASE("Control factory carries a native creation error") {
+    const auto control = RoutedControl::create({.id = 1});
+
+    REQUIRE_FALSE(control);
+    CHECK(control.error());
+}
+
 TEST_CASE("Control stores the adjusted final object pointer for subclass routing") {
-    ControlHost host;
-    REQUIRE(host.create({.parent = HWND_MESSAGE}));
-    OffsetControl control;
-    REQUIRE(control.create({.parent = host.hwnd(), .id = 1}));
+    auto host = ControlHost::create({.parent = HWND_MESSAGE});
+    REQUIRE(host);
+    auto control = OffsetControl::create({.parent = host->hwnd(), .id = 1});
+    REQUIRE(control);
 
-    winwrap::message::send(control.hwnd(), OffsetControl::probe_message);
+    winwrap::message::send(control->hwnd(), OffsetControl::probe_message);
 
-    CHECK(control.received);
+    CHECK(control->received);
 }
 
-TEST_CASE("Control rejects a second create while its child window is live") {
-    ControlHost host;
-    REQUIRE(host.create({.parent = HWND_MESSAGE}));
-    RoutedControl control;
-    REQUIRE(control.create({.parent = host.hwnd(), .id = 1}));
+TEST_CASE("Control owner destroys its child window when released first") {
+    auto host = ControlHost::create({.parent = HWND_MESSAGE});
+    REQUIRE(host);
+    HWND child{};
+    {
+        auto control = RoutedControl::create({.parent = host->hwnd(), .id = 1});
+        REQUIRE(control);
+        child = control->hwnd();
+        REQUIRE(IsWindow(child));
+    }
 
-    const auto duplicate = control.create({.parent = host.hwnd(), .id = 2});
-
-    REQUIRE_FALSE(duplicate);
-    CHECK(duplicate.error().value() == ERROR_ALREADY_EXISTS);
+    CHECK_FALSE(IsWindow(child));
 }
 
-TEST_CASE("Control can create again after its native window is destroyed") {
-    ControlHost host;
-    REQUIRE(host.create({.parent = HWND_MESSAGE}));
-    RoutedControl control;
-    REQUIRE(control.create({.parent = host.hwnd(), .id = 1}));
-    control.send(WM_CLOSE);
-    REQUIRE(control.hwnd() == nullptr);
+TEST_CASE("Control owner detaches when its parent destroys the child first") {
+    auto host = ControlHost::create({.parent = HWND_MESSAGE});
+    REQUIRE(host);
+    auto control = RoutedControl::create({.parent = host->hwnd(), .id = 1});
+    REQUIRE(control);
 
-    CHECK(control.create({.parent = host.hwnd(), .id = 2}));
-    CHECK(control.id() == 2);
-}
+    host->send(WM_CLOSE);
 
-TEST_CASE("Control can retry after native creation fails") {
-    ControlHost host;
-    REQUIRE(host.create({.parent = HWND_MESSAGE}));
-    RoutedControl control;
-
-    const auto failed = control.create({.id = 1});
-
-    REQUIRE_FALSE(failed);
-    REQUIRE(control.hwnd() == nullptr);
-    CHECK(control.create({.parent = host.hwnd(), .id = 2}));
-    CHECK(control.id() == 2);
+    CHECK(host->hwnd() == nullptr);
+    CHECK(control->hwnd() == nullptr);
 }
