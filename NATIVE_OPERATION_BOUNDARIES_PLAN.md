@@ -120,6 +120,8 @@ retains `hwnd()` as the raw integration escape hatch.
 - 2026-09-25: Committed the completed slice as `2f3c73a` (`Support explicit native default routing`).
   Standalone review of the frozen `e8db4f8..2f3c73a` candidate found no correctness, boundary, or
   test-coverage findings. The repository's isolated-review runtime is not installed in this worktree.
+- 2026-09-25: Pushed the branch and opened draft PR [#9](https://github.com/tomjseery/winwrap/pull/9).
+  The PR records the local ASan-runtime limitation and delegates exact-head validation to GitHub.
 
 ## Next Steps
 
@@ -137,4 +139,6 @@ retains `hwnd()` as the raw integration escape hatch.
 6. Completed locally: ran focused tests, an MSVC x64 build, full CTest, `git diff --check`, and
    standalone review of the committed candidate. The sanitizer-enabled `dev` preset is blocked by
    the missing MSVC AddressSanitizer runtime; the non-sanitized MSVC `gdb` preset is green.
-   Next: check remote delivery readiness for this branch, keeping this plan current.
+   Draft PR [#9](https://github.com/tomjseery/winwrap/pull/9) is open. Next: obtain exact-head PR
+   validation and resolve the declared sanitizer-runtime prerequisite before marking it ready or
+   merging.
