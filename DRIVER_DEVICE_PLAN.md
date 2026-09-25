@@ -26,7 +26,8 @@ driver in a VM.
 - Keep `winwrap::Device` at the library root to avoid `device::Device` stuttering and preserve
   its existing API.
 - Put kernel-only types in `winwrap::driver`; the namespace identifies the execution side.
-- Keep the kernel surface header-only and C++17-compatible. KMDF's WDF methods are inline
+- Keep the kernel surface header-only and compatible with the project's restricted C++20
+  driver subset. KMDF's WDF methods are inline
   dispatch-table calls, and the user-mode WinWrap static library must not be linked into a
   kernel binary.
 - Model shared native values as `DeviceInterface` and `DeviceControlCode`. They preserve a
@@ -90,8 +91,13 @@ driver in a VM.
   register a shell icon in this host session. No device or changed-path test failed.
 - 2026-09-25: SandboxHwid configured against the local producer candidate, built its C++23
   client, and passed all 9 CTests. No driver installation, loading, or live I/O was run.
+- 2026-09-25: committed and pushed the WinWrap implementation as `ad310c5`; SandboxHwid
+  pinned that exact revision and repeated its client and real WDK Debug/Release builds.
+  Formatting, raw-call, whitespace, and final candidate reviews passed with no blocking
+  findings. WinWrap PR #12 and SandboxHwid PR #2 now describe the complete boundary.
 
-## Current next action
+## Completion
 
-Review the complete diff, run the remaining WinWrap and SandboxHwid validation tiers, then
-commit/push WinWrap so SandboxHwid can pin and validate the exact producer revision.
+The authorized implementation, validation, commits, pushes, exact consumer pin, and PR
+updates are complete. Merging and VM-only driver execution remain outside this plan's
+authorization.
