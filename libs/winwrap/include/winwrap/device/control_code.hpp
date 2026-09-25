@@ -37,6 +37,11 @@ public:
         Access access;
     };
 
+    /// Encode the native fields into a device-control code.
+    [[nodiscard]] static constexpr ControlCode create(const Config& config) noexcept {
+        return ControlCode{config};
+    }
+
     constexpr explicit ControlCode(const Config& config) noexcept
         : value_{CTL_CODE(config.device_type, config.function, static_cast<ULONG>(config.method),
                           static_cast<ULONG>(config.access))} {}

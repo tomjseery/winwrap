@@ -41,13 +41,13 @@ A raw handle returned by an accessor is borrowed; the wrapper retains ownership.
 
 ## 2. Factory & builder naming — `create` vs `make_*`
 
-The verb a function picks tells the reader its contract. The deciding question is
-**"can it fail / does it own a resource?"** — *not* whether it's public or private.
+Follow `cpp:domain-design` for the generic type-owned factory name and return shape.
+The verb still tells the reader which operation the factory performs here.
 
-- **`create`** — a named constructor that **acquires an OS resource and can fail**,
-  so it returns `std::expected<T, std::error_code>` (a real constructor can't). The
-  public factory is `create`; its private worker that does the actual acquisition
-  takes the same family with a suffix, `create_<thing>`.
+- **`create`** — Winwrap resource factories acquire OS resources and return
+  `std::expected<T, std::error_code>`; `device::ControlCode::create(Config)`
+  builds an infallible value and returns it directly. A private worker that
+  performs resource acquisition uses a specific `create_<thing>` name.
 - **`open`** — acquire a handle to an existing named resource, as `Device::open` does.
 - **`load`** — acquire an owned copy of an existing image resource, as `icon::load`
   does. When the result is a WIL owner such as `wil::unique_hicon`, no Winwrap type
@@ -64,8 +64,7 @@ NOTIFYICONDATAW                                   make_data() const noexcept;   
 ```
 
 Public/private is only a *correlation*: resource factories are usually the public
-entry points and value-builders are usually private helpers — but the name follows
-the **failability + ownership**, not the visibility. (`create_window` /
+entry points and value-builders are usually private helpers. (`create_window` /
 `create_control` are private yet correctly `create_*`: they acquire a window and
 can fail.)
 
