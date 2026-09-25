@@ -117,6 +117,9 @@ retains `hwnd()` as the raw integration escape hatch.
   non-sanitized `gdb` preset passed all 39 CTest cases, including header checks; `git diff --check`
   passed. The pending validation prerequisite is installing the MSVC AddressSanitizer runtime, not
   a source-code repair.
+- 2026-09-25: Committed the completed slice as `2f3c73a` (`Support explicit native default routing`).
+  Standalone review of the frozen `e8db4f8..2f3c73a` candidate found no correctness, boundary, or
+  test-coverage findings. The repository's isolated-review runtime is not installed in this worktree.
 
 ## Next Steps
 
@@ -131,7 +134,7 @@ retains `hwnd()` as the raw integration escape hatch.
 4. Completed: recorded the candidate classification and selected first slice above.
 5. Completed: implemented and tested the first coherent slice, including the `default_proc`
    contract repair. Native-handle escape hatches remain intact.
-6. Completed locally: ran focused tests, an MSVC x64 build, full CTest, and `git diff --check`.
-   The sanitizer-enabled `dev` preset is blocked by the missing MSVC AddressSanitizer runtime;
-   the non-sanitized MSVC `gdb` preset is green. Next: perform the repository's review and
-   delivery workflow for this branch, keeping this plan current.
+6. Completed locally: ran focused tests, an MSVC x64 build, full CTest, `git diff --check`, and
+   standalone review of the committed candidate. The sanitizer-enabled `dev` preset is blocked by
+   the missing MSVC AddressSanitizer runtime; the non-sanitized MSVC `gdb` preset is green.
+   Next: check remote delivery readiness for this branch, keeping this plan current.
