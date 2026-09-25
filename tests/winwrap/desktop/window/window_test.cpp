@@ -64,3 +64,13 @@ TEST_CASE("Window can create again after its native window is destroyed") {
 
     CHECK(window.create({.parent = HWND_MESSAGE}));
 }
+
+TEST_CASE("Window can retry after native creation fails") {
+    RoutedWindow window;
+
+    const auto failed = window.create({.style = WS_CHILD});
+
+    REQUIRE_FALSE(failed);
+    REQUIRE(window.hwnd() == nullptr);
+    CHECK(window.create({.parent = HWND_MESSAGE}));
+}
