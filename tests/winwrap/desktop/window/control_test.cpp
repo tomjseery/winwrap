@@ -101,3 +101,16 @@ TEST_CASE("Control can create again after its native window is destroyed") {
     CHECK(control.create({.parent = host.hwnd(), .id = 2}));
     CHECK(control.id() == 2);
 }
+
+TEST_CASE("Control can retry after native creation fails") {
+    ControlHost host;
+    REQUIRE(host.create({.parent = HWND_MESSAGE}));
+    RoutedControl control;
+
+    const auto failed = control.create({.id = 1});
+
+    REQUIRE_FALSE(failed);
+    REQUIRE(control.hwnd() == nullptr);
+    CHECK(control.create({.parent = host.hwnd(), .id = 2}));
+    CHECK(control.id() == 2);
+}
