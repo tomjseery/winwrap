@@ -56,17 +56,17 @@ std::expected<void, std::error_code> NotifyIcon::set_tooltip(const wchar_t* text
     NOTIFYICONDATAW nid = make_data();
     nid.uFlags = NIF_TIP | NIF_SHOWTIP;
     wcsncpy_s(nid.szTip, tooltip_.c_str(), _TRUNCATE);
-    return check(Shell_NotifyIconW(NIM_MODIFY, &nid));
+    return error::nonzero_or_last(Shell_NotifyIconW(NIM_MODIFY, &nid));
 }
 
 std::expected<void, std::error_code> NotifyIcon::set_icon(wil::unique_hicon icon) {
     // A moved-from icon has no registration, and Shell_NotifyIconW sets no last error for it.
     if (!hwnd_)
-        return std::unexpected(win32_error(ERROR_INVALID_WINDOW_HANDLE));
+        return std::unexpected(error::win32(ERROR_INVALID_WINDOW_HANDLE));
     NOTIFYICONDATAW nid = make_data();
     nid.uFlags = NIF_ICON;
     nid.hIcon = icon.get();
-    return check(Shell_NotifyIconW(NIM_MODIFY, &nid)).transform([&] { icon_ = std::move(icon); });
+    return error::nonzero_or_last(Shell_NotifyIconW(NIM_MODIFY, &nid)).transform([&] { icon_ = std::move(icon); });
 }
 
 std::expected<void, std::error_code> NotifyIcon::add() {
@@ -75,11 +75,11 @@ std::expected<void, std::error_code> NotifyIcon::add() {
     nid.uCallbackMessage = callback_msg_;
     nid.hIcon = icon_.get();
     wcsncpy_s(nid.szTip, tooltip_.c_str(), _TRUNCATE);
-    if (auto added = check(Shell_NotifyIconW(NIM_ADD, &nid)); !added)
+    if (auto added = error::nonzero_or_last(Shell_NotifyIconW(NIM_ADD, &nid)); !added)
         return added;
 
     nid.uVersion = NOTIFYICON_VERSION_4;
-    return check(Shell_NotifyIconW(NIM_SETVERSION, &nid));
+    return error::nonzero_or_last(Shell_NotifyIconW(NIM_SETVERSION, &nid));
 }
 
 UINT NotifyIcon::taskbar_created_message() {

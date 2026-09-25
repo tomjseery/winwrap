@@ -79,7 +79,7 @@ entry once its resolution condition is met; Git preserves the history.
   Zero does not universally mean failure; some messages use CB_ERR/CB_ERRSPACE
   rather than GetLastError. **Resolve:** classify each public operation's documented
   outcome and test failure/empty/cancel/previous-state distinctions.
-- **M6 / error provenance.** Generic `check(BOOL)` assumes a meaningful last-error
+- **M6 / error provenance.** Generic `error::nonzero_or_last(BOOL)` assumes a meaningful last-error
   value, which Shell_NotifyIcon does not promise. **Resolve:** use API-specific
   conversion and a non-success wrapper error when no native diagnostic is defined.
 - **M10 / text buffer result.** Window text returns the queried size rather than the
@@ -110,7 +110,7 @@ entry once its resolution condition is met; Git preserves the history.
   Explorer-recovery integration check; no automatic disruption of a user's shell.
 - **M11 / icon adoption and raw access.** `NotifyIconConfig::icon` still adopts a raw
   HICON, consumed even on factory failure, and no borrowed HICON accessor exists.
-  `load_icon` now supplies owned icons and `set_icon` takes `wil::unique_hicon`.
+  `icon::load` now supplies owned icons and `set_icon` takes `wil::unique_hicon`.
   **Resolve:** make the factory's icon input an explicit owner with failure semantics,
   add borrowed access and tests; document owner-HWND lifetime and v4's identity limits.
 - **Tray cached state / keyboard protocol.** Tooltip cache changes before native

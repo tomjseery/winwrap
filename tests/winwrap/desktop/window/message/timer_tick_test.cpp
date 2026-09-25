@@ -18,7 +18,7 @@ struct TickingWindow : winwrap::Window<TickingWindow> {
         ticks.push_back(id);
         if (ticks.size() == 2) {
             CHECK(stop_timer(id));  // never REQUIRE: a throw must not cross the WndProc
-            winwrap::quit();
+            winwrap::message_loop::quit();
         }
     }
 };
@@ -31,7 +31,7 @@ bool timer_proc_called{};
 void CALLBACK record_timer_proc(HWND hwnd, UINT, UINT_PTR id, DWORD) {
     timer_proc_called = true;
     KillTimer(hwnd, id);
-    winwrap::quit();
+    winwrap::message_loop::quit();
 }
 
 }  // namespace
@@ -42,7 +42,7 @@ TEST_CASE("start_timer delivers each tick to on_timer until stop_timer") {
 
     REQUIRE((*window)->start_timer(7, 10ms));
 
-    CHECK(winwrap::run() == 0);
+    CHECK(winwrap::message_loop::run() == 0);
     CHECK((*window)->ticks == std::vector<UINT_PTR>{7, 7});
     CHECK_FALSE((*window)->stop_timer(7));  // already stopped
 }
@@ -53,11 +53,11 @@ TEST_CASE("a raw SetTimer callback keeps its ticks away from on_timer") {
     timer_proc_called = false;
 
     REQUIRE(SetTimer((*window)->hwnd(), 3, 10, &record_timer_proc) != 0);
-    CHECK(winwrap::run() == 0);
+    CHECK(winwrap::message_loop::run() == 0);
     CHECK(timer_proc_called);
 
     // A WM_TIMER that names a procedure is not claimed as an on_timer tick either.
-    winwrap::send_message((*window)->hwnd(), WM_TIMER, 3, reinterpret_cast<LPARAM>(&record_timer_proc));
+    winwrap::message::send((*window)->hwnd(), WM_TIMER, 3, reinterpret_cast<LPARAM>(&record_timer_proc));
     CHECK((*window)->ticks.empty());
 }
 
@@ -84,14 +84,14 @@ TEST_CASE("stop_timer reports a timer that is not running") {
 
 struct ClosingTimerWindow : winwrap::Window<ClosingTimerWindow> {
     static constexpr const wchar_t* window_class_name = L"WinwrapTimerTickClosingTest";
-    void on_destroy() { winwrap::quit(); }
+    void on_destroy() { winwrap::message_loop::quit(); }
 };
 
 TEST_CASE("timer operations on a destroyed window never reach thread timers") {
     auto window = ClosingTimerWindow::create({.parent = HWND_MESSAGE});
     REQUIRE(window);
     REQUIRE((*window)->request_close());
-    REQUIRE(winwrap::run() == 0);
+    REQUIRE(winwrap::message_loop::run() == 0);
 
     const auto started = (*window)->start_timer(1, 10ms);
     const auto stopped = (*window)->stop_timer(1);

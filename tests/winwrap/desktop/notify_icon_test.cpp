@@ -14,7 +14,7 @@ constexpr UINT tray_callback{WM_APP + 1};
 
 // Needs a running shell: the icon briefly appears in the notification area.
 winwrap::NotifyIcon make_tray_icon(HWND owner) {
-    auto icon = winwrap::load_icon(winwrap::SystemIcon::application, winwrap::IconSize::small);
+    auto icon = winwrap::icon::load(winwrap::SystemIcon::application, winwrap::IconSize::small);
     REQUIRE(icon);
     auto tray = winwrap::NotifyIcon::create({.owner = owner,
                                              .callback_msg = tray_callback,
@@ -31,7 +31,7 @@ TEST_CASE("set_icon replaces the tray icon") {
     auto owner = TrayOwner::create({.parent = HWND_MESSAGE});
     REQUIRE(owner);
     auto tray = make_tray_icon((*owner)->hwnd());
-    auto replacement = winwrap::load_icon(winwrap::SystemIcon::warning, winwrap::IconSize::small);
+    auto replacement = winwrap::icon::load(winwrap::SystemIcon::warning, winwrap::IconSize::small);
     REQUIRE(replacement);
 
     CHECK(tray.set_icon(std::move(*replacement)));
@@ -42,7 +42,7 @@ TEST_CASE("set_icon reports a registration the shell does not know") {
     REQUIRE(owner);
     auto tray = make_tray_icon((*owner)->hwnd());
     auto moved_to = std::move(tray);  // the moved-from icon no longer owns a registration
-    auto replacement = winwrap::load_icon(winwrap::SystemIcon::warning, winwrap::IconSize::small);
+    auto replacement = winwrap::icon::load(winwrap::SystemIcon::warning, winwrap::IconSize::small);
     REQUIRE(replacement);
 
     const auto result = tray.set_icon(std::move(*replacement));  // NOLINT(bugprone-use-after-move)

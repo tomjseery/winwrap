@@ -43,7 +43,7 @@ TEST_CASE("Control custom routing can delegate to its subclass default procedure
     REQUIRE(control);
 
     (*control)->delegated_to_default = false;
-    const LRESULT dialog_code = winwrap::send_message((*control)->hwnd(), WM_GETDLGCODE, 0, 0);
+    const LRESULT dialog_code = winwrap::message::send((*control)->hwnd(), WM_GETDLGCODE, 0, 0);
 
     REQUIRE((*control)->delegated_to_default);
     CHECK((dialog_code & DLGC_BUTTON) != 0);

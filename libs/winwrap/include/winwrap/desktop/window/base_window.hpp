@@ -6,7 +6,7 @@
 #include <string>
 #include <system_error>
 
-#include "winwrap/desktop/window/messaging.hpp"
+#include "winwrap/desktop/message.hpp"
 #include "winwrap/error.hpp"
 
 namespace winwrap {
@@ -57,13 +57,13 @@ public:
     /// 0, so `right` and `bottom` are its width and height.
     [[nodiscard]] std::expected<RECT, std::error_code> client_rect() const {
         RECT rect{};
-        return check(GetClientRect(hwnd_, &rect)).transform([&] { return rect; });
+        return error::nonzero_or_last(GetClientRect(hwnd_, &rect)).transform([&] { return rect; });
     }
 
     /// The whole window, including its frame, in screen coordinates (GetWindowRect).
     [[nodiscard]] std::expected<RECT, std::error_code> window_rect() const {
         RECT rect{};
-        return check(GetWindowRect(hwnd_, &rect)).transform([&] { return rect; });
+        return error::nonzero_or_last(GetWindowRect(hwnd_, &rect)).transform([&] { return rect; });
     }
 
     /// Moves the window's top-left corner without resizing, reordering or activating it
@@ -71,14 +71,14 @@ public:
     /// @note A top-level window moves in screen coordinates; a child window moves in its
     ///       parent's client coordinates.
     std::expected<void, std::error_code> move(int x, int y) {
-        return check(
+        return error::nonzero_or_last(
             SetWindowPos(hwnd_, nullptr, x, y, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE));
     }
 
     /// Resizes the whole window, frame included, without moving, reordering or activating
     /// it (`SetWindowPos` with `SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE`).
     std::expected<void, std::error_code> resize(int width, int height) {
-        return check(SetWindowPos(hwnd_, nullptr, 0, 0, width, height,
+        return error::nonzero_or_last(SetWindowPos(hwnd_, nullptr, 0, 0, width, height,
                                   SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE));
     }
 
@@ -98,8 +98,8 @@ public:
     std::expected<void, std::error_code> focus() {
         // SetFocus(nullptr) would clear the thread's focus instead of failing.
         if (!hwnd_)
-            return std::unexpected(win32_error(ERROR_INVALID_WINDOW_HANDLE));
-        return check_last_error([&] { return SetFocus(hwnd_); }).transform([](HWND) {});
+            return std::unexpected(error::win32(ERROR_INVALID_WINDOW_HANDLE));
+        return error::result_or_last([&] { return SetFocus(hwnd_); }).transform([](HWND) {});
     }
 
     /// Whether this window has the calling thread's keyboard focus (GetFocus).
@@ -110,16 +110,16 @@ public:
     /// inside this call.
     std::expected<void, std::error_code> request_close() { return post(WM_CLOSE); }
 
-    /// Sends `msg` to this window and waits for the result (send_message).
+    /// Sends `msg` to this window and waits for the result (message::send).
     LRESULT send(UINT msg, WPARAM wparam = 0, LPARAM lparam = 0) const {
-        return send_message(hwnd_, msg, wparam, lparam);
+        return message::send(hwnd_, msg, wparam, lparam);
     }
 
-    /// Queues `msg` for this window and returns immediately (post_message); safe from any
+    /// Queues `msg` for this window and returns immediately (message::post); safe from any
     /// thread, e.g. a worker reporting `WM_APP + n` back to its window.
     [[nodiscard]] std::expected<void, std::error_code> post(UINT msg, WPARAM wparam = 0,
                                                             LPARAM lparam = 0) const {
-        return post_message(hwnd_, msg, wparam, lparam);
+        return message::post(hwnd_, msg, wparam, lparam);
     }
 
     /// The window's `WS_*` style bits (`GetWindowLongPtrW(GWL_STYLE)`).
@@ -149,9 +149,9 @@ protected:
     void detach() noexcept { hwnd_ = nullptr; }
 
 private:
-    // A zero window long is also a legitimate value (check_last_error).
+    // A zero window long is also a legitimate value (error::result_or_last).
     [[nodiscard]] std::expected<DWORD, std::error_code> window_long(int index) const {
-        return check_last_error([&] { return GetWindowLongPtrW(hwnd_, index); })
+        return error::result_or_last([&] { return GetWindowLongPtrW(hwnd_, index); })
             .transform([](LONG_PTR value) { return static_cast<DWORD>(value); });
     }
 

@@ -265,10 +265,21 @@ Raw calls that Winwrap's **tests** make as consumers:
    still-unbound child window is destroyed and creation reports the error, instead of returning
    a live-looking unbound control. There is no deterministic way to make `SetWindowSubclass` fail
    in a test, so this path is covered only by inspection.
-10. **Tests** mirror the headers: `desktop/window/base_window_test.cpp`,
+10. **Namespaces** (agreed with Tommy): types stay in `winwrap::`; each free-function family
+    moved into a use-named namespace matching its header (`CODE_CONVENTIONS.md` §6):
+    `error::{last, win32, nonzero_or_last, result_or_last}` (formerly `last_error`,
+    `win32_error`, `check`, `check_last_error`), `message::{send, post}` (header moved to
+    `desktop/message.hpp`), `message_loop::{run, quit}`, `module::{current, loaded, path}`,
+    `icon::load`, `native_window::create`, `filesystem::{attributes, set_attributes,
+    add_attributes, remove_attributes}`, `shell::notify_folder_changed`. `make_dropped_paths`
+    was removed; `FileDroppable` uses `Drop{hdrop}.paths()` directly. This breaks the
+    previous flat names before 1.0; icon-dropper (already drifted, F9) is the only
+    consumer of the renamed pre-existing functions. A struct of static functions was
+    rejected: these families hold no state or invariant.
+11. **Tests** mirror the headers: `desktop/window/base_window_test.cpp`,
    `desktop/window/message/timer_tick_test.cpp`, `desktop/icon_test.cpp`,
    `desktop/notify_icon_test.cpp` (adds a real tray icon briefly, so it needs a running shell),
-   `desktop/window/native_window_test.cpp`, `desktop/window/messaging_test.cpp`,
+   `desktop/window/native_window_test.cpp`, `desktop/message_test.cpp`,
    `module_test.cpp`; `file_droppable_test.cpp` now
    uses `ex_style()`.
 

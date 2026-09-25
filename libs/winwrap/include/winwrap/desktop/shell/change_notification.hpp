@@ -6,7 +6,8 @@
 
 #include <filesystem>
 
-namespace winwrap {
+/// Shell (Explorer) integration.
+namespace winwrap::shell {
 
 /// Notifies the Shell that `folder` changed so Explorer can refresh an open view,
 /// for example after writing `desktop.ini`.
@@ -16,4 +17,4 @@ inline void notify_folder_changed(const std::filesystem::path& folder) {
     SHChangeNotify(SHCNE_UPDATEDIR, SHCNF_PATHW, folder.c_str(), nullptr);
 }
 
-}  // namespace winwrap
+}  // namespace winwrap::shell

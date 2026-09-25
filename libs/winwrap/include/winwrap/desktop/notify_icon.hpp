@@ -47,7 +47,7 @@ public:
 
     /// Replaces the icon shown in the notification area (NIM_MODIFY with NIF_ICON).
     /// @param icon  The new icon, which this NotifyIcon owns from now on; load one with
-    ///              load_icon. The previous icon is destroyed only after the shell accepts
+    ///              icon::load. The previous icon is destroyed only after the shell accepts
     ///              the new one. On failure the tray keeps showing the previous icon and
     ///              `icon` is destroyed.
     /// @return Nothing, or the error; `ERROR_INVALID_WINDOW_HANDLE` for a moved-from NotifyIcon.

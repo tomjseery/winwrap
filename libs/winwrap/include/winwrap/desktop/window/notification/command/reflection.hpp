@@ -4,7 +4,7 @@
 
 #include <optional>
 
-#include "winwrap/desktop/window/messaging.hpp"
+#include "winwrap/desktop/message.hpp"
 #include "winwrap/desktop/window/notification/command/protocol.hpp"
 
 namespace winwrap::notification {
@@ -19,7 +19,7 @@ struct CommandReflection {
                                                         LPARAM lparam) const {
         if (msg == WM_COMMAND)
             if (auto* child = reinterpret_cast<HWND>(lparam)) {
-                send_message(child, wm_command_reflect, wparam, lparam);
+                message::send(child, wm_command_reflect, wparam, lparam);
                 return 0;
             }
         return std::nullopt;

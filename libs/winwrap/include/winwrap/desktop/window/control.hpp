@@ -110,7 +110,7 @@ private:
         DWORD style = WS_CHILD | WS_VISIBLE | cfg.style;
         if constexpr (requires { T::default_style; })
             style |= T::default_style;
-        return create_window({.class_name = T::control_class,
+        return native_window::create({.class_name = T::control_class,
                               .title = cfg.text,
                               .style = style,
                               .x = cfg.x,
@@ -121,18 +121,18 @@ private:
                               .child_id = cfg.id})
             .and_then([&](wil::unique_hwnd made) -> std::expected<void, std::error_code> {
                 const HWND h = made.get();
-                send_message(h, WM_SETFONT,
+                message::send(h, WM_SETFONT,
                              reinterpret_cast<WPARAM>(GetStockObject(DEFAULT_GUI_FONT)), TRUE);
                 // Until the subclass is installed the control is unbound; on failure `made`
                 // destroys it, so no live window is left without its wrapper.
-                return check_last_error([&] {
+                return error::result_or_last([&] {
                            return SetWindowSubclass(h, &subclass_proc, 1,
                                                     reinterpret_cast<DWORD_PTR>(this));
                        })
                     .and_then([](BOOL installed) -> std::expected<void, std::error_code> {
                         // SetWindowSubclass documents no error code for its FALSE result.
                         if (!installed)
-                            return std::unexpected(win32_error(ERROR_GEN_FAILURE));
+                            return std::unexpected(error::win32(ERROR_GEN_FAILURE));
                         return {};
                     })
                     .transform([&] {

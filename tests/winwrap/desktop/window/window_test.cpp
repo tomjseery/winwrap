@@ -39,7 +39,7 @@ TEST_CASE("Window custom routing can delegate to its native default procedure") 
 
     constexpr const wchar_t* text{L"Routed by DefWindowProcW"};
     const auto result =
-        winwrap::send_message((*window)->hwnd(), WM_SETTEXT, 0, reinterpret_cast<LPARAM>(text));
+        winwrap::message::send((*window)->hwnd(), WM_SETTEXT, 0, reinterpret_cast<LPARAM>(text));
 
     REQUIRE((*window)->delegated_to_default);
     CHECK(result != FALSE);

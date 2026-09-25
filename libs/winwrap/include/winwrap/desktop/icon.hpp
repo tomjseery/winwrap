@@ -26,27 +26,31 @@ enum class IconSize {
     large,  ///< SM_CXICON x SM_CYICON: Alt+Tab and large-icon views.
 };
 
+/// Loading icons as owned `wil::unique_hicon` handles.
+namespace icon {
+
 /// Loads a system icon as an icon this caller owns: the shared system icon
 /// (`LoadImageW(..., LR_SHARED)`) copied at the requested size (`CopyImage`). Unlike
 /// `LoadIconW(nullptr, IDI_*)`, the result is a private copy, so it is safe to hand to an
 /// owner that destroys it, such as NotifyIcon.
-[[nodiscard]] std::expected<wil::unique_hicon, std::error_code> load_icon(SystemIcon icon,
-                                                                          IconSize size);
+[[nodiscard]] std::expected<wil::unique_hicon, std::error_code> load(SystemIcon icon, IconSize size);
 
 /// Loads icon resource `resource_id` from `module` (an .exe or DLL; see module.hpp) as an
 /// icon this caller owns (`LoadImageW` without `LR_SHARED`).
 /// @return The icon, or the Win32 error; `ERROR_INVALID_HANDLE` for a null `module`, which
 ///         `LoadImageW` would otherwise read as a request for a system icon.
-[[nodiscard]] std::expected<wil::unique_hicon, std::error_code> load_icon(HMODULE module,
-                                                                          WORD resource_id,
-                                                                          IconSize size);
+[[nodiscard]] std::expected<wil::unique_hicon, std::error_code> load(HMODULE module,
+                                                                     WORD resource_id,
+                                                                     IconSize size);
 
-/// Loads icon resource `resource_id` from the running executable (current_module()).
-[[nodiscard]] std::expected<wil::unique_hicon, std::error_code> load_icon(WORD resource_id,
-                                                                          IconSize size);
+/// Loads icon resource `resource_id` from the running executable (module::current()).
+[[nodiscard]] std::expected<wil::unique_hicon, std::error_code> load(WORD resource_id,
+                                                                     IconSize size);
 
 /// Loads an `.ico` file as an icon this caller owns, picking the image closest to `size`.
-[[nodiscard]] std::expected<wil::unique_hicon, std::error_code> load_icon(
+[[nodiscard]] std::expected<wil::unique_hicon, std::error_code> load(
     const std::filesystem::path& file, IconSize size);
+
+}  // namespace icon
 
 }  // namespace winwrap

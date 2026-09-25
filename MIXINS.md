@@ -139,7 +139,7 @@ code on the derived window type. `FileDroppable` is the worked example.
                        DragAcceptFiles(self.hwnd(), TRUE);
                    break;
                WW_CASE(WM_DROPFILES,
-                       self.on_files_dropped(make_dropped_paths(reinterpret_cast<HDROP>(wparam))));
+                       self.on_files_dropped(Drop{reinterpret_cast<HDROP>(wparam)}.paths()));
                default:
                    break;
            }
@@ -174,8 +174,8 @@ Rules specific to window mixins:
   `FileDroppable` currently registers at `WM_NCCREATE` when its hook exists and
   passes the message onward. This is a window lifecycle hook; a control subclass
   installed after native creation cannot rely on receiving that creation message.
-- **RAII the message's resources inside the helper** (`make_dropped_paths` is
-  `Drop{drop}.paths()` — `Drop` in `winwrap/desktop/drop.hpp` owns the handle
+- **RAII the message's resources inside the mixin** (`Drop{hdrop}.paths()` —
+  `Drop` in `winwrap/desktop/drop.hpp` owns the handle
   and runs `DragFinish` in its destructor). This protects HDROP cleanup, not the
   safety of exceptions escaping WndProc. Shadowing `route_message` for custom drop
   handling? Adopt the wparam into a `Drop` and query `count()` / `path(i)` /
