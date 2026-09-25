@@ -159,9 +159,9 @@ wrapper-everything" discipline this investigation is checking WinWrap's own code
   whose documented behavior actually changes, with the reason stated in the test name.
 - The authorized delivery includes the sandbox-hwid pin bump and rebuild on its existing
   PR #2 branch after the WinWrap commit is pushed.
-- Author any resulting implementation plan under this repo's own `plan-authoring`/`plans`
-  conventions (`PLANNING.md` §"Next planning action"); this file is the investigation
-  brief, not that implementation-ready plan.
+- This file became the implementation owner when Tommy authorized both producer and
+  consumer changes on 2026-09-25; its authorization, contract, phases, evidence, and
+  delivery state must remain current until both PRs are resolved.
 
 ## Progress and findings
 
@@ -222,15 +222,24 @@ wrapper-everything" discipline this investigation is checking WinWrap's own code
   creating their tray fixture because this host session cannot register the shell icon.
   Re-running those two tests alone produced the same fixture failure. No Device or
   changed-path test failed.
+- 2026-09-25: WinWrap commit `01d9d43839f1246fb80f8fe7a48469813a59d8f1`
+  was reviewed, pushed, and opened as draft PR #12. GitHub reports that exact code
+  commit and no remote checks.
+- 2026-09-25: sandbox-hwid's existing PR #2 branch was pinned to WinWrap `01d9d43`.
+  Commit `0b9ec1464204faf839ea27894256f433a2cd1144` routes all ten negative probe
+  requests and the successful oversized-output request through `Device::control`.
+  No direct `::DeviceIoControl` or `::GetLastError` call remains under `client/`.
+  `scripts/Build.ps1 -Target Client` fetched the exact pin, built with MSVC C++23,
+  and passed all 9 CTests; clang-format dry-run and `git diff --check` passed. The
+  commit was pushed to PR #2 and its description was updated. No driver or VM run
+  occurred.
 
 ## Next Steps
 
-1. Author the implementation-ready plan under this repo's `plan-authoring`/`plans`
-   conventions for the wrapper-first contract Tommy selected. Reconcile this local
-   `main` checkout with the consumer's `050c212` WinWrap pin before any code edit.
-2. Implement and test the WinWrap pointer and diagnostic-count changes without
-   changing the existing bounded-count meaning. Build and run the full CTest suite.
-3. In a separate sandbox-hwid change, bump its WinWrap pin and convert every
-   `probe()` request to `Device::control` while retaining all byte-count, error and
-   sentinel assertions. Run `scripts/Build.ps1 -Target Client` and all nine CTests.
-   Only a run in the designated VM can verify live `--probe` behavior.
+1. Review WinWrap PR #12, including the recorded 80/82 host-suite limitation. Merge
+   authorization was not part of this request.
+2. After the producer is accepted, review sandbox-hwid PR #2 against that dependency.
+   Its host build and all nine CTests are green at `0b9ec14`; merge authorization was
+   not part of this request.
+3. Run `hwid_client --probe` only in the designated disposable VM to establish live
+   driver evidence. The host build does not claim that result.
