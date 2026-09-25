@@ -110,7 +110,7 @@ follow the wrapper-first rule below.
 
 ## 4. Wrapper-first APIs — abstract the operation, preserve the escape hatch
 
-**Supported desktop operations use Winwrap's API by default.** For a window object,
+**Supported Windows operations use Winwrap's API by default.** For a window object,
 write `window.show()`, `window.set_text(...)` and `window.enable(...)`, not the
 corresponding raw SDK calls. Examples and application code should teach that path.
 Ordinary operations belong on their resource façade even when the implementation
@@ -153,6 +153,11 @@ wrapper, but it does not count as completing missing coverage in a promised
 feature. Preserve binding, ownership, thread and cached-state invariants. A getter
 does not transfer ownership; the choice of getter versus implicit conversion is
 separate from whether an operation should have an ergonomic member function.
+
+The same rule applies to supported WDF device operations. A driver keeps the WDF callback
+ABI, wraps callback handles immediately, and calls `winwrap::driver` operations for device
+creation, queue configuration, interface publication, request buffers, and completion.
+KMDF continues to own its framework objects; the wrapper types are borrowed adapters.
 
 **Wrap intent and complete protocols, not just spelling.** `show()` and `message_loop::quit()`
 are useful one-call intent operations. For a multi-step query such as dropped
@@ -208,7 +213,8 @@ is about state that is *implied by composing the mixin*, not general per-window 
 
 ## 6. Namespaces — types in `winwrap`, free-function families in their own
 
-Types live directly in `winwrap::` (`Window`, `Module`, `NotifyIcon`, `SystemIcon`):
+User-mode types live directly in `winwrap::` (`Window`, `Module`, `Device`, `NotifyIcon`,
+`SystemIcon`):
 a type already groups its own operations as members. **Free functions** live in a nested
 namespace that names their subsystem, for how they are used. Within it, each header
 names one protocol or operation family, so a namespace can span a folder of headers
@@ -240,6 +246,8 @@ names one protocol or operation family, so a namespace can span a folder of head
 - Add a new namespace only for a real operation family, not one per header or folder
   (`cpp:style`). Types and mixins stay in `winwrap::`; `winwrap::notification` and
   `winwrap::detail` keep their existing roles.
+- Kernel WDF object types live in `winwrap::driver` because they have a distinct runtime,
+  lifetime owner, error vocabulary, and toolchain from same-named user-mode concepts.
 
 ## See also
 

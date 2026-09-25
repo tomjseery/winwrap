@@ -13,6 +13,8 @@
 #include <utility>
 #include <vector>
 
+#include "winwrap/device_types.hpp"
+
 namespace winwrap {
 
 /// An open synchronous device connection. Owns its file-style Windows handle.
@@ -37,6 +39,12 @@ public:
     [[nodiscard]] static std::expected<std::vector<std::wstring>, std::error_code> paths(
         const GUID& interface_id);
 
+    /// Snapshot all currently present paths for a typed interface class.
+    [[nodiscard]] static std::expected<std::vector<std::wstring>, std::error_code> paths(
+        const DeviceInterface& interface_id) {
+        return paths(interface_id.native());
+    }
+
     /// Open an existing path without overlapped I/O.
     [[nodiscard]] static std::expected<Device, std::error_code> open(const Config& config);
 
@@ -52,6 +60,13 @@ public:
     /// data pointer, allowing callers to distinguish null and storage-backed empty buffers.
     [[nodiscard]] std::expected<std::size_t, ControlError> control(
         DWORD code, std::span<const std::byte> input, std::span<std::byte> output) const;
+
+    /// Perform one synchronous request using a typed device-control code.
+    [[nodiscard]] std::expected<std::size_t, ControlError> control(
+        DeviceControlCode code, std::span<const std::byte> input,
+        std::span<std::byte> output) const {
+        return control(code.native(), input, output);
+    }
 
     /// Borrow the native handle; this Device remains its owner.
     [[nodiscard]] HANDLE handle() const noexcept { return handle_.get(); }
