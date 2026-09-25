@@ -17,21 +17,21 @@ struct PumpWindow : winwrap::Window<PumpWindow> {
 // The main-window pattern: quit the app when this window is destroyed.
 struct ClosableWindow : winwrap::Window<ClosableWindow> {
     static constexpr const wchar_t* window_class_name = L"WinwrapClosableTestWindow";
-    void on_destroy() { winwrap::quit(); }
+    void on_destroy() { winwrap::message_loop::quit(); }
 };
 }  // namespace
 
 TEST_CASE("run() returns the posted exit code when WM_QUIT is already queued") {
-    PostQuitMessage(42);
-    CHECK(winwrap::run() == 42);
+    winwrap::message_loop::quit(42);
+    CHECK(winwrap::message_loop::run() == 42);
 }
 
 TEST_CASE("run() dispatches a posted message to the window before it quits") {
     auto window = PumpWindow::create({.parent = HWND_MESSAGE});
     REQUIRE(window.has_value());
-    PostMessageW((*window)->hwnd(), WM_COMMAND, 7, 0);
-    PostQuitMessage(0);
-    CHECK(winwrap::run() == 0);
+    REQUIRE(winwrap::message::post((*window)->hwnd(), WM_COMMAND, 7, 0));
+    winwrap::message_loop::quit(0);
+    CHECK(winwrap::message_loop::run() == 0);
     REQUIRE((*window)->commands.size() == 1);
     CHECK((*window)->commands.front() == 7);
 }
@@ -40,17 +40,18 @@ TEST_CASE("run() drains all queued messages in order, then quits") {
     auto window = PumpWindow::create({.parent = HWND_MESSAGE});
     REQUIRE(window.has_value());
     const HWND hwnd = (*window)->hwnd();
-    PostMessageW(hwnd, WM_COMMAND, 1, 0);
-    PostMessageW(hwnd, WM_COMMAND, 2, 0);
-    PostMessageW(hwnd, WM_COMMAND, 3, 0);
-    PostQuitMessage(0);
-    CHECK(winwrap::run() == 0);
+    REQUIRE(winwrap::message::post(hwnd, WM_COMMAND, 1, 0));
+    REQUIRE(winwrap::message::post(hwnd, WM_COMMAND, 2, 0));
+    REQUIRE(winwrap::message::post(hwnd, WM_COMMAND, 3, 0));
+    winwrap::message_loop::quit(0);
+    CHECK(winwrap::message_loop::run() == 0);
     CHECK((*window)->commands == std::vector<UINT>{1, 2, 3});
 }
 
 TEST_CASE("closing the window exits run() via on_destroy -> quit") {
     auto window = ClosableWindow::create({.parent = HWND_MESSAGE});
     REQUIRE(window.has_value());
-    PostMessageW((*window)->hwnd(), WM_CLOSE, 0, 0);  // WM_CLOSE -> DefWindowProc destroys it
-    CHECK(winwrap::run() == 0);
+    REQUIRE(winwrap::message::post((*window)->hwnd(), WM_CLOSE, 0,
+                                   0));  // WM_CLOSE -> DefWindowProc destroys it
+    CHECK(winwrap::message_loop::run() == 0);
 }

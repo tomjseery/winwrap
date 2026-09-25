@@ -4,7 +4,8 @@
 
 #include <wil/result_macros.h>
 
-namespace winwrap {
+/// The calling thread's message loop.
+namespace winwrap::message_loop {
 
 /// Runs the calling thread's message loop until WM_QUIT, then returns its exit
 /// code -- the value to hand back from wWinMain. Pumps GetMessageW /
@@ -28,6 +29,10 @@ namespace winwrap {
     return static_cast<int>(msg.wParam);
 }
 
-inline void quit(int error_code = 0) { PostQuitMessage(error_code); }
+/// Ends the calling thread's message loop: run() returns `exit_code` once the messages
+/// already queued are processed (PostQuitMessage).
+inline void quit(int exit_code = 0) {
+    PostQuitMessage(exit_code);
+}
 
-}  // namespace winwrap
+}  // namespace winwrap::message_loop

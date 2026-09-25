@@ -17,10 +17,12 @@ entry once its resolution condition is met; Git preserves the history.
   `T*` without adjustment. A nonzero base offset was demonstrated.
   **Resolve:** store/recover compatible pointer types and test multiple inheritance
   with the Control base at a nonzero offset.
-- **H3 / binding failures.** `SetWindowSubclass` and `SetWindowLongPtrW` results are
-  ignored; failed setup can publish success without destruction invalidation.
-  **Resolve:** correct API-specific error handling and resource rollback; prove
-  failure cannot return a live-looking unbound wrapper.
+- **H3 / binding failures.** `Window` ignores its `SetWindowLongPtrW` results; failed
+  setup can publish success without destruction invalidation. (`Control` now checks
+  `SetWindowSubclass` and destroys the unbound child on failure, but that path has no
+  deterministic test.) **Resolve:** API-specific error handling and rollback for
+  `Window`'s binding, plus a call seam that lets tests prove neither wrapper can return
+  a live-looking unbound object.
 - **H4 / reentrancy and teardown.** Native callbacks use `self` after user code on
   NC destruction. Synchronous APIs, derived/member teardown and modal menu tracking
   can reenter before owners are safe. Current base-destructor detach is insufficient
@@ -37,6 +39,13 @@ entry once its resolution condition is met; Git preserves the history.
   document owning creation versus borrowed attachment/parent ownership; test early
   wrapper reset and parent-first destruction. Expose a usable borrowed HWND façade
   if incremental existing-HWND adoption remains a supported audience.
+
+- **Owned windows are pointers.** Because the OS stores the wrapper's address,
+  `Window<T>`/`Control<T>` are immovable and `create` returns
+  `std::expected<std::unique_ptr<T>, ...>`, forcing `(*made)->op()` at every call site.
+  **Resolve:** a value-returning factory (movable wrappers that re-point
+  `GWLP_USERDATA`/subclass data on move, or an equivalent owner) with tests for moves
+  during and outside dispatch, coordinated with H4.
 
 ## Dispatch, reflection and headers
 
@@ -70,7 +79,7 @@ entry once its resolution condition is met; Git preserves the history.
   Zero does not universally mean failure; some messages use CB_ERR/CB_ERRSPACE
   rather than GetLastError. **Resolve:** classify each public operation's documented
   outcome and test failure/empty/cancel/previous-state distinctions.
-- **M6 / error provenance.** Generic `check(BOOL)` assumes a meaningful last-error
+- **M6 / error provenance.** Generic `error::nonzero_or_last(BOOL)` assumes a meaningful last-error
   value, which Shell_NotifyIcon does not promise. **Resolve:** use API-specific
   conversion and a non-success wrapper error when no native diagnostic is defined.
 - **M10 / text buffer result.** Window text returns the queried size rather than the
@@ -99,10 +108,11 @@ entry once its resolution condition is met; Git preserves the history.
   Documentation corrected the proposed host, but application recovery is unproved.
   **Resolve:** hidden top-level receiver or explicit forwarder and a controlled
   Explorer-recovery integration check; no automatic disruption of a user's shell.
-- **M11 / icon adoption and raw access.** Raw HICON is consumed even on factory
-  failure, shared handles are unsafe, and no borrowed HICON accessor exists.
-  **Resolve:** explicit owning/adopt/copy APIs with failure semantics, borrowed
-  access and tests; document owner-HWND lifetime and v4's identity limits.
+- **M11 / icon adoption and raw access.** `NotifyIconConfig::icon` still adopts a raw
+  HICON, consumed even on factory failure, and no borrowed HICON accessor exists.
+  `icon::load` now supplies owned icons and `set_icon` takes `wil::unique_hicon`.
+  **Resolve:** make the factory's icon input an explicit owner with failure semantics,
+  add borrowed access and tests; document owner-HWND lifetime and v4's identity limits.
 - **Tray cached state / keyboard protocol.** Tooltip cache changes before native
   success; v4 ID bounds, keyboard event/anchor decoding, focus restoration and
   registration recovery need coverage. **Resolve:** define intended/actual state,

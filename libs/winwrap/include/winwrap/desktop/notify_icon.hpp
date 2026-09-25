@@ -45,6 +45,14 @@ public:
     /// Updates the hover text (NIM_MODIFY).
     std::expected<void, std::error_code> set_tooltip(const wchar_t* text);
 
+    /// Replaces the icon shown in the notification area (NIM_MODIFY with NIF_ICON).
+    /// @param icon  The new icon, which this NotifyIcon owns from now on; load one with
+    ///              icon::load. The previous icon is destroyed only after the shell accepts
+    ///              the new one. On failure the tray keeps showing the previous icon and
+    ///              `icon` is destroyed.
+    /// @return Nothing, or the error; `ERROR_INVALID_WINDOW_HANDLE` for a moved-from NotifyIcon.
+    std::expected<void, std::error_code> set_icon(wil::unique_hicon icon);
+
     /// Registers the icon with the shell (NIM_ADD + NIM_SETVERSION). create() calls
     /// this; call it again from the owner on taskbar_created_message() so the icon
     /// survives an Explorer restart.
