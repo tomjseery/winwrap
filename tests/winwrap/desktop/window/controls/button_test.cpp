@@ -60,9 +60,35 @@ TEST_CASE("Button::create(cfg, handler) wires on_click in one call") {
                                         [&] { clicked = true; });
     REQUIRE(made);
 
-    winwrap::message::send((*host)->hwnd(), WM_COMMAND, MAKEWPARAM(2, BN_CLICKED),
-                 reinterpret_cast<LPARAM>((*made)->hwnd()));
+    (*made)->click();
     REQUIRE(clicked);
+}
+
+TEST_CASE("Button::click presses the native button and fires on_click") {
+    auto host = ClickHost::create();
+    REQUIRE(host);
+    REQUIRE((*host)->button);
+
+    int clicks = 0;
+    (*host)->button->on_click = [&] { ++clicks; };
+
+    // BM_CLICK makes the native button send BN_CLICKED to its parent, which reflects it.
+    (*host)->button->click();
+    (*host)->button->click();
+
+    CHECK(clicks == 2);
+}
+
+TEST_CASE("a control starts with the GUI font and set_font replaces it") {
+    auto host = ClickHost::create();
+    REQUIRE(host);
+    REQUIRE((*host)->button);
+    auto& button = *(*host)->button;
+    const auto system = static_cast<HFONT>(GetStockObject(SYSTEM_FONT));
+
+    CHECK(button.font() == static_cast<HFONT>(GetStockObject(DEFAULT_GUI_FONT)));
+    button.set_font(system, false);
+    CHECK(button.font() == system);
 }
 
 TEST_CASE("Button on_click fires through the parent window's reflection") {

@@ -110,6 +110,20 @@ public:
     /// inside this call.
     std::expected<void, std::error_code> request_close() { return post(WM_CLOSE); }
 
+    /// Sets the font this window draws its text with (`WM_SETFONT`).
+    /// Native controls and dialogs store it; a plain window's `DefWindowProcW` ignores it,
+    /// so a Window<T> that paints text chooses its font in `on_paint` instead.
+    /// @param font    The font; it is borrowed, not owned, so it must outlive its use by
+    ///                this window. A stock font (`GetStockObject`) never needs freeing.
+    /// @param redraw  Whether the window repaints immediately.
+    void set_font(HFONT font, bool redraw = true) const {
+        send(WM_SETFONT, reinterpret_cast<WPARAM>(font), redraw ? TRUE : FALSE);
+    }
+
+    /// The font this window draws its text with (`WM_GETFONT`), or null for the system font
+    /// (always null for a plain window, which stores no font).
+    [[nodiscard]] HFONT font() const { return reinterpret_cast<HFONT>(send(WM_GETFONT)); }
+
     /// Sends `msg` to this window and waits for the result (message::send).
     LRESULT send(UINT msg, WPARAM wparam = 0, LPARAM lparam = 0) const {
         return message::send(hwnd_, msg, wparam, lparam);

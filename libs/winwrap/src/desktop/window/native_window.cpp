@@ -3,7 +3,7 @@
 #include "winwrap/error.hpp"
 #include "winwrap/module.hpp"
 
-namespace winwrap::native_window {
+namespace winwrap::window {
 
 std::expected<wil::unique_hwnd, std::error_code> create(const NativeWindowConfig& config) {
     const HMENU menu_or_id = (config.style & WS_CHILD) != 0
@@ -15,12 +15,12 @@ std::expected<wil::unique_hwnd, std::error_code> create(const NativeWindowConfig
                                       config.height, config.parent, menu_or_id, module::current(),
                                       config.create_param);
            })
-        .and_then([](HWND window) -> std::expected<wil::unique_hwnd, std::error_code> {
+        .and_then([](HWND hwnd) -> std::expected<wil::unique_hwnd, std::error_code> {
             // Null with no recorded error: a window procedure refused creation silently.
-            if (!window)
+            if (!hwnd)
                 return std::unexpected(error::win32(ERROR_CANCELLED));
-            return wil::unique_hwnd{window};
+            return wil::unique_hwnd{hwnd};
         });
 }
 
-}  // namespace winwrap::native_window
+}  // namespace winwrap::window
