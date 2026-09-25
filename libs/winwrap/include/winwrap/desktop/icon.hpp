@@ -2,11 +2,11 @@
 
 #include "winwrap/win.hpp"
 
+#include <wil/resource.h>
+
 #include <expected>
 #include <filesystem>
 #include <system_error>
-
-#include <wil/resource.h>
 
 namespace winwrap {
 
@@ -33,7 +33,8 @@ namespace icon {
 /// (`LoadImageW(..., LR_SHARED)`) copied at the requested size (`CopyImage`). Unlike
 /// `LoadIconW(nullptr, IDI_*)`, the result is a private copy, so it is safe to hand to an
 /// owner that destroys it, such as NotifyIcon.
-[[nodiscard]] std::expected<wil::unique_hicon, std::error_code> load(SystemIcon icon, IconSize size);
+[[nodiscard]] std::expected<wil::unique_hicon, std::error_code> load(SystemIcon icon,
+                                                                     IconSize size);
 
 /// Loads icon resource `resource_id` from `module` (an .exe or DLL; see module.hpp) as an
 /// icon this caller owns (`LoadImageW` without `LR_SHARED`).

@@ -66,7 +66,9 @@ std::expected<void, std::error_code> NotifyIcon::set_icon(wil::unique_hicon icon
     NOTIFYICONDATAW nid = make_data();
     nid.uFlags = NIF_ICON;
     nid.hIcon = icon.get();
-    return error::nonzero_or_last(Shell_NotifyIconW(NIM_MODIFY, &nid)).transform([&] { icon_ = std::move(icon); });
+    return error::nonzero_or_last(Shell_NotifyIconW(NIM_MODIFY, &nid)).transform([&] {
+        icon_ = std::move(icon);
+    });
 }
 
 std::expected<void, std::error_code> NotifyIcon::add() {

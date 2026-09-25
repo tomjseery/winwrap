@@ -27,8 +27,8 @@ std::expected<wil::unique_hicon, std::error_code> load(SystemIcon icon, IconSize
     // System icons load only as shared handles (ERROR_RESOURCE_TYPE_NOT_FOUND otherwise),
     // which nobody may destroy, so hand back a private copy at the requested size.
     const SIZE extent = pixels(size);
-    return error::nonzero_or_last(LoadImageW(nullptr, MAKEINTRESOURCEW(static_cast<WORD>(icon)), IMAGE_ICON,
-                            extent.cx, extent.cy, LR_SHARED))
+    return error::nonzero_or_last(LoadImageW(nullptr, MAKEINTRESOURCEW(static_cast<WORD>(icon)),
+                                             IMAGE_ICON, extent.cx, extent.cy, LR_SHARED))
         .and_then([&](HANDLE shared) {
             return error::nonzero_or_last(CopyImage(shared, IMAGE_ICON, extent.cx, extent.cy, 0));
         })
@@ -36,7 +36,7 @@ std::expected<wil::unique_hicon, std::error_code> load(SystemIcon icon, IconSize
 }
 
 std::expected<wil::unique_hicon, std::error_code> load(HMODULE module, WORD resource_id,
-                                                            IconSize size) {
+                                                       IconSize size) {
     if (!module)
         return std::unexpected(error::win32(ERROR_INVALID_HANDLE));
     return load(module, MAKEINTRESOURCEW(resource_id), size, 0);
@@ -47,7 +47,7 @@ std::expected<wil::unique_hicon, std::error_code> load(WORD resource_id, IconSiz
 }
 
 std::expected<wil::unique_hicon, std::error_code> load(const std::filesystem::path& file,
-                                                            IconSize size) {
+                                                       IconSize size) {
     return load(nullptr, file.c_str(), size, LR_LOADFROMFILE);
 }
 

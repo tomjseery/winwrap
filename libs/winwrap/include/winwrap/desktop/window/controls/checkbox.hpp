@@ -21,14 +21,10 @@ public:
     void click() const { send(BM_CLICK); }
 
     /// Whether the box is currently ticked (`BM_GETCHECK`).
-    [[nodiscard]] bool checked() const {
-        return send(BM_GETCHECK) == BST_CHECKED;
-    }
+    [[nodiscard]] bool checked() const { return send(BM_GETCHECK) == BST_CHECKED; }
 
     /// Ticks or unticks the box (`BM_SETCHECK`).
-    void set_checked(bool checked) {
-        send(BM_SETCHECK, checked ? BST_CHECKED : BST_UNCHECKED);
-    }
+    void set_checked(bool checked) { send(BM_SETCHECK, checked ? BST_CHECKED : BST_UNCHECKED); }
 };
 
 }  // namespace winwrap

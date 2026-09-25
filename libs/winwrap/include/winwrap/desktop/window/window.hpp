@@ -76,8 +76,7 @@ template <typename T, typename... Mixins>
 class Window
     : public BaseWindow,
       public MessageRouter<Lifecycle, SizeChange, WindowCommand, notification::CommandReflection,
-                           Paintable, MouseInput, KeyboardInput, FocusAware, TimerTick,
-                           Mixins...> {
+                           Paintable, MouseInput, KeyboardInput, FocusAware, TimerTick, Mixins...> {
 public:
     Window(const Window&) = delete;
     Window& operator=(const Window&) = delete;
@@ -175,15 +174,15 @@ private:
         // can recover the object in WM_NCCREATE.
         // The destructor, not the handle, destroys the window: it must detach first.
         return window::create({.class_name = T::window_class_name,
-                                       .title = cfg.title,
-                                       .style = cfg.style,
-                                       .ex_style = cfg.ex_style,
-                                       .x = cfg.x,
-                                       .y = cfg.y,
-                                       .width = cfg.width,
-                                       .height = cfg.height,
-                                       .parent = cfg.parent,
-                                       .create_param = static_cast<T*>(this)})
+                               .title = cfg.title,
+                               .style = cfg.style,
+                               .ex_style = cfg.ex_style,
+                               .x = cfg.x,
+                               .y = cfg.y,
+                               .width = cfg.width,
+                               .height = cfg.height,
+                               .parent = cfg.parent,
+                               .create_param = static_cast<T*>(this)})
             .transform([](wil::unique_hwnd window) { window.release(); });
     }
 

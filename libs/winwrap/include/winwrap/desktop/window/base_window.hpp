@@ -79,7 +79,7 @@ public:
     /// it (`SetWindowPos` with `SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE`).
     std::expected<void, std::error_code> resize(int width, int height) {
         return error::nonzero_or_last(SetWindowPos(hwnd_, nullptr, 0, 0, width, height,
-                                  SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE));
+                                                   SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE));
     }
 
     /// Marks the whole client area for repainting (`InvalidateRect(hwnd, nullptr, erase)`).

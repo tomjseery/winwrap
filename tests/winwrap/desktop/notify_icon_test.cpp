@@ -1,7 +1,8 @@
+#include "winwrap/desktop/notify_icon.hpp"
+
 #include <catch2/catch_test_macros.hpp>
 
 #include "winwrap/desktop/icon.hpp"
-#include "winwrap/desktop/notify_icon.hpp"
 #include "winwrap/desktop/window/window.hpp"
 
 namespace {

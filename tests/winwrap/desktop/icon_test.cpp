@@ -1,12 +1,12 @@
-#include <catch2/catch_test_macros.hpp>
+#include "winwrap/desktop/icon.hpp"
 
+#include <catch2/catch_test_macros.hpp>
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
 #include <string>
 #include <vector>
 
-#include "winwrap/desktop/icon.hpp"
 #include "winwrap/module.hpp"
 
 namespace {
@@ -130,8 +130,8 @@ TEST_CASE("icon::load loads an .ico file") {
 }
 
 TEST_CASE("icon::load reports a missing .ico file") {
-    auto icon = winwrap::icon::load(unique_temp_path(L"winwrap_missing_icon_"),
-                                   winwrap::IconSize::small);
+    auto icon =
+        winwrap::icon::load(unique_temp_path(L"winwrap_missing_icon_"), winwrap::IconSize::small);
 
     REQUIRE_FALSE(icon);
     CHECK(icon.error().value() == ERROR_FILE_NOT_FOUND);

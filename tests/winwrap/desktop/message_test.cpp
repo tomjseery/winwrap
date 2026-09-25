@@ -1,9 +1,9 @@
-#include <catch2/catch_test_macros.hpp>
+#include "winwrap/desktop/message.hpp"
 
+#include <catch2/catch_test_macros.hpp>
 #include <vector>
 
 #include "winwrap/desktop/message_loop.hpp"
-#include "winwrap/desktop/message.hpp"
 #include "winwrap/desktop/window/window.hpp"
 
 namespace {
@@ -54,7 +54,8 @@ TEST_CASE("message::post rejects a null window instead of posting to the thread"
     REQUIRE_FALSE(posted);
     CHECK(posted.error().value() == ERROR_INVALID_WINDOW_HANDLE);
     MSG msg{};
-    CHECK_FALSE(PeekMessageW(&msg, reinterpret_cast<HWND>(-1), app_message, app_message, PM_REMOVE));
+    CHECK_FALSE(
+        PeekMessageW(&msg, reinterpret_cast<HWND>(-1), app_message, app_message, PM_REMOVE));
 }
 
 TEST_CASE("message::send to a destroyed window returns 0") {

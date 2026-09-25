@@ -36,7 +36,8 @@ inline void notify_folder_deleted(const std::filesystem::path& folder) {
 }
 
 /// A file was renamed or moved from `from` to `to` (SHCNE_RENAMEITEM).
-inline void notify_file_renamed(const std::filesystem::path& from, const std::filesystem::path& to) {
+inline void notify_file_renamed(const std::filesystem::path& from,
+                                const std::filesystem::path& to) {
     SHChangeNotify(SHCNE_RENAMEITEM, SHCNF_PATHW, from.c_str(), to.c_str());
 }
 

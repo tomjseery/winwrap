@@ -111,14 +111,14 @@ private:
         if constexpr (requires { T::default_style; })
             style |= T::default_style;
         return window::create({.class_name = T::control_class,
-                              .title = cfg.text,
-                              .style = style,
-                              .x = cfg.x,
-                              .y = cfg.y,
-                              .width = cfg.width,
-                              .height = cfg.height,
-                              .parent = cfg.parent,
-                              .child_id = cfg.id})
+                               .title = cfg.text,
+                               .style = style,
+                               .x = cfg.x,
+                               .y = cfg.y,
+                               .width = cfg.width,
+                               .height = cfg.height,
+                               .parent = cfg.parent,
+                               .child_id = cfg.id})
             .and_then([&](wil::unique_hwnd made) -> std::expected<void, std::error_code> {
                 const HWND h = made.get();
                 // Until the subclass is installed the control is unbound; on failure `made`

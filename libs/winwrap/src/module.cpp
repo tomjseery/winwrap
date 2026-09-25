@@ -33,8 +33,7 @@ std::expected<std::filesystem::path, std::error_code> path(HMODULE module) {
             return std::filesystem::path{std::move(buffer)};
         }
         if (capacity >= maximum_characters)
-            return std::unexpected(
-                error::win32(ERROR_INSUFFICIENT_BUFFER));
+            return std::unexpected(error::win32(ERROR_INSUFFICIENT_BUFFER));
         buffer.resize(std::min<std::size_t>(buffer.size() * 2, maximum_characters));
     }
 }
