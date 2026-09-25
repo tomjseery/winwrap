@@ -17,7 +17,7 @@ struct TickingWindow : winwrap::Window<TickingWindow> {
     void on_timer(UINT_PTR id) {
         ticks.push_back(id);
         if (ticks.size() == 2) {
-            REQUIRE(stop_timer(id));
+            CHECK(stop_timer(id));  // never REQUIRE: a throw must not cross the WndProc
             winwrap::quit();
         }
     }
@@ -80,4 +80,24 @@ TEST_CASE("stop_timer reports a timer that is not running") {
     REQUIRE(window);
 
     CHECK_FALSE((*window)->stop_timer(42));
+}
+
+struct ClosingTimerWindow : winwrap::Window<ClosingTimerWindow> {
+    static constexpr const wchar_t* window_class_name = L"WinwrapTimerTickClosingTest";
+    void on_destroy() { winwrap::quit(); }
+};
+
+TEST_CASE("timer operations on a destroyed window never reach thread timers") {
+    auto window = ClosingTimerWindow::create({.parent = HWND_MESSAGE});
+    REQUIRE(window);
+    REQUIRE((*window)->request_close());
+    REQUIRE(winwrap::run() == 0);
+
+    const auto started = (*window)->start_timer(1, 10ms);
+    const auto stopped = (*window)->stop_timer(1);
+
+    REQUIRE_FALSE(started);
+    REQUIRE_FALSE(stopped);
+    CHECK(started.error().value() == ERROR_INVALID_WINDOW_HANDLE);
+    CHECK(stopped.error().value() == ERROR_INVALID_WINDOW_HANDLE);
 }

@@ -50,6 +50,7 @@ public:
     ///              load_icon. The previous icon is destroyed only after the shell accepts
     ///              the new one. On failure the tray keeps showing the previous icon and
     ///              `icon` is destroyed.
+    /// @return Nothing, or the error; `ERROR_INVALID_WINDOW_HANDLE` for a moved-from NotifyIcon.
     std::expected<void, std::error_code> set_icon(wil::unique_hicon icon);
 
     /// Registers the icon with the shell (NIM_ADD + NIM_SETVERSION). create() calls

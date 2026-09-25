@@ -60,6 +60,9 @@ std::expected<void, std::error_code> NotifyIcon::set_tooltip(const wchar_t* text
 }
 
 std::expected<void, std::error_code> NotifyIcon::set_icon(wil::unique_hicon icon) {
+    // A moved-from icon has no registration, and Shell_NotifyIconW sets no last error for it.
+    if (!hwnd_)
+        return std::unexpected(std::error_code{ERROR_INVALID_WINDOW_HANDLE, std::system_category()});
     NOTIFYICONDATAW nid = make_data();
     nid.uFlags = NIF_ICON;
     nid.hIcon = icon.get();

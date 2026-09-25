@@ -143,8 +143,8 @@ app-side GDI (`CreateIconIndirect`); adoption must have an explicit ownership co
   C++23 **deducing this** on 2026-07-12 (see *Dispatch design review* below) —
   mixins are plain structs whose `handle_message` deduces the final type through an
   explicit object parameter (`this auto& self`).
-  Seven empty-base mixins — `Lifecycle`, `SizeChange`, `WindowCommand`, `Paintable`,
-  `MouseInput`, `KeyboardInput`, `FocusAware` — each expose
+  Eight empty-base mixins — `Lifecycle`, `SizeChange`, `WindowCommand`, `Paintable`,
+  `MouseInput`, `KeyboardInput`, `FocusAware`, `TimerTick` (window-only) — each expose
   `std::optional<LRESULT> handle_message(UINT, WPARAM, LPARAM)`: engaged = handled,
   `nullopt` = pass on. `MessageRouter<Mixins...>` chains them via a fold
   expression (`||`), short-circuiting on first match, and its `route_message`

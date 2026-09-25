@@ -246,6 +246,10 @@ Raw calls that Winwrap's **tests** make as consumers:
    `reinterpret_cast<HMENU>(id)`. It returns an owned `wil::unique_hwnd`; `Window` and `Control`
    release it because they manage destruction themselves. A rejected `WM_CREATE` records
    `ERROR_INVALID_HANDLE` (verified); a silent refusal becomes `ERROR_CANCELLED`.
+   Its input stays `NativeWindowConfig`, not `WindowConfig`: `WindowConfig` is
+   `Window<T>::create`'s input, and `Window<T>` must own `class_name` and `create_param`
+   (they bind the C++ object). Putting them in `WindowConfig` would let a caller silently
+   break routing.
 6. **Ambiguous-zero results**: `check_last_error(call)` in `error.hpp` is the only
    `SetLastError(ERROR_SUCCESS)` in the library, used by `style`/`ex_style`, `focus` and
    `create_window`.
@@ -274,13 +278,20 @@ Raw calls that Winwrap's **tests** make as consumers:
 - The sanitizer `dev` preset still cannot link locally (`clang_rt.asan_dynamic_runtime_thunk-x86_64.lib`
   is missing: the MSVC AddressSanitizer runtime is not installed), as recorded by PR #9.
 - The MSVC x64 `gdb` preset (Debug, no sanitizers) builds cleanly, including every public
-  header check. CTest: 71/71 passed, up from the 39-test baseline at `813ed55`.
+  header check. CTest: 72/72 passed, up from the 39-test baseline at `813ed55`.
+- Review of `813ed55..b18bed0` (parent-only; no review runtime or agents in this repository)
+  found four defects, all fixed in the follow-up commit: `stop_timer` on a destroyed window
+  could stop an unrelated thread timer (null guard added); `set_icon` on a moved-from
+  NotifyIcon could report an error value of 0 (guarded with `ERROR_INVALID_WINDOW_HANDLE`);
+  the timer test used `REQUIRE` inside a WndProc callback (now `CHECK`); and the roadmap's
+  built-in mixin count was stale. `Control` creation now chains its errors through
+  `create_window(...).transform(...)` instead of a manual check.
 - There is no remote CI in this repository.
 
 ## Next Steps
 
-Progress (2026-09-25): steps 1-5 are done (see *Implemented batch*). Next: review the
-candidate, address findings, commit, open the PR and deliver it.
+Progress (2026-09-25): steps 1-5 are done and reviewed (see *Implemented batch* and
+*Validation evidence*). Next: push the branch, open the PR, and merge once Tommy has seen it.
 
 1. Confirm the worktree, branch, base, and clean/unexplained Git state above.
 2. Read `AGENTS.md`, `VISION.md`, `ROADMAP.md`, `CODE_CONVENTIONS.md`, `PLANNING.md`, `MIXINS.md`,
