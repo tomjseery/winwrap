@@ -2,8 +2,11 @@
 
 #include "winwrap/win.hpp"
 
+#include <concepts>
 #include <expected>
+#include <functional>
 #include <system_error>
+#include <type_traits>
 
 namespace winwrap {
 
@@ -30,6 +33,21 @@ template <typename H>
     if (ok)
         return {};
     return std::unexpected(last_error());
+}
+
+/// Runs a Win32 call whose zero/null result is also a legitimate value (GetWindowLongPtrW,
+/// SetFocus, ...): clears the last error first, then treats a zero result as failure only
+/// when the call recorded an error.
+/// @return The call's result, possibly zero, or the error it recorded.
+template <std::invocable F>
+[[nodiscard]] std::expected<std::invoke_result_t<F>, std::error_code> check_last_error(F&& call) {
+    SetLastError(ERROR_SUCCESS);
+    auto result = std::invoke(std::forward<F>(call));
+    if (!result) {
+        if (auto error = last_error(); error.value() != ERROR_SUCCESS)
+            return std::unexpected(error);
+    }
+    return result;
 }
 
 }  // namespace winwrap

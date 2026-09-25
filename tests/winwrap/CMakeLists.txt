@@ -9,9 +9,15 @@ FetchContent_MakeAvailable(Catch2)
 
 add_executable(winwrap_test
     device_test.cpp
+    desktop/icon_test.cpp
+    desktop/notify_icon_test.cpp
+    desktop/window/base_window_test.cpp
     desktop/window/window_test.cpp
     desktop/window/drop_window_test.cpp
     desktop/window/message/file_droppable_test.cpp
+    desktop/window/message/timer_tick_test.cpp
+    desktop/window/native_window_test.cpp
+    module_test.cpp
     desktop/window/control_test.cpp
     desktop/window/controls/button_test.cpp
     desktop/window/controls/checkbox_test.cpp

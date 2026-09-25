@@ -14,6 +14,7 @@
 #include "winwrap/desktop/window/message/message_router.hpp"
 #include "winwrap/desktop/window/message/mouse_input.hpp"
 #include "winwrap/desktop/window/message/paintable.hpp"
+#include "winwrap/desktop/window/native_window.hpp"
 #include "winwrap/error.hpp"
 
 namespace winwrap {
@@ -109,12 +110,19 @@ private:
         DWORD style = WS_CHILD | WS_VISIBLE | cfg.style;
         if constexpr (requires { T::default_style; })
             style |= T::default_style;
-        HWND h = CreateWindowExW(0, T::control_class, cfg.text, style, cfg.x, cfg.y, cfg.width,
-                                 cfg.height, cfg.parent,
-                                 reinterpret_cast<HMENU>(static_cast<UINT_PTR>(cfg.id)),
-                                 GetModuleHandleW(nullptr), nullptr);
-        if (!h)
-            return std::unexpected(last_error());
+        auto made = create_window({.class_name = T::control_class,
+                                   .title = cfg.text,
+                                   .style = style,
+                                   .x = cfg.x,
+                                   .y = cfg.y,
+                                   .width = cfg.width,
+                                   .height = cfg.height,
+                                   .parent = cfg.parent,
+                                   .child_id = cfg.id});
+        if (!made)
+            return std::unexpected(made.error());
+        // The parent destroys its child windows, so the handle is not kept as an owner.
+        HWND h = made->release();
         attach(h);
         id_ = cfg.id;
         SendMessageW(h, WM_SETFONT, reinterpret_cast<WPARAM>(GetStockObject(DEFAULT_GUI_FONT)),

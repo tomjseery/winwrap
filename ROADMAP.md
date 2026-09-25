@@ -67,17 +67,15 @@ the assessment's reproduced correctness issues qualify their readiness claims.
 
 Close these before or while wiring — wifi-toggle needs each one:
 
-1. **`NotifyIcon::set_icon`** *(blocking — the status recolor is the app's core
-   feature)*. `NIM_MODIFY` with `uFlags = NIF_ICON`; identity = the original
-   `(hWnd, uID)` from `NIM_ADD`; the shell does **not** take ownership of the
-   `HICON`, so swap the owned `wil::unique_hicon` member only after the call
-   succeeds. No `NIM_SETVERSION` re-send needed after a modify.
-2. **`on_timer(id)` hook** — a `Timable` mixin (`WM_TIMER`, id = `wparam`) per the
-   `MIXINS.md` recipe, for the status poll. Precedent: WTL's `MSG_WM_TIMER` →
-   `OnTimer(UINT_PTR)`; no surveyed library wraps `SetTimer`/`KillTimer` beyond
-   raw members. Plan a Winwrap timer API with explicit ownership/cancellation;
-   direct calls can establish the protocol during learning, not stand in for
-   completed timer coverage in the final supported application slice.
+1. ~~**`NotifyIcon::set_icon`**~~ — ✅ **Done (2026-09-25).** `set_icon(wil::unique_hicon)`
+   sends `NIM_MODIFY` + `NIF_ICON` and swaps the owned icon only after the shell accepts
+   it. Owned icons come from `winwrap/desktop/icon.hpp` (`load_icon` for system icons,
+   module resources and `.ico` files), never from a shared `LoadIconW` handle.
+2. ~~**`on_timer(id)` hook**~~ — ✅ **Done (2026-09-25).** `Window::start_timer(id,
+   interval)` / `stop_timer(id)` over `SetTimer`/`KillTimer`, and the built-in
+   `TimerTick` mixin routes `WM_TIMER` to `on_timer(UINT_PTR)`. Built into `Window`
+   only; raw `TIMERPROC` timers stay with their procedure. See
+   `FREE_FUNCTION_WRAPPER_INVESTIGATION.md` for the wider operation survey.
 3. ~~**Message loop**~~ — ✅ **Done (2026-07-13).** `winwrap/desktop/message_loop.hpp`:
    header-only `run()` (the `GetMessageW`/`TranslateMessage`/`DispatchMessageW` pump;
    returns `msg.wParam`; `-1` guarded by `FAIL_FAST_IF`) + `quit(int = 0)` (over

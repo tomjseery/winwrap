@@ -38,6 +38,13 @@ entry once its resolution condition is met; Git preserves the history.
   wrapper reset and parent-first destruction. Expose a usable borrowed HWND façade
   if incremental existing-HWND adoption remains a supported audience.
 
+- **Owned windows are pointers.** Because the OS stores the wrapper's address,
+  `Window<T>`/`Control<T>` are immovable and `create` returns
+  `std::expected<std::unique_ptr<T>, ...>`, forcing `(*made)->op()` at every call site.
+  **Resolve:** a value-returning factory (movable wrappers that re-point
+  `GWLP_USERDATA`/subclass data on move, or an equivalent owner) with tests for moves
+  during and outside dispatch, coordinated with H4.
+
 ## Dispatch, reflection and headers
 
 - **M2 / result-bearing hooks and setup.** `WW_CASE` discards returns, including
@@ -99,10 +106,11 @@ entry once its resolution condition is met; Git preserves the history.
   Documentation corrected the proposed host, but application recovery is unproved.
   **Resolve:** hidden top-level receiver or explicit forwarder and a controlled
   Explorer-recovery integration check; no automatic disruption of a user's shell.
-- **M11 / icon adoption and raw access.** Raw HICON is consumed even on factory
-  failure, shared handles are unsafe, and no borrowed HICON accessor exists.
-  **Resolve:** explicit owning/adopt/copy APIs with failure semantics, borrowed
-  access and tests; document owner-HWND lifetime and v4's identity limits.
+- **M11 / icon adoption and raw access.** `NotifyIconConfig::icon` still adopts a raw
+  HICON, consumed even on factory failure, and no borrowed HICON accessor exists.
+  `load_icon` now supplies owned icons and `set_icon` takes `wil::unique_hicon`.
+  **Resolve:** make the factory's icon input an explicit owner with failure semantics,
+  add borrowed access and tests; document owner-HWND lifetime and v4's identity limits.
 - **Tray cached state / keyboard protocol.** Tooltip cache changes before native
   success; v4 ID bounds, keyboard event/anchor decoding, focus restoration and
   registration recovery need coverage. **Resolve:** define intended/actual state,

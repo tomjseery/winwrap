@@ -49,6 +49,10 @@ The verb a function picks tells the reader its contract. The deciding question i
   public factory is `create`; its private worker that does the actual acquisition
   takes the same family with a suffix, `create_<thing>`.
 - **`open`** — acquire a handle to an existing named resource, as `Device::open` does.
+- **`load`** — acquire an owned copy of an existing image resource, as `load_icon`
+  does. When the result is a WIL owner such as `wil::unique_hicon`, no Winwrap type
+  exists to host the factory, so it is an ownerless free function in the resource's
+  header (`desktop/icon.hpp`) returning `std::expected`.
 - **`make_*`** — a helper that **builds a plain value and cannot fail**; it returns
   the value by value, never an `expected`. This is the standard-library idiom
   (`std::make_pair`, `make_tuple`, `make_optional`).
@@ -123,6 +127,14 @@ Build coherent operations for the windows, controls, menus, tray, dialogs and ot
 native components within the project's scope. Native terminology, styles and
 semantics may remain visible; callers should not have to repeat the underlying
 function sequence for an operation Winwrap promises to support.
+
+**Each native call has one owner inside Winwrap.** When several Winwrap types or
+operations need the same SDK call, one wrapper makes it and the rest reuse that wrapper.
+For a handle whose operations are useful without the owning class, that wrapper is a
+free function taking the raw handle, and the class delegates to it. `module.hpp` is the
+precedent: `current_module()`, `loaded_module()` and `module_path()` own the SDK calls,
+and `Module`, `Window`, `Control` and `load_icon` call them. Do not also re-implement the
+native call in a member.
 
 **Raw handles are the escape hatch, not the normal operation API.** An unsupported
 operation or integration with another HWND-based library may use a borrowed
