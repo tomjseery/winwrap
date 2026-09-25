@@ -101,6 +101,10 @@ driver in a VM.
 - 2026-09-25: the refined headers pass WinWrap's MSVC build, per-header compilation, and all
   14 device-related tests. SandboxHwid's local producer build passes 9/9 client tests and real
   WDK Debug/Release builds with zero warnings or errors.
+- 2026-09-25: the KMDF `Queue` type now has its own `driver/queue.hpp`; `driver/device.hpp`
+  includes it for `Device::create_default_queue`. The existing result operators remain the
+  idiomatic success-value access, while callback and byte-count names in SandboxHwid were
+  clarified without changing either device's creation/opening contract.
 
 ## Producer completion
 
