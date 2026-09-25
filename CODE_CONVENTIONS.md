@@ -191,13 +191,11 @@ case in the mixin's own `handle_message` (the HWND is live from `WM_NCCREATE`) â
 ```cpp
 // Don't: "accepts drops" lives in two places that must agree, or it breaks silently.
 class App : public Window<App, FileDroppable> { void on_files_dropped(...); };
-App app;
-app.create({.ex_style = WS_EX_ACCEPTFILES});   // compose here, flag there -> can desync
+auto app = App::create({.ex_style = WS_EX_ACCEPTFILES});  // compose here, flag there -> can desync
 
 // Do: composing the mixin is the whole declaration; the mixin self-registers.
 class App : public Window<App, FileDroppable> { void on_files_dropped(...); };
-App app;
-app.create({});                                 // one source of truth
+auto app = App::create({});  // one source of truth
 ```
 
 **Why:**
