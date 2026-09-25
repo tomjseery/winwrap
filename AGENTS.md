@@ -14,7 +14,7 @@ Winwrap's public-API conventions are project-specific:
 
 `libs/winwrap/include/winwrap/` — public headers: `desktop/` holds `window/`
 (`Window`, `Control`, controls, mixins, and command notifications), the
-thread's `message_loop.hpp`, `menu.hpp`, `drop.hpp`, `icon.hpp`, `notify_icon.hpp`,
+thread's `message_loop.hpp`, `message.hpp`, `menu.hpp`, `drop.hpp`, `icon.hpp`, `notify_icon.hpp`,
 and `shell/` (Shell change notifications). `device.hpp`, `module.hpp`,
 `filesystem/attributes.hpp`, `error.hpp`, and `win.hpp` remain at their
 respective non-desktop boundaries. `libs/winwrap/src/` and `tests/winwrap/`

@@ -114,12 +114,12 @@ public:
     std::expected<void, std::error_code> start_timer(UINT_PTR id,
                                                      std::chrono::milliseconds interval) {
         if (interval.count() < 0 || interval.count() > USER_TIMER_MAXIMUM)
-            return std::unexpected(win32_error(ERROR_INVALID_PARAMETER));
+            return std::unexpected(error::win32(ERROR_INVALID_PARAMETER));
         // SetTimer(nullptr, ...) would start a thread timer instead of failing.
         if (!hwnd())
-            return std::unexpected(win32_error(ERROR_INVALID_WINDOW_HANDLE));
+            return std::unexpected(error::win32(ERROR_INVALID_WINDOW_HANDLE));
         if (SetTimer(hwnd(), id, static_cast<UINT>(interval.count()), nullptr) == 0)
-            return std::unexpected(last_error());
+            return std::unexpected(error::last());
         return {};
     }
 
@@ -129,8 +129,8 @@ public:
     std::expected<void, std::error_code> stop_timer(UINT_PTR id) {
         // KillTimer(nullptr, id) would stop an unrelated thread timer with the same id.
         if (!hwnd())
-            return std::unexpected(win32_error(ERROR_INVALID_WINDOW_HANDLE));
-        return check(KillTimer(hwnd(), id));
+            return std::unexpected(error::win32(ERROR_INVALID_WINDOW_HANDLE));
+        return error::nonzero_or_last(KillTimer(hwnd(), id));
     }
 
 protected:
@@ -167,14 +167,14 @@ private:
         if (RegisterClassW(&wc) == 0) {
             // A class already registered under this name is fine -- anything else
             // is a real failure.
-            if (auto ec = last_error(); ec.value() != ERROR_CLASS_ALREADY_EXISTS)
+            if (auto ec = error::last(); ec.value() != ERROR_CLASS_ALREADY_EXISTS)
                 return std::unexpected(ec);
         }
 
         // --- Creation (per window): `this` rides through so the static callback
         // can recover the object in WM_NCCREATE.
         // The destructor, not the handle, destroys the window: it must detach first.
-        return winwrap::create_window({.class_name = T::window_class_name,
+        return native_window::create({.class_name = T::window_class_name,
                                        .title = cfg.title,
                                        .style = cfg.style,
                                        .ex_style = cfg.ex_style,
@@ -211,7 +211,7 @@ private:
         return DefWindowProcW(hwnd, msg, wparam, lparam);
     }
 
-    const HINSTANCE instance_{current_module()};
+    const HINSTANCE instance_{module::current()};
 };
 
 }  // namespace winwrap

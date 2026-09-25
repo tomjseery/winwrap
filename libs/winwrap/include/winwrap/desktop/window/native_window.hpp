@@ -9,7 +9,7 @@
 
 namespace winwrap {
 
-/// Settings passed to create_window -- the CreateWindowExW arguments by name, set
+/// Settings passed to native_window::create -- the CreateWindowExW arguments by name, set
 /// with designated initializers; omitted fields take the defaults below.
 struct NativeWindowConfig {
     const wchar_t* class_name{};  ///< A registered class: a system class such as `L"BUTTON"`
@@ -27,20 +27,25 @@ struct NativeWindowConfig {
     void* create_param{};         ///< Passed to `WM_NCCREATE`/`WM_CREATE` as `lpCreateParams`.
 };
 
+/// Creating windows directly from any registered window class.
+namespace native_window {
+
 /// Creates a window (CreateWindowExW), owned by the returned handle, which destroys it
 /// (DestroyWindow) when reset. Native messages such as `WM_NCCREATE` and `WM_CREATE` are sent
 /// to the class's window procedure before this returns.
 ///
 /// `CreateWindowExW` reuses one argument for two meanings: a top-level window's menu or a
 /// child window's id. This chooses between `menu` and `child_id` from `WS_CHILD` in `style`.
-/// The window belongs to the running executable (current_module()).
+/// The window belongs to the running executable (module::current()).
 ///
 /// @return The owned window, or the Win32 error: e.g. `ERROR_CANNOT_FIND_WND_CLASS`, or
 ///         `ERROR_INVALID_HANDLE` when a window procedure rejects `WM_NCCREATE`/`WM_CREATE`.
 ///         A creation refused without any recorded error is `ERROR_CANCELLED`.
 /// @note A child window is also destroyed with its parent; `release()` the handle when the
 ///       parent owns its lifetime.
-[[nodiscard]] std::expected<wil::unique_hwnd, std::error_code> create_window(
+[[nodiscard]] std::expected<wil::unique_hwnd, std::error_code> create(
     const NativeWindowConfig& config);
+
+}  // namespace native_window
 
 }  // namespace winwrap

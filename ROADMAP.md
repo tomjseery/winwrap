@@ -69,7 +69,7 @@ Close these before or while wiring — wifi-toggle needs each one:
 
 1. ~~**`NotifyIcon::set_icon`**~~ — ✅ **Done (2026-09-25).** `set_icon(wil::unique_hicon)`
    sends `NIM_MODIFY` + `NIF_ICON` and swaps the owned icon only after the shell accepts
-   it. Owned icons come from `winwrap/desktop/icon.hpp` (`load_icon` for system icons,
+   it. Owned icons come from `winwrap/desktop/icon.hpp` (`icon::load` for system icons,
    module resources and `.ico` files), never from a shared `LoadIconW` handle.
 2. ~~**`on_timer(id)` hook**~~ — ✅ **Done (2026-09-25).** `Window::start_timer(id,
    interval)` / `stop_timer(id)` over `SetTimer`/`KillTimer`, and the built-in
@@ -113,11 +113,15 @@ app-side GDI (`CreateIconIndirect`); adoption must have an explicit ownership co
   `taskbar_created_message()`; owns `HICON` via `wil::unique_hicon`; `NIM_DELETE` on
   destruct; hand-written Rule-of-Five (the shell registration isn't an RAII handle).
   Builds clean (`/W4` + sanitizers), clang-tidy-clean. **Not yet exercised** by an app.
-- **`error.hpp`** — `last_error()` lives in `winwrap/error.hpp` (shared by
-  `window.hpp` and `menu.cpp`).
+- **`error.hpp`** — `winwrap::error` (`last`, `win32`, `nonzero_or_last`,
+  `result_or_last`) owns every conversion of a Win32 failure into `std::error_code`.
+- **Namespaces (2026-09-25)** — free-function families moved into use-named namespaces
+  (`message_loop::run`, `message::send`, `module::current`, `icon::load`,
+  `native_window::create`, `filesystem::attributes`, `shell::notify_folder_changed`);
+  see `CODE_CONVENTIONS.md` §6.
 - **`message_loop.hpp`** — ✅ **Done (2026-07-13).** Header-only `run()` (the message
   pump; returns `msg.wParam`; `-1` → `FAIL_FAST_IF`) + `quit(int = 0)` (over
-  `PostQuitMessage`). App exits via `on_destroy` → `winwrap::quit()`. Four Catch2 tests,
+  `PostQuitMessage`). App exits via `on_destroy` → `winwrap::message_loop::quit()`. Four Catch2 tests,
   MSVC-clean. Design/rationale: `MESSAGE_LOOP_DESIGN.md`.
 - **Build** — CMake + WIL + install/export + warnings/sanitizers exist. A full-install
   consumer passed in the assessment; explicit dependency metadata, compiler CI and

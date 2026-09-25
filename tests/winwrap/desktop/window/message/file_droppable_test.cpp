@@ -25,7 +25,7 @@ struct DropWindow : winwrap::Window<DropWindow, winwrap::FileDroppable> {
 
 // Fabricates the HDROP Explorer would produce: a DROPFILES header followed by a
 // double-null-terminated wide path list. Ownership passes to the recipient
-// (make_dropped_paths DragFinish-frees it), exactly like a real drop.
+// (Drop DragFinish-frees it), exactly like a real drop.
 HDROP make_test_hdrop(std::initializer_list<std::wstring_view> paths) {
     size_t chars = 1;  // the list's trailing second null
     for (auto path : paths)

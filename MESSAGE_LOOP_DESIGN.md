@@ -1,5 +1,9 @@
 # winwrap — message-loop design proposal
 
+> **Renamed 2026-09-25:** `winwrap::run()` / `winwrap::quit()` are now
+> `winwrap::message_loop::run()` / `winwrap::message_loop::quit()` (CODE_CONVENTIONS §6).
+> The design record below keeps the names it was written with.
+
 Design and implementation notes for the reusable message-pump runner. Applications
 may use `run()` or retain their own native loop. Project rationale lives in
 [VISION.md](VISION.md) and [CODE_CONVENTIONS.md](CODE_CONVENTIONS.md); current

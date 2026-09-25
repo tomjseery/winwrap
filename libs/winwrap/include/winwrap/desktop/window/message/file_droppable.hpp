@@ -13,12 +13,6 @@
 
 namespace winwrap {
 
-/// Unpacks an HDROP into the dropped-file paths and releases it -- Drop owns
-/// the handle, so DragFinish runs even if an allocation throws.
-inline std::vector<std::wstring> make_dropped_paths(HDROP drop) {
-    return Drop{drop}.paths();
-}
-
 /// WINDOW mixin: routes `WM_DROPFILES` to the final type's
 /// `on_files_dropped(const std::vector<std::wstring>&)`, and registers the window
 /// to accept dropped files automatically -- no `.ex_style = WS_EX_ACCEPTFILES`.
@@ -40,7 +34,7 @@ struct FileDroppable {
                     DragAcceptFiles(self.hwnd(), TRUE);
                 break;
             WW_CASE(WM_DROPFILES,
-                    self.on_files_dropped(make_dropped_paths(reinterpret_cast<HDROP>(wparam))));
+                    self.on_files_dropped(Drop{reinterpret_cast<HDROP>(wparam)}.paths()));
             default:
                 break;
         }

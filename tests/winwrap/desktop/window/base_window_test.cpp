@@ -12,7 +12,7 @@ struct PlainWindow : winwrap::Window<PlainWindow> {
 
 struct ClosingWindow : winwrap::Window<ClosingWindow> {
     static constexpr const wchar_t* window_class_name = L"WinwrapBaseWindowClosingTest";
-    void on_destroy() { winwrap::quit(); }
+    void on_destroy() { winwrap::message_loop::quit(); }
 };
 
 constexpr int off_screen{-20000};
@@ -132,7 +132,7 @@ TEST_CASE("request_close closes the window from the message loop") {
     REQUIRE((*window)->request_close());
     CHECK((*window)->hwnd() != nullptr);  // nothing happens until the loop runs
 
-    CHECK(winwrap::run() == 0);
+    CHECK(winwrap::message_loop::run() == 0);
     CHECK((*window)->hwnd() == nullptr);
 }
 
@@ -140,7 +140,7 @@ TEST_CASE("operations on a destroyed window report the Win32 error") {
     auto window = ClosingWindow::create({.parent = HWND_MESSAGE});
     REQUIRE(window);
     REQUIRE((*window)->request_close());
-    REQUIRE(winwrap::run() == 0);
+    REQUIRE(winwrap::message_loop::run() == 0);
 
     const auto client = (*window)->client_rect();
     const auto style = (*window)->style();
