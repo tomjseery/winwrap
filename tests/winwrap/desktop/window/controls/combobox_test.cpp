@@ -44,8 +44,8 @@ TEST_CASE("ComboBox fires on_selection_changed with the selected index") {
     int got = -1;
     combo->on_selection_changed = [&](int index) { got = index; };
 
-    SendMessageW((*host)->hwnd(), WM_COMMAND, MAKEWPARAM(combobox_id, CBN_SELCHANGE),
-                 reinterpret_cast<LPARAM>(combo->hwnd()));
+    winwrap::message::send((*host)->hwnd(), WM_COMMAND, MAKEWPARAM(combobox_id, CBN_SELCHANGE),
+                           reinterpret_cast<LPARAM>(combo->hwnd()));
 
     REQUIRE(got == 2);
 }

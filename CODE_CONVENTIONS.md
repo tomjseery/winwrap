@@ -49,6 +49,10 @@ The verb a function picks tells the reader its contract. The deciding question i
   public factory is `create`; its private worker that does the actual acquisition
   takes the same family with a suffix, `create_<thing>`.
 - **`open`** — acquire a handle to an existing named resource, as `Device::open` does.
+- **`load`** — acquire an owned copy of an existing image resource, as `icon::load`
+  does. When the result is a WIL owner such as `wil::unique_hicon`, no Winwrap type
+  exists to host the factory, so it is a free function in the resource's family
+  namespace (`winwrap::icon`, header `desktop/icon.hpp`) returning `std::expected`.
 - **`make_*`** — a helper that **builds a plain value and cannot fail**; it returns
   the value by value, never an `expected`. This is the standard-library idiom
   (`std::make_pair`, `make_tuple`, `make_optional`).
@@ -82,7 +86,7 @@ As the library grows, decide *where* a thing belongs by what conceptually needs 
   type owner share a header named for their stable operation family or native
   protocol: `filesystem/attributes.hpp` owns file-attribute operations and
   `desktop/shell/change_notification.hpp` owns Shell change-notification calls,
-  currently `notify_folder_changed()`. A header may start with one function;
+  currently `shell::notify_folder_changed()`. A header may start with one function;
   do not add filler APIs or a catchall to increase its count. Add a deeper
   directory when multiple public headers form a real subsystem, not merely
   because their implementations call the same Windows DLL. Generic error
@@ -124,6 +128,24 @@ native components within the project's scope. Native terminology, styles and
 semantics may remain visible; callers should not have to repeat the underlying
 function sequence for an operation Winwrap promises to support.
 
+**Each native call has one owner inside Winwrap.** When several Winwrap types or
+operations need the same SDK call, one wrapper makes it and the rest reuse that wrapper.
+For a handle whose operations are useful without the owning class, that wrapper is a
+free function taking the raw handle, and the class delegates to it. `module.hpp` is the
+precedent: `module::current()`, `module::loaded()` and `module::path()` own the SDK calls,
+and `Module`, `Window`, `window::create` and `icon::load` call them. Likewise
+`message::send`/`post`, `window::create` and `error::*` are the only callers of
+`SendMessageW`/`PostMessageW`, `CreateWindowExW` and `SetLastError`. Do not also
+re-implement the native call in a member.
+
+**Give each message Winwrap uses a typed operation.** `WPARAM`/`LPARAM` are two untyped
+numbers whose meaning depends on the message, so they appear only inside the operation
+that owns the message (`set_font` for `WM_SETFONT`, `Button::click` for `BM_CLICK`,
+`Checkbox::set_checked` for `BM_SETCHECK`) or in deliberate pass-through such as command
+reflection forwarding a `WM_COMMAND` unchanged. The generic `message::send`/`post` and
+`BaseWindow::send`/`post` remain the escape hatch for messages Winwrap does not wrap,
+such as an application's own `WM_APP + n`.
+
 **Raw handles are the escape hatch, not the normal operation API.** An unsupported
 operation or integration with another HWND-based library may use a borrowed
 `hwnd()` / `handle()` directly. That remains supported without first adding a
@@ -132,7 +154,7 @@ feature. Preserve binding, ownership, thread and cached-state invariants. A gett
 does not transfer ownership; the choice of getter versus implicit conversion is
 separate from whether an operation should have an ergonomic member function.
 
-**Wrap intent and complete protocols, not just spelling.** `show()` and `quit()`
+**Wrap intent and complete protocols, not just spelling.** `show()` and `message_loop::quit()`
 are useful one-call intent operations. For a multi-step query such as dropped
 files, `Drop` should own the count/path/cleanup protocol rather than merely rename
 each `DragQueryFileW` call and leave the ceremony to the consumer. Document the
@@ -183,6 +205,41 @@ is about state that is *implied by composing the mixin*, not general per-window 
 `WM_NCCREATE`, guarded on `on_files_dropped`, so `Window<T, FileDroppable>` needs no
 `.ex_style = WS_EX_ACCEPTFILES`. (Superseded the caller-supplied flag; see ROADMAP,
 2026-07-13.)
+
+## 6. Namespaces — types in `winwrap`, free-function families in their own
+
+Types live directly in `winwrap::` (`Window`, `Module`, `NotifyIcon`, `SystemIcon`):
+a type already groups its own operations as members. **Free functions** live in a nested
+namespace that names their subsystem, for how they are used. Within it, each header
+names one protocol or operation family, so a namespace can span a folder of headers
+(`winwrap::shell` covers every header in `desktop/shell/`):
+
+| Namespace | Header | Examples |
+|---|---|---|
+| `winwrap::error` | `error.hpp` | `error::last()`, `error::win32(code)`, `error::nonzero_or_last(result)`, `error::result_or_last(call)` |
+| `winwrap::message` | `desktop/message.hpp` | `message::send(hwnd, msg)`, `message::post(hwnd, msg)` |
+| `winwrap::message_loop` | `desktop/message_loop.hpp` | `message_loop::run()`, `message_loop::quit()` |
+| `winwrap::module` | `module.hpp` | `module::current()`, `module::loaded(name)`, `module::path(module)` |
+| `winwrap::icon` | `desktop/icon.hpp` | `icon::load(...)` |
+| `winwrap::window` | `desktop/window/native_window.hpp` | `window::create(config)`; later `window::find`, `window::foreground` in their own protocol headers |
+| `winwrap::filesystem` | `filesystem/*.hpp` | `filesystem::attributes(path)` (`attributes.hpp`) |
+| `winwrap::shell` | `desktop/shell/*.hpp` | `shell::notify_file_created(path)`, `shell::notify_folder_changed(folder)` (`change_notification.hpp`) |
+
+- **The namespace carries the noun**, so function names do not repeat it:
+  `module::path(h)`, not `module_path(h)`. Typing `winwrap::module::` lists the family.
+- **A member and a free function never share a name in one scope.** Member names hide
+  namespace functions (a private `Window::create_window` once hid a free `create_window`);
+  family namespaces remove that class of collision.
+- **Keep lowercase snake_case.** Many Win32 names (`CreateWindow`, `LoadIcon`,
+  `SendMessage`) are macros, which ignore namespaces; snake_case names never collide with
+  them.
+- **Avoid a local variable or parameter named like a family** (`error`, `icon`,
+  `message`, `window`) in code that calls that family: the local hides the namespace.
+  Inside Winwrap a window handle is named `hwnd`. Callers who qualify
+  (`winwrap::window::create`) are unaffected.
+- Add a new namespace only for a real operation family, not one per header or folder
+  (`cpp:style`). Types and mixins stay in `winwrap::`; `winwrap::notification` and
+  `winwrap::detail` keep their existing roles.
 
 ## See also
 

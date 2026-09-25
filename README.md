@@ -68,7 +68,7 @@ public:
             greet_ = std::move(*button);
     }
 
-    void on_destroy() { winwrap::quit(); }
+    void on_destroy() { winwrap::message_loop::quit(); }
 
 private:
     std::unique_ptr<winwrap::Button> greet_;
@@ -80,7 +80,7 @@ int wWinMain(HINSTANCE, HINSTANCE, PWSTR, int) {
     if (!window)
         return window.error().value();
 
-    return winwrap::run();
+    return winwrap::message_loop::run();
 }
 ```
 
@@ -111,11 +111,14 @@ public:
     static constexpr const wchar_t* window_class_name = L"winwrap_tray";
 
     void on_created() {
+        auto image = winwrap::icon::load(winwrap::SystemIcon::application, winwrap::IconSize::small);
+        if (!image)
+            return;
         auto icon = winwrap::NotifyIcon::create(
             {.owner = hwnd(),
              .callback_msg = tray_callback,
              .id = 1,
-             .icon = CopyIcon(LoadIconW(nullptr, IDI_APPLICATION)),
+             .icon = image->release(),
              .tooltip = L"winwrap"});
         if (icon)
             tray_ = std::move(*icon);
@@ -136,7 +139,7 @@ private:
         auto menu = winwrap::Menu::create();
         if (!menu)
             return;
-        std::ignore = menu->add_item(L"Exit", [] { winwrap::quit(); });
+        std::ignore = menu->add_item(L"Exit", [] { winwrap::message_loop::quit(); });
         menu->show(hwnd());
     }
 
@@ -144,8 +147,9 @@ private:
 };
 ```
 
-The icon is adopted, so pass one that's safe to `DestroyIcon` (a `CopyIcon` of a
-system icon, or a non-shared `LoadImageW`) — never a shared system handle.
+The icon is adopted, so pass one that's safe to `DestroyIcon`: `icon::load` always
+returns a private copy, never a shared system handle. Swap it later by passing another
+checked `icon::load` result to `set_icon`.
 
 ## What's in the box
 
@@ -158,11 +162,18 @@ system icon, or a non-shared `LoadImageW`) — never a shared system handle.
 | `winwrap/desktop/drop.hpp` | `Drop` — the `WM_DROPFILES` query protocol as a type |
 | `winwrap/desktop/window/message/*.hpp` | direct window/control message routing and behaviors (`MessageRouter`, `FileDroppable`, `Paintable`, …) |
 | `winwrap/desktop/window/notification/command/*.hpp` | control notification mixins (`notification::Click`, `TextChange`, `SelectionChange`) and parent-to-child reflection |
-| `winwrap/desktop/message_loop.hpp` | `run()` and `quit()` |
-| `winwrap/desktop/shell/change_notification.hpp` | `notify_folder_changed()` — tell Explorer a folder changed |
-| `winwrap/filesystem/attributes.hpp` | file-attribute queries and updates |
+| `winwrap/desktop/window/native_window.hpp` | `window::create(NativeWindowConfig)` — any registered window class as an owned `wil::unique_hwnd` |
+| `winwrap/desktop/message.hpp` | `message::send` / `message::post` — messages to any window (`BaseWindow::send` / `post` delegate) |
+| `winwrap/desktop/message_loop.hpp` | `message_loop::run()` and `message_loop::quit()` |
+| `winwrap/desktop/icon.hpp` | `icon::load` — system, module-resource and `.ico` icons as owned `wil::unique_hicon` |
+| `winwrap/desktop/shell/change_notification.hpp` | `shell::notify_file_created` / `_deleted` / `_renamed` / `_changed`, the folder equivalents and `notify_associations_changed` — tell Explorer what changed |
+| `winwrap/filesystem/attributes.hpp` | `filesystem::attributes` and add/remove/set — file-attribute queries and updates |
+| `winwrap/module.hpp` | `module::current` / `loaded` / `path` and the borrowed `Module` view |
 | `winwrap/device.hpp` | `Device` — present-interface paths, synchronous open and control |
-| `winwrap/error.hpp` | `last_error()` / `check()` — Win32 codes as `std::error_code` |
+| `winwrap/error.hpp` | `error::last()`, `error::win32(code)`, `error::nonzero_or_last(result)`, `error::result_or_last(call)` — Win32 failures as `std::error_code` |
+
+Types (`Window`, `Module`, `NotifyIcon`, …) live in `winwrap::`; free-function families
+live in a namespace named for their use (`winwrap::icon`, `winwrap::message`, …).
 
 ## Device I/O
 

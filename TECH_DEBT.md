@@ -55,6 +55,10 @@ the work queue in [ROADMAP.md](ROADMAP.md), and dated evidence in
   deprecation policy lack a complete tested release contract.
   **Resolve:** document those contracts alongside validated examples before
   recommending production adoption; align source comments during the owning fixes.
+- **Sources are not clang-format clean, and nothing checks it.** At `813ed55`, 23 library
+  and test files already differed from `.clang-format`, so PR #10 formatted only the lines it
+  changed. **Resolve:** one formatting-only commit over the whole tree, then a format check
+  (e.g. `clang-format --dry-run -Werror`) in the local validation script or CI.
 - **Guidance reachability is not automatically checked.** AGENTS links the owning
   documents and CLAUDE imports AGENTS, but there is no repository reachability
   hook. **Resolve:** add a small link/import check when repository checks are

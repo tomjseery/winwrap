@@ -1,22 +1,24 @@
 #include "winwrap/desktop/menu.hpp"
 
+#include "winwrap/desktop/message.hpp"
 #include "winwrap/error.hpp"
 
 namespace winwrap {
 
 std::expected<Menu, std::error_code> Menu::create() {
-    return check(CreatePopupMenu()).transform([](HMENU h) { return Menu{wil::unique_hmenu{h}}; });
+    return error::nonzero_or_last(CreatePopupMenu()).transform([](HMENU h) {
+        return Menu{wil::unique_hmenu{h}};
+    });
 }
 
 std::expected<void, std::error_code> Menu::add_item(UINT id, const wchar_t* text) {
-    return check(AppendMenuW(handle_.get(), MF_STRING, id, text));
+    return error::nonzero_or_last(AppendMenuW(handle_.get(), MF_STRING, id, text));
 }
 
 std::expected<void, std::error_code> Menu::add_item(const wchar_t* text,
                                                     std::function<void()> handler) {
-    return check(AppendMenuW(handle_.get(), MF_STRING, next_id_, text)).transform([&] {
-        handlers_.emplace(next_id_++, std::move(handler));
-    });
+    return error::nonzero_or_last(AppendMenuW(handle_.get(), MF_STRING, next_id_, text))
+        .transform([&] { handlers_.emplace(next_id_++, std::move(handler)); });
 }
 
 void Menu::show(HWND owner) {
@@ -26,7 +28,8 @@ void Menu::show(HWND owner) {
     const auto picked = static_cast<UINT>(
         TrackPopupMenuEx(handle_.get(), TPM_RIGHTBUTTON | TPM_RETURNCMD | TPM_NONOTIFY, pt.x,
                          pt.y, owner, nullptr));
-    PostMessageW(owner, WM_NULL, 0, 0);
+    // Best effort: the empty message only lets a background owner dismiss the menu.
+    static_cast<void>(message::post(owner, WM_NULL));
     if (picked == 0)
         return;
     if (auto it = handlers_.find(picked); it != handlers_.end()) {
@@ -36,7 +39,8 @@ void Menu::show(HWND owner) {
         handler();
         return;
     }
-    PostMessageW(owner, WM_COMMAND, picked, 0);
+    // An unreported failure here is existing debt M5 (menu posting failures).
+    static_cast<void>(message::post(owner, WM_COMMAND, picked));
 }
 
 }  // namespace winwrap

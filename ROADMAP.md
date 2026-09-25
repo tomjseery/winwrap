@@ -67,17 +67,15 @@ the assessment's reproduced correctness issues qualify their readiness claims.
 
 Close these before or while wiring — wifi-toggle needs each one:
 
-1. **`NotifyIcon::set_icon`** *(blocking — the status recolor is the app's core
-   feature)*. `NIM_MODIFY` with `uFlags = NIF_ICON`; identity = the original
-   `(hWnd, uID)` from `NIM_ADD`; the shell does **not** take ownership of the
-   `HICON`, so swap the owned `wil::unique_hicon` member only after the call
-   succeeds. No `NIM_SETVERSION` re-send needed after a modify.
-2. **`on_timer(id)` hook** — a `Timable` mixin (`WM_TIMER`, id = `wparam`) per the
-   `MIXINS.md` recipe, for the status poll. Precedent: WTL's `MSG_WM_TIMER` →
-   `OnTimer(UINT_PTR)`; no surveyed library wraps `SetTimer`/`KillTimer` beyond
-   raw members. Plan a Winwrap timer API with explicit ownership/cancellation;
-   direct calls can establish the protocol during learning, not stand in for
-   completed timer coverage in the final supported application slice.
+1. ~~**`NotifyIcon::set_icon`**~~ — ✅ **Done (2026-09-25).** `set_icon(wil::unique_hicon)`
+   sends `NIM_MODIFY` + `NIF_ICON` and swaps the owned icon only after the shell accepts
+   it. Owned icons come from `winwrap/desktop/icon.hpp` (`icon::load` for system icons,
+   module resources and `.ico` files), never from a shared `LoadIconW` handle.
+2. ~~**`on_timer(id)` hook**~~ — ✅ **Done (2026-09-25).** `Window::start_timer(id,
+   interval)` / `stop_timer(id)` over `SetTimer`/`KillTimer`, and the built-in
+   `TimerTick` mixin routes `WM_TIMER` to `on_timer(UINT_PTR)`. Built into `Window`
+   only; raw `TIMERPROC` timers stay with their procedure. See
+   `FREE_FUNCTION_WRAPPER_INVESTIGATION.md` for the wider operation survey.
 3. ~~**Message loop**~~ — ✅ **Done (2026-07-13).** `winwrap/desktop/message_loop.hpp`:
    header-only `run()` (the `GetMessageW`/`TranslateMessage`/`DispatchMessageW` pump;
    returns `msg.wParam`; `-1` guarded by `FAIL_FAST_IF`) + `quit(int = 0)` (over
@@ -115,11 +113,15 @@ app-side GDI (`CreateIconIndirect`); adoption must have an explicit ownership co
   `taskbar_created_message()`; owns `HICON` via `wil::unique_hicon`; `NIM_DELETE` on
   destruct; hand-written Rule-of-Five (the shell registration isn't an RAII handle).
   Builds clean (`/W4` + sanitizers), clang-tidy-clean. **Not yet exercised** by an app.
-- **`error.hpp`** — `last_error()` lives in `winwrap/error.hpp` (shared by
-  `window.hpp` and `menu.cpp`).
+- **`error.hpp`** — `winwrap::error` (`last`, `win32`, `nonzero_or_last`,
+  `result_or_last`) owns every conversion of a Win32 failure into `std::error_code`.
+- **Namespaces (2026-09-25)** — free-function families moved into use-named namespaces
+  (`message_loop::run`, `message::send`, `module::current`, `icon::load`,
+  `window::create`, `filesystem::attributes`, `shell::notify_folder_changed`);
+  see `CODE_CONVENTIONS.md` §6.
 - **`message_loop.hpp`** — ✅ **Done (2026-07-13).** Header-only `run()` (the message
   pump; returns `msg.wParam`; `-1` → `FAIL_FAST_IF`) + `quit(int = 0)` (over
-  `PostQuitMessage`). App exits via `on_destroy` → `winwrap::quit()`. Four Catch2 tests,
+  `PostQuitMessage`). App exits via `on_destroy` → `winwrap::message_loop::quit()`. Four Catch2 tests,
   MSVC-clean. Design/rationale: `MESSAGE_LOOP_DESIGN.md`.
 - **Build** — CMake + WIL + install/export + warnings/sanitizers exist. A full-install
   consumer passed in the assessment; explicit dependency metadata, compiler CI and
@@ -145,8 +147,8 @@ app-side GDI (`CreateIconIndirect`); adoption must have an explicit ownership co
   C++23 **deducing this** on 2026-07-12 (see *Dispatch design review* below) —
   mixins are plain structs whose `handle_message` deduces the final type through an
   explicit object parameter (`this auto& self`).
-  Seven empty-base mixins — `Lifecycle`, `SizeChange`, `WindowCommand`, `Paintable`,
-  `MouseInput`, `KeyboardInput`, `FocusAware` — each expose
+  Eight empty-base mixins — `Lifecycle`, `SizeChange`, `WindowCommand`, `Paintable`,
+  `MouseInput`, `KeyboardInput`, `FocusAware`, `TimerTick` (window-only) — each expose
   `std::optional<LRESULT> handle_message(UINT, WPARAM, LPARAM)`: engaged = handled,
   `nullopt` = pass on. `MessageRouter<Mixins...>` chains them via a fold
   expression (`||`), short-circuiting on first match, and its `route_message`

@@ -25,7 +25,7 @@ struct DropWindow : winwrap::Window<DropWindow, winwrap::FileDroppable> {
 
 // Fabricates the HDROP Explorer would produce: a DROPFILES header followed by a
 // double-null-terminated wide path list. Ownership passes to the recipient
-// (make_dropped_paths DragFinish-frees it), exactly like a real drop.
+// (Drop DragFinish-frees it), exactly like a real drop.
 HDROP make_test_hdrop(std::initializer_list<std::wstring_view> paths) {
     size_t chars = 1;  // the list's trailing second null
     for (auto path : paths)
@@ -83,14 +83,10 @@ TEST_CASE("Drop moves transfer ownership") {
     CHECK(second.path(0) == L"C:\\a.txt");
 }
 
-namespace {
-bool accepts_drops(HWND hwnd) {
-    return (GetWindowLongPtrW(hwnd, GWL_EXSTYLE) & WS_EX_ACCEPTFILES) != 0;
-}
-}  // namespace
-
 TEST_CASE("FileDroppable self-registers for drops on a created window") {
     auto window = DropWindow::create({});
     REQUIRE(window.has_value());
-    CHECK(accepts_drops((*window)->hwnd()));
+    const auto ex_style = (*window)->ex_style();
+    REQUIRE(ex_style);
+    CHECK((*ex_style & WS_EX_ACCEPTFILES) != 0);
 }

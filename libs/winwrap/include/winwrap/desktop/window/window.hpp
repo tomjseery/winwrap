@@ -2,6 +2,7 @@
 
 #include "winwrap/win.hpp"
 
+#include <chrono>
 #include <expected>
 #include <memory>
 #include <system_error>
@@ -14,9 +15,12 @@
 #include "winwrap/desktop/window/message/mouse_input.hpp"
 #include "winwrap/desktop/window/message/paintable.hpp"
 #include "winwrap/desktop/window/message/size_change.hpp"
+#include "winwrap/desktop/window/message/timer_tick.hpp"
 #include "winwrap/desktop/window/message/window_command.hpp"
+#include "winwrap/desktop/window/native_window.hpp"
 #include "winwrap/desktop/window/notification/command/reflection.hpp"
 #include "winwrap/error.hpp"
+#include "winwrap/module.hpp"
 
 namespace winwrap {
 
@@ -53,6 +57,7 @@ struct WindowConfig {
 ///   - `on_mouse_move(x, y)` / `on_lbutton_down(x, y)` / `on_lbutton_up(x, y)`
 ///   - `on_key_down(vk)`      -- `WM_KEYDOWN` (virtual-key code)
 ///   - `on_focus(gained)`     -- `WM_SETFOCUS` (true) / `WM_KILLFOCUS` (false)
+///   - `on_timer(id)`         -- `WM_TIMER` from start_timer
 ///
 /// For a message with a runtime id (e.g. a tray callback), shadow route_message
 /// in T and delegate the rest with `Window::route_message`. A custom router may
@@ -71,7 +76,7 @@ template <typename T, typename... Mixins>
 class Window
     : public BaseWindow,
       public MessageRouter<Lifecycle, SizeChange, WindowCommand, notification::CommandReflection,
-                           Paintable, MouseInput, KeyboardInput, FocusAware, Mixins...> {
+                           Paintable, MouseInput, KeyboardInput, FocusAware, TimerTick, Mixins...> {
 public:
     Window(const Window&) = delete;
     Window& operator=(const Window&) = delete;
@@ -96,6 +101,35 @@ public:
     /// the current message; ordinary routing calls it automatically.
     [[nodiscard]] LRESULT default_proc(UINT msg, WPARAM wparam, LPARAM lparam) {
         return DefWindowProcW(hwnd(), msg, wparam, lparam);
+    }
+
+    /// Starts timer `id` on this window, or restarts it with a new interval (SetTimer).
+    /// Each tick arrives as `WM_TIMER` and reaches `on_timer(id)`. Timers stop when the
+    /// window is destroyed; stop one earlier with stop_timer.
+    /// @param interval  Time between ticks. Windows raises values below
+    ///                  `USER_TIMER_MINIMUM` (10 ms) to that minimum.
+    /// @return Nothing, or the Win32 error; `ERROR_INVALID_PARAMETER` when `interval` is
+    ///         negative or above `USER_TIMER_MAXIMUM`.
+    std::expected<void, std::error_code> start_timer(UINT_PTR id,
+                                                     std::chrono::milliseconds interval) {
+        if (interval.count() < 0 || interval.count() > USER_TIMER_MAXIMUM)
+            return std::unexpected(error::win32(ERROR_INVALID_PARAMETER));
+        // SetTimer(nullptr, ...) would start a thread timer instead of failing.
+        if (!hwnd())
+            return std::unexpected(error::win32(ERROR_INVALID_WINDOW_HANDLE));
+        if (SetTimer(hwnd(), id, static_cast<UINT>(interval.count()), nullptr) == 0)
+            return std::unexpected(error::last());
+        return {};
+    }
+
+    /// Stops timer `id` (KillTimer). A tick already waiting in the message queue is
+    /// still delivered.
+    /// @return Nothing, or the Win32 error, e.g. when no such timer is running.
+    std::expected<void, std::error_code> stop_timer(UINT_PTR id) {
+        // KillTimer(nullptr, id) would stop an unrelated thread timer with the same id.
+        if (!hwnd())
+            return std::unexpected(error::win32(ERROR_INVALID_WINDOW_HANDLE));
+        return error::nonzero_or_last(KillTimer(hwnd(), id));
     }
 
 protected:
@@ -132,18 +166,24 @@ private:
         if (RegisterClassW(&wc) == 0) {
             // A class already registered under this name is fine -- anything else
             // is a real failure.
-            if (auto ec = last_error(); ec.value() != ERROR_CLASS_ALREADY_EXISTS)
+            if (auto ec = error::last(); ec.value() != ERROR_CLASS_ALREADY_EXISTS)
                 return std::unexpected(ec);
         }
 
         // --- Creation (per window): `this` rides through so the static callback
         // can recover the object in WM_NCCREATE.
-        HWND hwnd = CreateWindowExW(cfg.ex_style, T::window_class_name, cfg.title, cfg.style, cfg.x,
-                                    cfg.y, cfg.width, cfg.height, cfg.parent, nullptr, instance_,
-                                    static_cast<T*>(this));
-        if (!hwnd)
-            return std::unexpected(last_error());
-        return {};
+        // The destructor, not the handle, destroys the window: it must detach first.
+        return window::create({.class_name = T::window_class_name,
+                               .title = cfg.title,
+                               .style = cfg.style,
+                               .ex_style = cfg.ex_style,
+                               .x = cfg.x,
+                               .y = cfg.y,
+                               .width = cfg.width,
+                               .height = cfg.height,
+                               .parent = cfg.parent,
+                               .create_param = static_cast<T*>(this)})
+            .transform([](wil::unique_hwnd window) { window.release(); });
     }
 
     static LRESULT CALLBACK window_proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
@@ -170,7 +210,7 @@ private:
         return DefWindowProcW(hwnd, msg, wparam, lparam);
     }
 
-    const HINSTANCE instance_{GetModuleHandleW(nullptr)};
+    const HINSTANCE instance_{module::current()};
 };
 
 }  // namespace winwrap

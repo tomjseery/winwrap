@@ -29,6 +29,10 @@ public:
 
     using Control::create;  // keep the handler-less create(cfg); see below re: name hiding
 
+    /// Clicks the button as the user would (`BM_CLICK`): Windows presses and releases it,
+    /// and the parent's reflected `BN_CLICKED` fires on_click before this returns.
+    void click() const { send(BM_CLICK); }
+
     /// Creates the button and wires its click handler in one call -- a convenience for
     /// create(cfg) then assigning on_click. Both forms stay valid, and on_click remains
     /// reassignable afterwards.

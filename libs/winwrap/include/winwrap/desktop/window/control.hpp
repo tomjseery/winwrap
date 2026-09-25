@@ -14,6 +14,7 @@
 #include "winwrap/desktop/window/message/message_router.hpp"
 #include "winwrap/desktop/window/message/mouse_input.hpp"
 #include "winwrap/desktop/window/message/paintable.hpp"
+#include "winwrap/desktop/window/native_window.hpp"
 #include "winwrap/error.hpp"
 
 namespace winwrap {
@@ -109,18 +110,36 @@ private:
         DWORD style = WS_CHILD | WS_VISIBLE | cfg.style;
         if constexpr (requires { T::default_style; })
             style |= T::default_style;
-        HWND h = CreateWindowExW(0, T::control_class, cfg.text, style, cfg.x, cfg.y, cfg.width,
-                                 cfg.height, cfg.parent,
-                                 reinterpret_cast<HMENU>(static_cast<UINT_PTR>(cfg.id)),
-                                 GetModuleHandleW(nullptr), nullptr);
-        if (!h)
-            return std::unexpected(last_error());
-        attach(h);
-        id_ = cfg.id;
-        SendMessageW(h, WM_SETFONT, reinterpret_cast<WPARAM>(GetStockObject(DEFAULT_GUI_FONT)),
-                     TRUE);
-        SetWindowSubclass(h, &subclass_proc, 1, reinterpret_cast<DWORD_PTR>(this));
-        return {};
+        return window::create({.class_name = T::control_class,
+                               .title = cfg.text,
+                               .style = style,
+                               .x = cfg.x,
+                               .y = cfg.y,
+                               .width = cfg.width,
+                               .height = cfg.height,
+                               .parent = cfg.parent,
+                               .child_id = cfg.id})
+            .and_then([&](wil::unique_hwnd made) -> std::expected<void, std::error_code> {
+                const HWND h = made.get();
+                // Until the subclass is installed the control is unbound; on failure `made`
+                // destroys it, so no live window is left without its wrapper.
+                return error::result_or_last([&] {
+                           return SetWindowSubclass(h, &subclass_proc, 1,
+                                                    reinterpret_cast<DWORD_PTR>(this));
+                       })
+                    .and_then([](BOOL installed) -> std::expected<void, std::error_code> {
+                        // SetWindowSubclass documents no error code for its FALSE result.
+                        if (!installed)
+                            return std::unexpected(error::win32(ERROR_GEN_FAILURE));
+                        return {};
+                    })
+                    .transform([&] {
+                        // The parent destroys its child windows, so the handle is not kept.
+                        attach(made.release());
+                        id_ = cfg.id;
+                        set_font(static_cast<HFONT>(GetStockObject(DEFAULT_GUI_FONT)));
+                    });
+            });
     }
     static LRESULT CALLBACK subclass_proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam,
                                           UINT_PTR /*id_subclass*/, DWORD_PTR ref_data) {
