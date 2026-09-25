@@ -11,8 +11,8 @@ The public split is:
 - `winwrap::Device` for a user-mode connection that owns a file-style `HANDLE`.
 - `winwrap::driver::Driver`, `Device`, `Queue`, and `Request` for borrowed KMDF framework
   objects inside a driver.
-- shared device-interface and device-control-code value types that the protocol can use on
-  both sides.
+- `winwrap::device::Interface` and `winwrap::device::ControlCode` values that the protocol can
+  use on both sides.
 
 ## Authorization
 
@@ -30,11 +30,11 @@ driver in a VM.
   driver subset. KMDF's WDF methods are inline
   dispatch-table calls, and the user-mode WinWrap static library must not be linked into a
   kernel binary.
-- Model shared native values as `DeviceInterface` and `DeviceControlCode`. They preserve a
+- Model shared native values as `device::Interface` and `device::ControlCode`. They preserve a
   native-value escape hatch while preventing GUIDs and arbitrary integers from being mixed at
   ordinary call sites.
 - Use nested enums/config records where the vocabulary belongs to one owner, such as
-  `DeviceControlCode::Method`, `DeviceControlCode::Access`, and `Queue::Dispatch`.
+  `device::ControlCode::Method`, `device::ControlCode::Access`, and `Queue::Dispatch`.
 - WDF retains ownership of driver, device, queue, and request objects. WinWrap driver objects
   are small borrowed-handle adapters and never delete WDF objects.
 - Preserve WDF callback function types so Static Driver Verifier annotations and the native
@@ -80,7 +80,7 @@ driver in a VM.
 - 2026-09-25: inspected the actual SandboxHwid driver and confirmed the required WDF surface.
   Official WDF documentation confirms that KMDF owns framework-object lifetime, queues route
   requests, and request completion is terminal.
-- 2026-09-25: implemented shared `DeviceInterface`/`DeviceControlCode` values, typed overloads
+- 2026-09-25: implemented shared `device::Interface`/`device::ControlCode` values, typed overloads
   on the existing user-mode `Device`, and header-only kernel adapters for KMDF driver, device,
   queue, request-buffer, and completion operations. Updated the SandboxHwid source and build
   boundary to consume them.
@@ -95,9 +95,15 @@ driver in a VM.
   pinned that exact revision and repeated its client and real WDK Debug/Release builds.
   Formatting, raw-call, whitespace, and final candidate reviews passed with no blocking
   findings. WinWrap PR #12 and SandboxHwid PR #2 now describe the complete boundary.
+- 2026-09-25: refined the supporting values into the `winwrap::device` namespace and separate
+  `device/interface.hpp` and `device/control_code.hpp` headers. `winwrap::Device` remains the
+  root owning type; folder cohesion does not force `device::Device` stuttering.
+- 2026-09-25: the refined headers pass WinWrap's MSVC build, per-header compilation, and all
+  14 device-related tests. SandboxHwid's local producer build passes 9/9 client tests and real
+  WDK Debug/Release builds with zero warnings or errors.
 
-## Completion
+## Producer completion
 
-The authorized implementation, validation, commits, pushes, exact consumer pin, and PR
-updates are complete. Merging and VM-only driver execution remain outside this plan's
-authorization.
+The producer API and local consumer validation are complete. SandboxHwid's maintained plan
+owns the exact remote pin and final PR refresh. Merging and VM-only driver execution remain
+outside the authorized scope.

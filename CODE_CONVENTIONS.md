@@ -243,9 +243,14 @@ names one protocol or operation family, so a namespace can span a folder of head
   `message`, `window`) in code that calls that family: the local hides the namespace.
   Inside Winwrap a window handle is named `hwnd`. Callers who qualify
   (`winwrap::window::create`) are unaffected.
-- Add a new namespace only for a real operation family, not one per header or folder
-  (`cpp:style`). Types and mixins stay in `winwrap::`; `winwrap::notification` and
-  `winwrap::detail` keep their existing roles.
+- Add a new namespace only for a real API family or the supporting-value case below, not one
+  per header or folder (`cpp:style`). Primary resource types and mixins stay in `winwrap::`;
+  `winwrap::notification` and `winwrap::detail` keep their existing roles.
+- A subsystem namespace may also disambiguate short supporting value types that would be
+  vague at the root. `winwrap::device::Interface` and `device::ControlCode` live in
+  `device/interface.hpp` and `device/control_code.hpp`; the primary owning type remains
+  `winwrap::Device` in `device.hpp`. The folder records cohesion, while the namespace earns
+  its place by avoiding generic root names such as `Interface` and `ControlCode`.
 - Kernel WDF object types live in `winwrap::driver` because they have a distinct runtime,
   lifetime owner, error vocabulary, and toolchain from same-named user-mode concepts.
 

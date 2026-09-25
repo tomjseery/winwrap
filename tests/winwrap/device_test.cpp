@@ -80,9 +80,9 @@ TEST_CASE("Device::paths returns no paths for an unknown interface") {
     CHECK(paths->empty());
 }
 
-TEST_CASE("DeviceInterface preserves its native identifier") {
+TEST_CASE("device::Interface preserves its native identifier") {
     constexpr GUID id{0x39bb3c82, 0x92a7, 0x424d, {0x98, 0x5b, 0x48, 0x29, 0xb3, 0x31, 0x0f, 0xc7}};
-    constexpr winwrap::DeviceInterface interface_id{id};
+    constexpr winwrap::device::Interface interface_id{id};
 
     CHECK(interface_id.native().Data1 == id.Data1);
     CHECK(interface_id.native().Data2 == id.Data2);
@@ -90,19 +90,19 @@ TEST_CASE("DeviceInterface preserves its native identifier") {
     CHECK(interface_id.native().Data4[7] == id.Data4[7]);
 }
 
-TEST_CASE("DeviceControlCode encodes the native control fields") {
+TEST_CASE("device::ControlCode encodes the native control fields") {
     constexpr ULONG device_type{0x8000};
     constexpr ULONG function{0x800};
-    constexpr winwrap::DeviceControlCode code{{
+    constexpr winwrap::device::ControlCode code{{
         .device_type = device_type,
         .function = function,
-        .method = winwrap::DeviceControlCode::Method::buffered,
-        .access = winwrap::DeviceControlCode::Access::read,
+        .method = winwrap::device::ControlCode::Method::buffered,
+        .access = winwrap::device::ControlCode::Access::read,
     }};
 
     STATIC_REQUIRE(code.native() ==
                    CTL_CODE(device_type, function, METHOD_BUFFERED, FILE_READ_DATA));
-    STATIC_REQUIRE(code == winwrap::DeviceControlCode{code.native()});
+    STATIC_REQUIRE(code == winwrap::device::ControlCode{code.native()});
 }
 TEST_CASE("paths preserves one or more entries") {
     const std::array<wchar_t, 6> one{L'o', L'n', L'e', L'\0', L'\0', L'\0'};

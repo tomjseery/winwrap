@@ -13,7 +13,8 @@
 #include <utility>
 #include <vector>
 
-#include "winwrap/device_types.hpp"
+#include "winwrap/device/control_code.hpp"
+#include "winwrap/device/interface.hpp"
 
 namespace winwrap {
 
@@ -41,7 +42,7 @@ public:
 
     /// Snapshot all currently present paths for a typed interface class.
     [[nodiscard]] static std::expected<std::vector<std::wstring>, std::error_code> paths(
-        const DeviceInterface& interface_id) {
+        const device::Interface& interface_id) {
         return paths(interface_id.native());
     }
 
@@ -63,7 +64,7 @@ public:
 
     /// Perform one synchronous request using a typed device-control code.
     [[nodiscard]] std::expected<std::size_t, ControlError> control(
-        DeviceControlCode code, std::span<const std::byte> input,
+        device::ControlCode code, std::span<const std::byte> input,
         std::span<std::byte> output) const {
         return control(code.native(), input, output);
     }
