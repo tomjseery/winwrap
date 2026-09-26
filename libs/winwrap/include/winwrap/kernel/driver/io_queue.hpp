@@ -4,8 +4,8 @@
 
 namespace winwrap::kernel::driver {
 
-/// A borrowed KMDF queue object. KMDF owns its lifetime.
-class Queue final {
+/// A borrowed KMDF I/O queue object. KMDF owns its lifetime.
+class IoQueue final {
 public:
     /// How KMDF delivers requests from this queue.
     enum class Dispatch {
@@ -43,7 +43,7 @@ public:
     };
 
     /// Wrap a borrowed native queue handle received from KMDF.
-    constexpr explicit Queue(WDFQUEUE native) noexcept : native_{native} {}
+    constexpr explicit IoQueue(WDFQUEUE native) noexcept : native_{native} {}
 
     /// Borrow the native KMDF handle.
     [[nodiscard]] constexpr WDFQUEUE native() const noexcept { return native_; }
