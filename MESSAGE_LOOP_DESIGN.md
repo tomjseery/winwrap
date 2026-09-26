@@ -86,7 +86,7 @@ walled *open*, not *off* — the free-function entry admits a future defaulted
 
 #include "winwrap/win.hpp"
 
-#include <wil/result_macros.h>  // FAIL_FAST_IF -- the terminate tier (windows/CLAUDE.md §4)
+#include <wil/result_macros.h>  // FAIL_FAST_IF -- the terminate tier (win32:style)
 
 namespace winwrap {
 
@@ -158,7 +158,7 @@ environment or by arguments the caller supplied. `GetMessageW`'s `-1` is documen
 to occur only for an invalid window handle or an invalid `lpMsg` pointer — **both
 supplied by `run()` itself** (`nullptr` filter, a valid local `&msg`). So `-1` is
 not a recoverable, caller-caused failure; it is an invariant break with no meaningful
-recovery. That is exactly the tier `windows/CLAUDE.md` §4 assigns to `FAIL_FAST_IF`
+recovery. That is exactly the tier `win32:style` assigns to `FAIL_FAST_IF`
 ("terminate"). Returning `std::expected<int, std::error_code>` would force every
 `wWinMain` to unwrap an error that cannot happen, taxing the happy path (normal exit
 is `WM_QUIT` = success) for nothing — the wrong shape for this call. WTL's silent
@@ -234,7 +234,7 @@ for its intended use (a drop target inside a larger app), but if a premade
 belongs — bundled, opt-in, deferred per §3.
 
 **Correction (as built): `winwrap::quit(int = 0)` *was* added.** The proposal
-originally rejected it as a thin `PostQuitMessage` rename (per the LIBRARY_CONVENTIONS
+originally rejected it as a thin `PostQuitMessage` rename (per the `cpp:libraries`
 thin-wrapper rule). That was wrong. The thin-wrapper rule targets renames that hide a
 name the user still needs *and add nothing* — e.g. `DragQueryFileW`, whose sentinel +
 length-probe protocol you must understand either way, so the fix there was a *class*

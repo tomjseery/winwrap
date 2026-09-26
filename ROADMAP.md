@@ -512,7 +512,7 @@ engine, no theming framework, no widget toolkit. Not a Qt/wxWidgets replacement.
   access. `make_dropped_paths` is now `Drop{drop}.paths()` (its `wil::scope_exit`
   guard is gone — the view *is* the RAII); the mixin's hook is unchanged, purely
   additive. Renamed free-function pass-throughs over `DragQueryFileW` stay
-  **rejected** per the LIBRARY_CONVENTIONS thin-wrapper rule (renames don't fix
+  **rejected** per the `cpp:libraries` thin-wrapper rule (renames don't fix
   the protocol and break MSDN searchability). Tested via fabricated `DROPFILES`
   blocks: count/path/paths/point + move-transfer.
 - **`FileDroppable` self-registration** — ✅ **Done (2026-07-13).** The mixin now

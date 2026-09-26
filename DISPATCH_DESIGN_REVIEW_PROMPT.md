@@ -72,11 +72,11 @@ either "reviewed against N alternatives on <date>, held, here's why" or a
 migration proposal. If concepts-hardening (or similar) fixes weakness 1 as a
 bolt-on, spec it as an additive task regardless of the main verdict.
 
-## Working style (per NORTH_STAR.md — this is a learning project)
+## Working style (per `cpp:direction` — this is a learning project)
 
 1. Research + reasoned comparison in chat; teach each alternative before judging
    it. **`deducing this`, concepts/`requires` internals, and function-pointer
-   member tables are all NOT in `WHAT_I_KNOW.md` — teach before relying on.**
+   member tables are all NOT in `cpp:knowledge` — teach before relying on.**
 2. No code changes without an explicit go — this task's output is a verdict and
    (maybe) specs.
 3. Web research is fine (talks, blogs, the libraries' sources); cite what you

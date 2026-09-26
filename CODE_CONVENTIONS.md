@@ -108,7 +108,7 @@ As the library grows, decide *where* a thing belongs by what conceptually needs 
 
 **The move trigger — the second real consumer.** Keep a thing local until a
 *second* wrapper genuinely needs it; only then lift it into the appropriate shared
-header. This is `LIBRARY_CONVENTIONS.md`'s reactive-extraction rule applied inside
+header. This is `cpp:libraries`' reactive-extraction rule applied inside
 winwrap: a one-caller "utility" is premature abstraction — you'll guess the shape
 wrong before you've seen two real uses.
 
