@@ -1,6 +1,8 @@
 #pragma once
 
-#include "winwrap/kernel/driver/result.hpp"
+#include <expected>
+
+#include "winwrap/kernel/driver/detail/wdf.hpp"
 
 namespace winwrap::kernel::driver {
 
@@ -14,9 +16,9 @@ public:
     };
 
     /// Create the KMDF driver object for DriverEntry.
-    [[nodiscard]] static Result<Driver> create(PDRIVER_OBJECT driver_object,
-                                               PCUNICODE_STRING registry_path,
-                                               const Config& config) noexcept {
+    [[nodiscard]] static std::expected<Driver, NTSTATUS> create(PDRIVER_OBJECT driver_object,
+                                                                PCUNICODE_STRING registry_path,
+                                                                const Config& config) noexcept {
         WDF_DRIVER_CONFIG native_config{};
         WDF_DRIVER_CONFIG_INIT(&native_config, config.device_add);
         native_config.EvtDriverUnload = config.unload;
@@ -25,8 +27,8 @@ public:
         const auto status{WdfDriverCreate(driver_object, registry_path, WDF_NO_OBJECT_ATTRIBUTES,
                                           &native_config, &native)};
         if (!NT_SUCCESS(status))
-            return Result<Driver>::failure(status, Driver{nullptr});
-        return Result<Driver>::success(Driver{native});
+            return std::unexpected{status};
+        return Driver{native};
     }
 
     /// Wrap a borrowed native driver handle received from KMDF.

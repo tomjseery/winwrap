@@ -10,7 +10,7 @@ add_library(winwrap::winwrap ALIAS winwrap)
 add_library(winwrap_kernel INTERFACE)
 set_target_properties(winwrap_kernel PROPERTIES EXPORT_NAME kernel)
 add_library(winwrap::kernel ALIAS winwrap_kernel)
-target_compile_features(winwrap_kernel INTERFACE cxx_std_20)
+target_compile_features(winwrap_kernel INTERFACE cxx_std_23)
 target_include_directories(winwrap_kernel
     INTERFACE
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>

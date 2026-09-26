@@ -182,7 +182,7 @@ live in a namespace named for their use (`winwrap::icon`, `winwrap::message`, â€
 ## Execution modes
 
 User mode is the default: `winwrap::` and `winwrap/` hold C++23/WIL user-mode APIs.
-Kernel-only code lives in `winwrap::kernel` and `winwrap/kernel/` (C++20, WDK headers).
+Kernel-only code lives in `winwrap::kernel` and `winwrap/kernel/` (C++23, WDK headers).
 Values that both a driver and its clients use live in `winwrap::protocol` and
 `winwrap/protocol/`, and compile in either mode. User-mode headers fail to compile in
 kernel mode, and kernel headers fail to compile in user mode.
@@ -235,7 +235,11 @@ clang-cl is an intended target, but a supported-version CI matrix has not yet be
 established. MinGW is not supported.
 
 The `winwrap/kernel/driver/` headers require the WDK and KMDF. They avoid the user-mode
-static library and WIL, use `NTSTATUS`, and are C++20-compatible for restricted kernel builds.
+static library and WIL, and report failures as `std::expected<T, NTSTATUS>`. The driver
+compiles as C++23 with the MSVC STL and UCRT include directories ahead of the WDK
+include path, whose `km\crt\yvals.h` otherwise shadows the STL's. Only header-only
+standard library code is usable: never call `expected::value()`, which throws and leaves
+unresolved runtime symbols at link time. Use `*`, `->`, `has_value()` and `error()`.
 
 ## Build
 

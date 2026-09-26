@@ -1,7 +1,8 @@
 #pragma once
 
+#include <expected>
+
 #include "winwrap/kernel/driver/io_queue.hpp"
-#include "winwrap/kernel/driver/result.hpp"
 #include "winwrap/protocol/device/interface.hpp"
 
 namespace winwrap::kernel::driver {
@@ -24,8 +25,8 @@ public:
     };
 
     /// Configure and create a KMDF device. KMDF consumes device_init on success.
-    [[nodiscard]] static Result<Device> create(PWDFDEVICE_INIT& device_init,
-                                               const Config& config) noexcept {
+    [[nodiscard]] static std::expected<Device, NTSTATUS> create(PWDFDEVICE_INIT& device_init,
+                                                                const Config& config) noexcept {
         WdfDeviceInitSetDeviceType(device_init, config.type);
         WdfDeviceInitSetCharacteristics(device_init, config.characteristics,
                                         config.add_characteristics ? TRUE : FALSE);
@@ -35,7 +36,7 @@ public:
             const auto status{
                 WdfDeviceInitAssignSDDLString(device_init, config.security_descriptor)};
             if (!NT_SUCCESS(status))
-                return Result<Device>::failure(status, Device{nullptr});
+                return std::unexpected{status};
         }
 
         if (config.d0_entry != nullptr || config.d0_exit != nullptr) {
@@ -55,15 +56,16 @@ public:
         WDFDEVICE native{};
         const auto status{WdfDeviceCreate(&device_init, &attributes, &native)};
         if (!NT_SUCCESS(status))
-            return Result<Device>::failure(status, Device{nullptr});
-        return Result<Device>::success(Device{native});
+            return std::unexpected{status};
+        return Device{native};
     }
 
     /// Wrap a borrowed native device handle received from KMDF.
     constexpr explicit Device(WDFDEVICE native) noexcept : native_{native} {}
 
     /// Create an I/O queue associated with this device.
-    [[nodiscard]] Result<IoQueue> create_queue(const IoQueue::Config& config) const noexcept {
+    [[nodiscard]] std::expected<IoQueue, NTSTATUS> create_queue(
+        const IoQueue::Config& config) const noexcept {
         WDF_IO_QUEUE_CONFIG native_config{};
         if (config.role == IoQueue::Role::default_queue)
             WDF_IO_QUEUE_CONFIG_INIT_DEFAULT_QUEUE(&native_config,
@@ -82,8 +84,8 @@ public:
         const auto status{
             WdfIoQueueCreate(native_, &native_config, WDF_NO_OBJECT_ATTRIBUTES, &native)};
         if (!NT_SUCCESS(status))
-            return Result<IoQueue>::failure(status, IoQueue{nullptr});
-        return Result<IoQueue>::success(IoQueue{native});
+            return std::unexpected{status};
+        return IoQueue{native};
     }
 
     /// Route a request type to a queue associated with this device.
