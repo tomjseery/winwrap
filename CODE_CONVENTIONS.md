@@ -44,10 +44,15 @@ A raw handle returned by an accessor is borrowed; the wrapper retains ownership.
 Follow `cpp:domain-design` for the generic type-owned factory name and return shape.
 The verb still tells the reader which operation the factory performs here.
 
-- **`create`** — Winwrap resource factories acquire OS resources and return
-  `std::expected<T, std::error_code>`; `device::ControlCode::create(Config)`
-  builds an infallible value and returns it directly. A private worker that
-  performs resource acquisition uses a specific `create_<thing>` name.
+- **`create`** — a type-owned factory. Winwrap resource factories normally return
+  `std::expected<T, std::error_code>`. When the OS must retain the wrapper's address,
+  as for `Window<T>` and `Control<T>`, their inherited static factory returns
+  `CreationResult<T>`. It combines the expected creation error with the sole owner
+  of a permanently addressed `T`, allowing a checked result to use
+  `result->operation()` without exposing `unique_ptr` extraction.
+  `device::ControlCode::create(Config)` builds an infallible value and returns it
+  directly. A private worker that acquires a resource uses a specific
+  `create_<thing>` name.
 - **`open`** — acquire a handle to an existing named resource, as `Device::open` does.
 - **`load`** — acquire an owned copy of an existing image resource, as `icon::load`
   does. When the result is a WIL owner such as `wil::unique_hicon`, no Winwrap type
@@ -59,9 +64,19 @@ The verb still tells the reader which operation the factory performs here.
 
 ```cpp
 static std::expected<NotifyIcon, std::error_code> create(const NotifyIconConfig&); // acquires + can fail
+static CreationResult<T>                         create(const WindowConfig&); // creates pinned object
 std::expected<void, std::error_code>              create_control(const ControlConfig&); // private worker
-NOTIFYICONDATAW                                   make_data() const noexcept;        // builds a value, can't fail
+NOTIFYICONDATAW                                   make_data() const noexcept; // builds a value, can't fail
 ```
+
+`CreationResult<T>` is the narrow exception to the standard-result boundary. Plain
+`std::expected<std::unique_ptr<T>, E>` exposes two pointer-like layers and cannot
+forward `operator->` through both. The adapter still uses `std::expected` and
+`std::unique_ptr` internally, adds no allocation, and exists only for these callback-
+bound wrappers. Moving the result moves the owner, never `T`; `T` remains non-copyable
+and non-movable because Windows stores its address in `GWLP_USERDATA` or subclass data.
+Default construction supplies an empty member slot for controls created during their
+owner's `on_created()` hook.
 
 Public/private is only a *correlation*: resource factories are usually the public
 entry points and value-builders are usually private helpers. (`create_window` /
@@ -181,11 +196,11 @@ case in the mixin's own `handle_message` (the HWND is live from `WM_NCCREATE`) �
 ```cpp
 // Don't: "accepts drops" lives in two places that must agree, or it breaks silently.
 class App : public Window<App, FileDroppable> { void on_files_dropped(...); };
-App::create({.ex_style = WS_EX_ACCEPTFILES});   // compose here, flag there -> can desync
+auto app = App::create({.ex_style = WS_EX_ACCEPTFILES});  // compose here, flag there -> can desync
 
 // Do: composing the mixin is the whole declaration; the mixin self-registers.
 class App : public Window<App, FileDroppable> { void on_files_dropped(...); };
-App::create({});                                 // one source of truth
+auto app = App::create({});  // one source of truth
 ```
 
 **Why:**

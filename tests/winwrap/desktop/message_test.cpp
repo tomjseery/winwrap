@@ -11,7 +11,7 @@ namespace {
 constexpr UINT app_message{WM_APP + 7};
 
 struct MessageWindow : winwrap::Window<MessageWindow> {
-    static constexpr const wchar_t* window_class_name = L"WinwrapMessagingTest";
+    static constexpr const wchar_t* class_name = L"WinwrapMessagingTest";
     std::vector<WPARAM> received;
 
     LRESULT route_message(UINT msg, WPARAM wparam, LPARAM lparam) {
@@ -31,21 +31,21 @@ TEST_CASE("message::send runs the window procedure and returns its result") {
     auto window = MessageWindow::create({.parent = HWND_MESSAGE});
     REQUIRE(window);
 
-    CHECK(winwrap::message::send((*window)->hwnd(), app_message, 21) == 42);
-    CHECK((*window)->send(app_message, 5) == 10);
-    CHECK((*window)->received == std::vector<WPARAM>{21, 5});
+    CHECK(winwrap::message::send(window->hwnd(), app_message, 21) == 42);
+    CHECK(window->send(app_message, 5) == 10);
+    CHECK(window->received == std::vector<WPARAM>{21, 5});
 }
 
 TEST_CASE("message::post queues the message for the message loop") {
     auto window = MessageWindow::create({.parent = HWND_MESSAGE});
     REQUIRE(window);
 
-    REQUIRE(winwrap::message::post((*window)->hwnd(), app_message, 1));
-    REQUIRE((*window)->post(app_message, 2, 1));  // lparam 1: quit after this one
-    CHECK((*window)->received.empty());           // nothing runs until the loop does
+    REQUIRE(winwrap::message::post(window->hwnd(), app_message, 1));
+    REQUIRE(window->post(app_message, 2, 1));  // lparam 1: quit after this one
+    CHECK(window->received.empty());           // nothing runs until the loop does
 
     CHECK(winwrap::message_loop::run() == 0);
-    CHECK((*window)->received == std::vector<WPARAM>{1, 2});
+    CHECK(window->received == std::vector<WPARAM>{1, 2});
 }
 
 TEST_CASE("message::post rejects a null window instead of posting to the thread") {
@@ -63,7 +63,7 @@ TEST_CASE("message::send to a destroyed window returns 0") {
     {
         auto window = MessageWindow::create({.parent = HWND_MESSAGE});
         REQUIRE(window);
-        gone = (*window)->hwnd();
+        gone = window->hwnd();
     }
 
     CHECK(winwrap::message::send(gone, app_message, 21) == 0);

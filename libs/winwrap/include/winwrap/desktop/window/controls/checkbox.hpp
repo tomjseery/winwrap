@@ -13,7 +13,7 @@ namespace winwrap {
 /// so `on_click` fires on every toggle; read the resulting state with `checked()`.
 class Checkbox final : public Control<Checkbox, notification::Click> {
 public:
-    static constexpr const wchar_t* control_class = L"BUTTON";
+    static constexpr const wchar_t* class_name = L"BUTTON";
     static constexpr DWORD default_style = BS_AUTOCHECKBOX | WS_TABSTOP;
 
     /// Clicks the box as the user would (`BM_CLICK`): Windows toggles it, and the parent's

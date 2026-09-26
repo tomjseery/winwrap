@@ -13,7 +13,7 @@ namespace winwrap {
 /// with `add_item`, and read or set the current pick with `selection()` / `set_selection()`.
 class ComboBox final : public Control<ComboBox, notification::SelectionChange> {
 public:
-    static constexpr const wchar_t* control_class = L"COMBOBOX";
+    static constexpr const wchar_t* class_name = L"COMBOBOX";
     static constexpr DWORD default_style = CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP;
 
     /// Appends an item to the end of the list (CB_ADDSTRING).

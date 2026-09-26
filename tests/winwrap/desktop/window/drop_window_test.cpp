@@ -10,7 +10,7 @@ namespace {
 // The extensibility acceptance demo: a window gains file drag-drop purely by
 // composing the mixin -- no raw drop API appears anywhere in this file.
 struct DropDemoWindow : winwrap::Window<DropDemoWindow, winwrap::FileDroppable> {
-    static constexpr const wchar_t* window_class_name = L"WinwrapDropDemoWindow";
+    static constexpr const wchar_t* class_name = L"WinwrapDropDemoWindow";
     std::vector<std::wstring> received;
     void on_files_dropped(const std::vector<std::wstring>& paths) { received = paths; }
 };
