@@ -1,4 +1,4 @@
-#include "winwrap/filesystem/attributes.hpp"
+#include "winwrap/user/filesystem/attributes.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 #include <filesystem>
@@ -20,11 +20,11 @@ std::filesystem::path make_temp_file() {
 TEST_CASE("filesystem::attributes reports a file's bits and surfaces the sentinel as an error") {
     const std::filesystem::path path = make_temp_file();
 
-    const auto attributes = winwrap::filesystem::attributes(path);
+    const auto attributes = winwrap::user::filesystem::attributes(path);
     REQUIRE(attributes.has_value());
     CHECK((*attributes & FILE_ATTRIBUTE_DIRECTORY) == 0);
 
-    const auto missing = winwrap::filesystem::attributes(std::filesystem::temp_directory_path() /
+    const auto missing = winwrap::user::filesystem::attributes(std::filesystem::temp_directory_path() /
                                                          "winwrap_no_such_file");
     REQUIRE_FALSE(missing.has_value());
     CHECK(missing.error().value() == ERROR_FILE_NOT_FOUND);
@@ -34,50 +34,50 @@ TEST_CASE("filesystem::attributes reports a file's bits and surfaces the sentine
 
 TEST_CASE("filesystem::add_attributes turns bits on without dropping the existing ones") {
     const std::filesystem::path path = make_temp_file();
-    REQUIRE(winwrap::filesystem::set_attributes(path, FILE_ATTRIBUTE_ARCHIVE).has_value());
+    REQUIRE(winwrap::user::filesystem::set_attributes(path, FILE_ATTRIBUTE_ARCHIVE).has_value());
 
-    REQUIRE(winwrap::filesystem::add_attributes(path, FILE_ATTRIBUTE_HIDDEN | FILE_ATTRIBUTE_SYSTEM)
+    REQUIRE(winwrap::user::filesystem::add_attributes(path, FILE_ATTRIBUTE_HIDDEN | FILE_ATTRIBUTE_SYSTEM)
                 .has_value());
 
-    const auto attributes = winwrap::filesystem::attributes(path);
+    const auto attributes = winwrap::user::filesystem::attributes(path);
     REQUIRE(attributes.has_value());
     CHECK((*attributes & FILE_ATTRIBUTE_HIDDEN) != 0);
     CHECK((*attributes & FILE_ATTRIBUTE_SYSTEM) != 0);
     CHECK((*attributes & FILE_ATTRIBUTE_ARCHIVE) != 0);
 
-    REQUIRE(winwrap::filesystem::set_attributes(path, FILE_ATTRIBUTE_NORMAL).has_value());
+    REQUIRE(winwrap::user::filesystem::set_attributes(path, FILE_ATTRIBUTE_NORMAL).has_value());
     std::filesystem::remove(path);
 }
 
 TEST_CASE("filesystem::remove_attributes turns bits off and leaves the rest alone") {
     const std::filesystem::path path = make_temp_file();
-    REQUIRE(winwrap::filesystem::set_attributes(
+    REQUIRE(winwrap::user::filesystem::set_attributes(
                 path, FILE_ATTRIBUTE_HIDDEN | FILE_ATTRIBUTE_SYSTEM | FILE_ATTRIBUTE_READONLY)
                 .has_value());
 
     REQUIRE(
-        winwrap::filesystem::remove_attributes(path, FILE_ATTRIBUTE_HIDDEN | FILE_ATTRIBUTE_SYSTEM)
+        winwrap::user::filesystem::remove_attributes(path, FILE_ATTRIBUTE_HIDDEN | FILE_ATTRIBUTE_SYSTEM)
             .has_value());
 
-    const auto attributes = winwrap::filesystem::attributes(path);
+    const auto attributes = winwrap::user::filesystem::attributes(path);
     REQUIRE(attributes.has_value());
     CHECK((*attributes & FILE_ATTRIBUTE_HIDDEN) == 0);
     CHECK((*attributes & FILE_ATTRIBUTE_SYSTEM) == 0);
     CHECK((*attributes & FILE_ATTRIBUTE_READONLY) != 0);
 
-    REQUIRE(winwrap::filesystem::set_attributes(path, FILE_ATTRIBUTE_NORMAL).has_value());
+    REQUIRE(winwrap::user::filesystem::set_attributes(path, FILE_ATTRIBUTE_NORMAL).has_value());
     std::filesystem::remove(path);
 }
 
 TEST_CASE("filesystem::remove_attributes clearing every bit leaves FILE_ATTRIBUTE_NORMAL") {
     const std::filesystem::path path = make_temp_file();
-    REQUIRE(winwrap::filesystem::set_attributes(path, FILE_ATTRIBUTE_HIDDEN).has_value());
+    REQUIRE(winwrap::user::filesystem::set_attributes(path, FILE_ATTRIBUTE_HIDDEN).has_value());
 
     REQUIRE(
-        winwrap::filesystem::remove_attributes(path, FILE_ATTRIBUTE_HIDDEN | FILE_ATTRIBUTE_ARCHIVE)
+        winwrap::user::filesystem::remove_attributes(path, FILE_ATTRIBUTE_HIDDEN | FILE_ATTRIBUTE_ARCHIVE)
             .has_value());
 
-    const auto attributes = winwrap::filesystem::attributes(path);
+    const auto attributes = winwrap::user::filesystem::attributes(path);
     REQUIRE(attributes.has_value());
     CHECK(*attributes == FILE_ATTRIBUTE_NORMAL);
 

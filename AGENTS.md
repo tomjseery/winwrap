@@ -13,13 +13,13 @@ Winwrap's public-API conventions are project-specific:
 
 ## Layout
 
-`libs/winwrap/include/winwrap/` — public headers: `desktop/` holds `window/`
-(`Window`, `Control`, controls, mixins, and command notifications), the
-thread's `message_loop.hpp`, `message.hpp`, `menu.hpp`, `drop.hpp`, `icon.hpp`, `notify_icon.hpp`,
-and `shell/` (Shell change notifications). `device.hpp`, `device/`, `driver/`, `module.hpp`,
-`filesystem/attributes.hpp`, `error.hpp`, and `win.hpp` remain at their
-respective non-desktop boundaries. `libs/winwrap/src/` and `tests/winwrap/`
-mirror these owners; tests include a per-header user-mode compile check. Kernel headers are
+`libs/winwrap/include/winwrap/user/` holds C++23/WIL user APIs, including
+desktop, file-system, module, and synchronous device I/O wrappers.
+`winwrap/kernel/` holds C++20 WDK-only KMDF adapters and debug printing;
+`winwrap/shared/` holds cross-mode device values. Their public namespaces are
+`winwrap::user`, `winwrap::kernel`, and `winwrap::shared`.
+`libs/winwrap/src/` and `tests/winwrap/` contain the user-mode implementation
+and tests, including a per-header user-mode compile check. Kernel headers are
 compiled through a real WDK consumer. Build user mode from an
 *x64 Native Tools* prompt: `cmake --preset dev`,
 `cmake --build --preset dev`, `ctest --preset dev`.

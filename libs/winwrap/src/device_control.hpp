@@ -1,8 +1,8 @@
 #pragma once
 
-#include "winwrap/device.hpp"
+#include "winwrap/user/device.hpp"
 
-namespace winwrap::detail {
+namespace winwrap::user::detail {
 
 using DeviceControl = decltype(&::DeviceIoControl);
 
@@ -10,4 +10,4 @@ using DeviceControl = decltype(&::DeviceIoControl);
     HANDLE handle, DWORD code, std::span<const std::byte> input, std::span<std::byte> output,
     DeviceControl device_control);
 
-}  // namespace winwrap::detail
+}  // namespace winwrap::user::detail

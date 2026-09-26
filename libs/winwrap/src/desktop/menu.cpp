@@ -1,9 +1,9 @@
-#include "winwrap/desktop/menu.hpp"
+#include "winwrap/user/desktop/menu.hpp"
 
-#include "winwrap/desktop/message.hpp"
-#include "winwrap/error.hpp"
+#include "winwrap/user/desktop/message.hpp"
+#include "winwrap/user/error.hpp"
 
-namespace winwrap {
+namespace winwrap::user {
 
 std::expected<Menu, std::error_code> Menu::create() {
     return error::nonzero_or_last(CreatePopupMenu()).transform([](HMENU h) {
@@ -43,4 +43,4 @@ void Menu::show(HWND owner) {
     static_cast<void>(message::post(owner, WM_COMMAND, picked));
 }
 
-}  // namespace winwrap
+}  // namespace winwrap::user
