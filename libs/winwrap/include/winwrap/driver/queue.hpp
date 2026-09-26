@@ -11,7 +11,6 @@ public:
     enum class Dispatch {
         sequential,
         parallel,
-        manual,
     };
 
     /// Parameters for creating a device's default I/O queue.

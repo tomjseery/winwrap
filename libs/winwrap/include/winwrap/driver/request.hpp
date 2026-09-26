@@ -39,6 +39,9 @@ public:
         if (!NT_SUCCESS(status))
             return Result<RequestBuffer<const T>>::failure(status,
                                                            RequestBuffer<const T>{nullptr, 0});
+        if (reinterpret_cast<ULONG_PTR>(data) % alignof(T) != 0)
+            return Result<RequestBuffer<const T>>::failure(STATUS_DATATYPE_MISALIGNMENT,
+                                                           RequestBuffer<const T>{nullptr, 0});
         return Result<RequestBuffer<const T>>::success(
             RequestBuffer<const T>{static_cast<const T*>(data), size});
     }
@@ -51,6 +54,9 @@ public:
         const auto status{WdfRequestRetrieveOutputBuffer(native_, sizeof(T), &data, &size)};
         if (!NT_SUCCESS(status))
             return Result<RequestBuffer<T>>::failure(status, RequestBuffer<T>{nullptr, 0});
+        if (reinterpret_cast<ULONG_PTR>(data) % alignof(T) != 0)
+            return Result<RequestBuffer<T>>::failure(STATUS_DATATYPE_MISALIGNMENT,
+                                                     RequestBuffer<T>{nullptr, 0});
         return Result<RequestBuffer<T>>::success(RequestBuffer<T>{static_cast<T*>(data), size});
     }
 
