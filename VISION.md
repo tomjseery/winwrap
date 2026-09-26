@@ -6,15 +6,17 @@ What winwrap is, what it deliberately isn't, and why it exists. The user-facing
 
 ## The one-liner
 
-**Modern C++ (C++23, MSVC) over *native* Win32 — a thin wrapper, not a
-replacement runtime.** winwrap still calls `CreateWindowExW`, `Shell_NotifyIcon`,
-`TrackPopupMenuEx` directly. It serves developers who have already chosen classic
-Win32, leaving application architecture outside the library.
+**Modern C++ over native Windows APIs — a thin wrapper, not a replacement runtime.**
+Winwrap still calls `CreateWindowExW`, `Shell_NotifyIcon`, `DeviceIoControl`, and WDF methods
+directly inside the library. It serves developers who have already chosen classic Win32 or
+KMDF, leaving application and driver architecture outside the library.
 
 ## Design pillars
 
 1. **A broad native Windows façade, not a replacement runtime.** Winwrap aims to
-   abstract useful classic Win32 desktop and user-mode device operations into coherent C++ operations.
+   abstract useful classic Win32 desktop and device operations into coherent C++ operations.
+   Device support spans the user-mode connection and the matching KMDF driver objects while
+   keeping their runtimes, ownership rules, and build targets separate.
    "Thin" means preserving native semantics and avoiding an application framework,
    not limiting the library to a handful of helpers. The wrapper-first API and
    escape-hatch policy is owned by [CODE_CONVENTIONS.md](CODE_CONVENTIONS.md#4-wrapper-first-apis--abstract-the-operation-preserve-the-escape-hatch).
@@ -44,8 +46,9 @@ Win32, leaving application architecture outside the library.
    an HWND; tray events arrive as ordinary window messages. It must remain usable
    with an existing raw-Win32 window, without adopting the Winwrap window base.
    Tray support is a useful initial use case, not a uniqueness claim.
-7. **Unicode, MSVC.** UTF-16 at the Win32 boundary, the `…W` APIs, `/utf-8` for
-   narrow literals. Classic user-mode Win32 — not WinRT/UWP or kernel-mode APIs.
+7. **Unicode, MSVC and WDK.** UTF-16 at the Win32 boundary, the `…W` APIs, `/utf-8`
+   for narrow literals. User-mode code targets C++23; kernel headers remain compatible with
+   the consuming WDK driver's restricted runtime. WinRT/UWP remains outside the library.
 
 ## What winwrap is *not* (non-goals)
 

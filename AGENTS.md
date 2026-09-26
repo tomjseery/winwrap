@@ -1,9 +1,10 @@
 # winwrap
 
-A C++23 static library of **thin wrappers over native Win32**: top-level windows,
-native child controls, menus, a system-tray icon, and synchronous user-mode
-device I/O. Native-handle interoperability is
-part of the intended contract. Not a framework, not cross-platform, not WinRT.
+A C++23 static library of **thin wrappers over native Windows APIs**: top-level windows,
+native child controls, menus, a system-tray icon, synchronous user-mode device I/O, and a
+kernel-safe C++20 header surface for the corresponding KMDF driver device path. Native-handle
+interoperability is part of the intended contract. Not a framework, not cross-platform,
+not WinRT.
 Experimental v0.1; release readiness and implementation gaps are tracked below.
 
 Winwrap's public-API conventions are project-specific:
@@ -15,10 +16,11 @@ Winwrap's public-API conventions are project-specific:
 `libs/winwrap/include/winwrap/` — public headers: `desktop/` holds `window/`
 (`Window`, `Control`, controls, mixins, and command notifications), the
 thread's `message_loop.hpp`, `message.hpp`, `menu.hpp`, `drop.hpp`, `icon.hpp`, `notify_icon.hpp`,
-and `shell/` (Shell change notifications). `device.hpp`, `module.hpp`,
+and `shell/` (Shell change notifications). `device.hpp`, `device/`, `driver/`, `module.hpp`,
 `filesystem/attributes.hpp`, `error.hpp`, and `win.hpp` remain at their
 respective non-desktop boundaries. `libs/winwrap/src/` and `tests/winwrap/`
-mirror these owners; tests include a per-header compile check. Build from an
+mirror these owners; tests include a per-header user-mode compile check. Kernel headers are
+compiled through a real WDK consumer. Build user mode from an
 *x64 Native Tools* prompt: `cmake --preset dev`,
 `cmake --build --preset dev`, `ctest --preset dev`.
 

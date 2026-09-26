@@ -50,6 +50,9 @@ get_target_property(winwrap_source_dir winwrap SOURCE_DIR)
 set(winwrap_include_dir ${winwrap_source_dir}/include)
 file(GLOB_RECURSE winwrap_public_headers CONFIGURE_DEPENDS
     RELATIVE ${winwrap_include_dir} ${winwrap_include_dir}/winwrap/*.hpp)
+# Kernel headers are compiled by a real WDK consumer; this target intentionally has only
+# user-mode SDK include paths and libraries.
+list(FILTER winwrap_public_headers EXCLUDE REGEX "^winwrap/driver/")
 set(winwrap_header_units)
 foreach(header IN LISTS winwrap_public_headers)
     string(MAKE_C_IDENTIFIER ${header} unit)

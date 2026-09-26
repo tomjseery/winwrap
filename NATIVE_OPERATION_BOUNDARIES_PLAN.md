@@ -69,7 +69,7 @@ that mechanically aliases every Win32 function.
 - `route_message` is shadowable for application-specific messages and delegates unclaimed
   messages through the final type's `default_proc`.
 - `Device::paths`, `Device::open`, and `Device::control` already form a device boundary; the
-  separately discussed `DeviceInterface` refinement should be evaluated against the real
+  separately discussed `device::Interface` refinement should be evaluated against the real
   Sandbox HWID flow rather than mixed casually into an HWND-operation slice.
 - `CODE_CONVENTIONS.md` already says supported resource operations are wrapper-first while raw
   handles remain the escape hatch. This plan makes that principle systematic across ambiguous

@@ -1,6 +1,6 @@
 # winwrap
 
-Winwrap is a C++23 library for developers who have already chosen **classic Win32**.
+Winwrap is a modern C++ library for developers who have already chosen native Windows APIs.
 It abstracts native window operations, controls, menus and tray protocols into
 an ergonomic C++ API, with ownership helpers and composable message handling.
 Borrowed native handles remain available for unsupported operations and integration.
@@ -169,7 +169,10 @@ checked `icon::load` result to `set_icon`.
 | `winwrap/desktop/shell/change_notification.hpp` | `shell::notify_file_created` / `_deleted` / `_renamed` / `_changed`, the folder equivalents and `notify_associations_changed` — tell Explorer what changed |
 | `winwrap/filesystem/attributes.hpp` | `filesystem::attributes` and add/remove/set — file-attribute queries and updates |
 | `winwrap/module.hpp` | `module::current` / `loaded` / `path` and the borrowed `Module` view |
-| `winwrap/device.hpp` | `Device` — present-interface paths, synchronous open and control |
+| `winwrap/device/interface.hpp` | `device::Interface` — shared client/driver interface-class value |
+| `winwrap/device/control_code.hpp` | `device::ControlCode` — shared client/driver IOCTL value |
+| `winwrap/device.hpp` | `Device` — user-mode present-interface paths, synchronous open and control |
+| `winwrap/driver/*.hpp` | `driver::Driver`, `Device`, `Queue`, and `Request` — kernel-safe borrowed KMDF adapters |
 | `winwrap/error.hpp` | `error::last()`, `error::win32(code)`, `error::nonzero_or_last(result)`, `error::result_or_last(call)` — Win32 failures as `std::error_code` |
 
 Types (`Window`, `Module`, `NotifyIcon`, …) live in `winwrap::`; free-function families
@@ -177,15 +180,23 @@ live in a namespace named for their use (`winwrap::icon`, `winwrap::message`, �
 
 ## Device I/O
 
+Device support has two sides. `winwrap::Device` owns a user-mode file handle. The
+`winwrap::driver` types borrow KMDF framework handles because KMDF owns their lifetime. Shared
+`device::Interface` and `device::ControlCode` values keep the published GUID and complete IOCTL
+consistent across both binaries.
+
 `Device::paths(interface_id)` snapshots all currently present interface paths;
 an empty vector means none are present. `Device::open({.path = ..., .access = ...,
 .share_mode = ...})` owns the `CreateFileW` handle. `control(code, input, output)`
 is synchronous and reports the number of output bytes actually written; callers
 must interpret and validate those bytes for their own protocol. A failed request
 returns `Device::ControlError`, which preserves the native error and any partial
-byte count reported by Windows, bounded by the output buffer. `handle()` borrows the
-native handle without transferring ownership. There is no overlapped-I/O API;
-asynchronous requests need separate buffer and cancellation lifetimes.
+byte count in two forms: `bytes_returned` is bounded by the output buffer, while
+`native_bytes_returned` is the exact diagnostic count from Windows and is absent only
+when WinWrap rejects the request before making the native call. Input and output pointers
+are preserved independently from their lengths, including storage-backed zero-length
+spans. `handle()` borrows the native handle without transferring ownership. There is no
+overlapped-I/O API; asynchronous requests need separate buffer and cancellation lifetimes.
 
 Configuration Manager returns `CONFIGRET`, not a `GetLastError` code. WinWrap
 uses `CM_MapCrToWin32Err` and `std::system_category()` for those failures.
@@ -195,10 +206,13 @@ If the interface list changes through three size/list attempts, `paths` returns
 `ERROR_RETRY`. A malformed list returns `ERROR_INVALID_DATA`.
 ## Requirements
 
-Windows and a sufficiently recent MSVC C++23 toolchain: both `std::expected` and
+User mode requires Windows and a sufficiently recent MSVC C++23 toolchain: both `std::expected` and
 explicit object parameters are required. The assessment verified MSVC 19.50 x64.
 clang-cl is an intended target, but a supported-version CI matrix has not yet been
 established. MinGW is not supported.
+
+The optional `winwrap::driver` headers require the WDK and KMDF. They avoid the user-mode
+static library and WIL, use `NTSTATUS`, and are C++20-compatible for restricted kernel builds.
 
 ## Build
 
