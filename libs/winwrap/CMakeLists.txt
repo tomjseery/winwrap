@@ -8,10 +8,12 @@ add_library(winwrap STATIC
 add_library(winwrap::winwrap ALIAS winwrap)
 
 add_library(winwrap_user INTERFACE)
+set_target_properties(winwrap_user PROPERTIES EXPORT_NAME user)
 add_library(winwrap::user ALIAS winwrap_user)
 target_link_libraries(winwrap_user INTERFACE winwrap)
 
 add_library(winwrap_kernel INTERFACE)
+set_target_properties(winwrap_kernel PROPERTIES EXPORT_NAME kernel)
 add_library(winwrap::kernel ALIAS winwrap_kernel)
 target_compile_features(winwrap_kernel INTERFACE cxx_std_20)
 target_include_directories(winwrap_kernel
