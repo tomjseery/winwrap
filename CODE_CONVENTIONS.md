@@ -250,7 +250,7 @@ dumping ground for mode-neutral helpers. The owning user-mode
 connection is `winwrap::Device`. Borrowed KMDF objects live in
 `winwrap::kernel::driver::{Driver, Device, IoQueue, IoRequest}`, while kernel
 diagnostics use `winwrap::kernel::debug_print`. Kernel headers depend only on
-WDK, protocol and header-only standard library headers; user headers and the
+WDK, protocol and runtime-free standard library headers; user headers and the
 user static library are not kernel dependencies. User headers include
 `winwrap/detail/user_mode.hpp`, which rejects kernel-mode compilation.
 
