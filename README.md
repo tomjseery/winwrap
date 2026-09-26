@@ -173,7 +173,7 @@ checked `icon::load` result to `set_icon`.
 | `winwrap/protocol/device/control_code.hpp` | `protocol::device::ControlCode` — client/driver IOCTL value |
 | `winwrap/device.hpp` | `Device` — user-mode present-interface paths, synchronous open and control |
 | `winwrap/kernel/debug_print.hpp` | `kernel::debug_print` — DbgPrintEx diagnostics with component and level |
-| `winwrap/kernel/driver/*.hpp` | `driver::Driver`, `Device`, `Queue`, and `Request` — kernel-safe borrowed KMDF adapters |
+| `winwrap/kernel/driver/*.hpp` | `driver::Driver`, `Device`, `IoQueue`, and `IoRequest` — kernel-safe borrowed KMDF adapters |
 | `winwrap/error.hpp` | `error::last()`, `error::win32(code)`, `error::nonzero_or_last(result)`, `error::result_or_last(call)` — Win32 failures as `std::error_code` |
 
 Types (`Window`, `Module`, `NotifyIcon`, …) live in `winwrap`; free-function families

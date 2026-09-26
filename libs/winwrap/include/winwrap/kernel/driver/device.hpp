@@ -1,6 +1,6 @@
 #pragma once
 
-#include "winwrap/kernel/driver/queue.hpp"
+#include "winwrap/kernel/driver/io_queue.hpp"
 #include "winwrap/kernel/driver/result.hpp"
 #include "winwrap/protocol/device/interface.hpp"
 
@@ -63,9 +63,9 @@ public:
     constexpr explicit Device(WDFDEVICE native) noexcept : native_{native} {}
 
     /// Create an I/O queue associated with this device.
-    [[nodiscard]] Result<Queue> create_queue(const Queue::Config& config) const noexcept {
+    [[nodiscard]] Result<IoQueue> create_queue(const IoQueue::Config& config) const noexcept {
         WDF_IO_QUEUE_CONFIG native_config{};
-        if (config.role == Queue::Role::default_queue)
+        if (config.role == IoQueue::Role::default_queue)
             WDF_IO_QUEUE_CONFIG_INIT_DEFAULT_QUEUE(&native_config,
                                                    native_dispatch(config.dispatch));
         else
@@ -82,14 +82,14 @@ public:
         const auto status{
             WdfIoQueueCreate(native_, &native_config, WDF_NO_OBJECT_ATTRIBUTES, &native)};
         if (!NT_SUCCESS(status))
-            return Result<Queue>::failure(status, Queue{nullptr});
-        return Result<Queue>::success(Queue{native});
+            return Result<IoQueue>::failure(status, IoQueue{nullptr});
+        return Result<IoQueue>::success(IoQueue{native});
     }
 
     /// Route a request type to a queue associated with this device.
     /// @pre `queue` was created for this device.
-    [[nodiscard]] NTSTATUS route_requests(const Queue& queue,
-                                          Queue::RequestType request_type) const noexcept {
+    [[nodiscard]] NTSTATUS route_requests(const IoQueue& queue,
+                                          IoQueue::RequestType request_type) const noexcept {
         return WdfDeviceConfigureRequestDispatching(native_, queue.native(),
                                                     native_request_type(request_type));
     }
@@ -105,30 +105,30 @@ public:
 
 private:
     [[nodiscard]] static constexpr WDF_IO_QUEUE_DISPATCH_TYPE native_dispatch(
-        Queue::Dispatch dispatch) noexcept {
+        IoQueue::Dispatch dispatch) noexcept {
         switch (dispatch) {
-            case Queue::Dispatch::sequential:
+            case IoQueue::Dispatch::sequential:
                 return WdfIoQueueDispatchSequential;
-            case Queue::Dispatch::parallel:
+            case IoQueue::Dispatch::parallel:
                 return WdfIoQueueDispatchParallel;
-            case Queue::Dispatch::manual:
+            case IoQueue::Dispatch::manual:
                 return WdfIoQueueDispatchManual;
         }
         return WdfIoQueueDispatchSequential;
     }
 
     [[nodiscard]] static constexpr WDF_REQUEST_TYPE native_request_type(
-        Queue::RequestType request_type) noexcept {
+        IoQueue::RequestType request_type) noexcept {
         switch (request_type) {
-            case Queue::RequestType::create:
+            case IoQueue::RequestType::create:
                 return WdfRequestTypeCreate;
-            case Queue::RequestType::read:
+            case IoQueue::RequestType::read:
                 return WdfRequestTypeRead;
-            case Queue::RequestType::write:
+            case IoQueue::RequestType::write:
                 return WdfRequestTypeWrite;
-            case Queue::RequestType::device_control:
+            case IoQueue::RequestType::device_control:
                 return WdfRequestTypeDeviceControl;
-            case Queue::RequestType::internal_device_control:
+            case IoQueue::RequestType::internal_device_control:
                 return WdfRequestTypeDeviceControlInternal;
         }
         return WdfRequestTypeDeviceControl;
