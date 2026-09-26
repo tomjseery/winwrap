@@ -57,7 +57,7 @@ The verb still tells the reader which operation the factory performs here.
 - **`load`** — acquire an owned copy of an existing image resource, as `icon::load`
   does. When the result is a WIL owner such as `wil::unique_hicon`, no Winwrap type
   exists to host the factory, so it is a free function in the resource's family
-  namespace (`winwrap::icon`, header `desktop/icon.hpp`) returning `std::expected`.
+  namespace (`winwrap::user::icon`, header `user/desktop/icon.hpp`) returning `std::expected`.
 - **`make_*`** — a helper that **builds a plain value and cannot fail**; it returns
   the value by value, never an `expected`. This is the standard-library idiom
   (`std::make_pair`, `make_tuple`, `make_optional`).
@@ -169,7 +169,7 @@ does not transfer ownership; the choice of getter versus implicit conversion is
 separate from whether an operation should have an ergonomic member function.
 
 The same rule applies to supported WDF device operations. A driver keeps the WDF callback
-ABI, wraps callback handles immediately, and calls `winwrap::driver` operations for device
+ABI, wraps callback handles immediately, and calls `winwrap::kernel::driver` operations for device
 creation, queue configuration, interface publication, request buffers, and completion.
 KMDF continues to own its framework objects; the wrapper types are borrowed adapters.
 
@@ -225,48 +225,35 @@ is about state that is *implied by composing the mixin*, not general per-window 
 `.ex_style = WS_EX_ACCEPTFILES`. (Superseded the caller-supplied flag; see ROADMAP,
 2026-07-13.)
 
-## 6. Namespaces — types in `winwrap`, free-function families in their own
+## 6. Execution-mode namespaces and API families
 
-User-mode types live directly in `winwrap::` (`Window`, `Module`, `Device`, `NotifyIcon`,
-`SystemIcon`):
-a type already groups its own operations as members. **Free functions** live in a nested
-namespace that names their subsystem, for how they are used. Within it, each header
-names one protocol or operation family, so a namespace can span a folder of headers
-(`winwrap::shell` covers every header in `desktop/shell/`):
+The first public namespace and header component identifies the execution mode:
 
-| Namespace | Header | Examples |
-|---|---|---|
-| `winwrap::error` | `error.hpp` | `error::last()`, `error::win32(code)`, `error::nonzero_or_last(result)`, `error::result_or_last(call)` |
-| `winwrap::message` | `desktop/message.hpp` | `message::send(hwnd, msg)`, `message::post(hwnd, msg)` |
-| `winwrap::message_loop` | `desktop/message_loop.hpp` | `message_loop::run()`, `message_loop::quit()` |
-| `winwrap::module` | `module.hpp` | `module::current()`, `module::loaded(name)`, `module::path(module)` |
-| `winwrap::icon` | `desktop/icon.hpp` | `icon::load(...)` |
-| `winwrap::window` | `desktop/window/native_window.hpp` | `window::create(config)`; later `window::find`, `window::foreground` in their own protocol headers |
-| `winwrap::filesystem` | `filesystem/*.hpp` | `filesystem::attributes(path)` (`attributes.hpp`) |
-| `winwrap::shell` | `desktop/shell/*.hpp` | `shell::notify_file_created(path)`, `shell::notify_folder_changed(folder)` (`change_notification.hpp`) |
+| Mode | Public namespace | Header root | Build target |
+|---|---|---|---|
+| User mode | `winwrap::user` | `winwrap/user/` | `winwrap::user` |
+| Kernel mode | `winwrap::kernel` | `winwrap/kernel/` | `winwrap::kernel` |
+| Shared values | `winwrap::shared` | `winwrap/shared/` | Header-only dependency of either mode |
 
-- **The namespace carries the noun**, so function names do not repeat it:
-  `module::path(h)`, not `module_path(h)`. Typing `winwrap::module::` lists the family.
-- **A member and a free function never share a name in one scope.** Member names hide
-  namespace functions (a private `Window::create_window` once hid a free `create_window`);
-  family namespaces remove that class of collision.
-- **Keep lowercase snake_case.** Many Win32 names (`CreateWindow`, `LoadIcon`,
-  `SendMessage`) are macros, which ignore namespaces; snake_case names never collide with
-  them.
-- **Avoid a local variable or parameter named like a family** (`error`, `icon`,
-  `message`, `window`) in code that calls that family: the local hides the namespace.
-  Inside Winwrap a window handle is named `hwnd`. Callers who qualify
-  (`winwrap::window::create`) are unaffected.
-- Add a new namespace only for a real API family or the supporting-value case below, not one
-  per header or folder (`cpp:style`). Primary resource types and mixins stay in `winwrap::`;
-  `winwrap::notification` and `winwrap::detail` keep their existing roles.
-- A subsystem namespace may also disambiguate short supporting value types that would be
-  vague at the root. `winwrap::device::Interface` and `device::ControlCode` live in
-  `device/interface.hpp` and `device/control_code.hpp`; the primary owning type remains
-  `winwrap::Device` in `device.hpp`. The folder records cohesion, while the namespace earns
-  its place by avoiding generic root names such as `Interface` and `ControlCode`.
-- Kernel WDF object types live in `winwrap::driver` because they have a distinct runtime,
-  lifetime owner, error vocabulary, and toolchain from same-named user-mode concepts.
+User-mode resource types such as `Window`, `Module`, `Device`, and
+`NotifyIcon` live directly in `winwrap::user`. Free-function families keep
+their use-named subnamespaces: `user::error`, `user::message`,
+`user::message_loop`, `user::module`, `user::icon`, `user::window`,
+`user::filesystem`, and `user::shell`. The family name carries the noun,
+so `user::module::path(handle)` does not repeat it in the function name.
+The existing `user::notification` and `user::detail` roles remain.
+
+The cross-mode interface and IOCTL values live in
+`winwrap::shared::device::{Interface, ControlCode}`. The owning user-mode
+connection is `winwrap::user::Device`. Borrowed KMDF objects live in
+`winwrap::kernel::driver::{Driver, Device, Queue, Request}`, while kernel
+diagnostics use `winwrap::kernel::debug_print`. Kernel headers depend only on
+WDK and shared headers; user headers and the user static library are not
+kernel dependencies.
+
+Keep lowercase snake_case for free operations. Native Win32 macros ignore
+C++ namespaces, so spell wrapper operations distinctly from those macros.
+Avoid local names that hide a free-function family in unqualified calls.
 
 ## See also
 

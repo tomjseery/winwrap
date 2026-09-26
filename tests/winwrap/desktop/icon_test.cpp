@@ -1,4 +1,4 @@
-#include "winwrap/desktop/icon.hpp"
+#include "winwrap/user/desktop/icon.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 #include <cstdint>
@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-#include "winwrap/module.hpp"
+#include "winwrap/user/module.hpp"
 
 namespace {
 
@@ -76,7 +76,7 @@ std::filesystem::path unique_temp_path(const wchar_t* stem) {
 }  // namespace
 
 TEST_CASE("icon::load loads a system icon at the requested metric") {
-    auto icon = winwrap::icon::load(winwrap::SystemIcon::application, winwrap::IconSize::small);
+    auto icon = winwrap::user::icon::load(winwrap::user::SystemIcon::application, winwrap::user::IconSize::small);
 
     REQUIRE(icon);
     const SIZE extent = icon_extent(icon->get());
@@ -85,8 +85,8 @@ TEST_CASE("icon::load loads a system icon at the requested metric") {
 }
 
 TEST_CASE("icon::load returns a private copy the caller can destroy") {
-    auto first = winwrap::icon::load(winwrap::SystemIcon::warning, winwrap::IconSize::large);
-    auto second = winwrap::icon::load(winwrap::SystemIcon::warning, winwrap::IconSize::large);
+    auto first = winwrap::user::icon::load(winwrap::user::SystemIcon::warning, winwrap::user::IconSize::large);
+    auto second = winwrap::user::icon::load(winwrap::user::SystemIcon::warning, winwrap::user::IconSize::large);
     REQUIRE(first);
     REQUIRE(second);
 
@@ -96,23 +96,23 @@ TEST_CASE("icon::load returns a private copy the caller can destroy") {
 
 TEST_CASE("icon::load loads an icon resource from a module") {
     // user32.dll ships icon resource 100 (the application icon).
-    const auto user32 = winwrap::module::loaded(L"user32.dll");
+    const auto user32 = winwrap::user::module::loaded(L"user32.dll");
     REQUIRE(user32);
-    auto icon = winwrap::icon::load(*user32, 100, winwrap::IconSize::small);
+    auto icon = winwrap::user::icon::load(*user32, 100, winwrap::user::IconSize::small);
 
     REQUIRE(icon);
     CHECK(icon_extent(icon->get()).cx == small_icon_metric().cx);
 }
 
 TEST_CASE("icon::load reports a missing resource in the running executable") {
-    auto icon = winwrap::icon::load(0x7FFF, winwrap::IconSize::small);
+    auto icon = winwrap::user::icon::load(0x7FFF, winwrap::user::IconSize::small);
 
     REQUIRE_FALSE(icon);
     CHECK(icon.error().value() == ERROR_RESOURCE_TYPE_NOT_FOUND);
 }
 
 TEST_CASE("icon::load rejects a null module instead of loading a system icon") {
-    auto icon = winwrap::icon::load(nullptr, 32512, winwrap::IconSize::small);
+    auto icon = winwrap::user::icon::load(nullptr, 32512, winwrap::user::IconSize::small);
 
     REQUIRE_FALSE(icon);
     CHECK(icon.error().value() == ERROR_INVALID_HANDLE);
@@ -122,7 +122,7 @@ TEST_CASE("icon::load loads an .ico file") {
     const auto file = unique_temp_path(L"winwrap_icon_test_");
     write_ico(file);
 
-    auto icon = winwrap::icon::load(file, winwrap::IconSize::small);
+    auto icon = winwrap::user::icon::load(file, winwrap::user::IconSize::small);
 
     std::filesystem::remove(file);
     REQUIRE(icon);
@@ -131,7 +131,7 @@ TEST_CASE("icon::load loads an .ico file") {
 
 TEST_CASE("icon::load reports a missing .ico file") {
     auto icon =
-        winwrap::icon::load(unique_temp_path(L"winwrap_missing_icon_"), winwrap::IconSize::small);
+        winwrap::user::icon::load(unique_temp_path(L"winwrap_missing_icon_"), winwrap::user::IconSize::small);
 
     REQUIRE_FALSE(icon);
     CHECK(icon.error().value() == ERROR_FILE_NOT_FOUND);

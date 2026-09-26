@@ -7,6 +7,18 @@ add_library(winwrap STATIC
     src/desktop/menu.cpp)
 add_library(winwrap::winwrap ALIAS winwrap)
 
+add_library(winwrap_user INTERFACE)
+add_library(winwrap::user ALIAS winwrap_user)
+target_link_libraries(winwrap_user INTERFACE winwrap)
+
+add_library(winwrap_kernel INTERFACE)
+add_library(winwrap::kernel ALIAS winwrap_kernel)
+target_compile_features(winwrap_kernel INTERFACE cxx_std_20)
+target_include_directories(winwrap_kernel
+    INTERFACE
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:include>)
+
 target_compile_features(winwrap PUBLIC cxx_std_23)
 
 # Public headers: this path while building from the tree, the installed path
@@ -38,7 +50,7 @@ include(CMakePackageConfigHelpers)
 
 install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
-install(TARGETS winwrap EXPORT winwrap-targets)
+install(TARGETS winwrap winwrap_user winwrap_kernel EXPORT winwrap-targets)
 install(EXPORT winwrap-targets
     FILE winwrap-targets.cmake
     NAMESPACE winwrap::

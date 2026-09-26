@@ -1,9 +1,9 @@
-#include "winwrap/desktop/icon.hpp"
+#include "winwrap/user/desktop/icon.hpp"
 
-#include "winwrap/error.hpp"
-#include "winwrap/module.hpp"
+#include "winwrap/user/error.hpp"
+#include "winwrap/user/module.hpp"
 
-namespace winwrap::icon {
+namespace winwrap::user::icon {
 namespace {
 
 [[nodiscard]] SIZE pixels(IconSize size) noexcept {
@@ -51,4 +51,4 @@ std::expected<wil::unique_hicon, std::error_code> load(const std::filesystem::pa
     return load(nullptr, file.c_str(), size, LR_LOADFROMFILE);
 }
 
-}  // namespace winwrap::icon
+}  // namespace winwrap::user::icon

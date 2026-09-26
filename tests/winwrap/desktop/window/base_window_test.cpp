@@ -1,18 +1,18 @@
 #include <catch2/catch_test_macros.hpp>
 
-#include "winwrap/desktop/message_loop.hpp"
-#include "winwrap/desktop/window/window.hpp"
+#include "winwrap/user/desktop/message_loop.hpp"
+#include "winwrap/user/desktop/window/window.hpp"
 
 namespace {
 
 // A real top-level window, created hidden and far off-screen so the tests never flash it.
-struct PlainWindow : winwrap::Window<PlainWindow> {
+struct PlainWindow : winwrap::user::Window<PlainWindow> {
     static constexpr const wchar_t* class_name = L"WinwrapBaseWindowTest";
 };
 
-struct ClosingWindow : winwrap::Window<ClosingWindow> {
+struct ClosingWindow : winwrap::user::Window<ClosingWindow> {
     static constexpr const wchar_t* class_name = L"WinwrapBaseWindowClosingTest";
-    void on_destroy() { winwrap::message_loop::quit(); }
+    void on_destroy() { winwrap::user::message_loop::quit(); }
 };
 
 constexpr int off_screen{-20000};
@@ -140,7 +140,7 @@ TEST_CASE("request_close closes the window from the message loop") {
     REQUIRE(window->request_close());
     CHECK(window->hwnd() != nullptr);  // nothing happens until the loop runs
 
-    CHECK(winwrap::message_loop::run() == 0);
+    CHECK(winwrap::user::message_loop::run() == 0);
     CHECK(window->hwnd() == nullptr);
 }
 
@@ -148,7 +148,7 @@ TEST_CASE("operations on a destroyed window report the Win32 error") {
     auto window = ClosingWindow::create({.parent = HWND_MESSAGE});
     REQUIRE(window);
     REQUIRE(window->request_close());
-    REQUIRE(winwrap::message_loop::run() == 0);
+    REQUIRE(winwrap::user::message_loop::run() == 0);
 
     const auto client = window->client_rect();
     const auto style = window->style();

@@ -1,9 +1,9 @@
-#include "winwrap/desktop/window/native_window.hpp"
+#include "winwrap/user/desktop/window/native_window.hpp"
 
-#include "winwrap/error.hpp"
-#include "winwrap/module.hpp"
+#include "winwrap/user/error.hpp"
+#include "winwrap/user/module.hpp"
 
-namespace winwrap::window {
+namespace winwrap::user::window {
 
 std::expected<wil::unique_hwnd, std::error_code> create(const NativeWindowConfig& config) {
     const HMENU menu_or_id = (config.style & WS_CHILD) != 0
@@ -23,4 +23,4 @@ std::expected<wil::unique_hwnd, std::error_code> create(const NativeWindowConfig
         });
 }
 
-}  // namespace winwrap::window
+}  // namespace winwrap::user::window
