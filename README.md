@@ -235,7 +235,8 @@ clang-cl is an intended target, but a supported-version CI matrix has not yet be
 established. MinGW is not supported.
 
 The `winwrap/kernel/driver/` headers require the WDK and KMDF. They avoid the user-mode
-static library and WIL, and report failures as `std::expected<T, NTSTATUS>`. The driver
+static library and WIL. Operations that produce a value return
+`std::expected<T, NTSTATUS>`; the others return `NTSTATUS`. The driver
 compiles as C++23 with the MSVC STL and UCRT include directories ahead of the WDK
 include path, whose `km\crt\yvals.h` otherwise shadows the STL's. Only header-only
 standard library code is usable: never call `expected::value()`, which throws and leaves
