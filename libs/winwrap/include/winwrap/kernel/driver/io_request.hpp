@@ -1,6 +1,9 @@
 #pragma once
 
-#include "winwrap/kernel/driver/result.hpp"
+#include <expected>
+#include <type_traits>
+
+#include "winwrap/kernel/driver/detail/wdf.hpp"
 
 namespace winwrap::kernel::driver {
 
@@ -32,58 +35,54 @@ public:
 
     /// Retrieve an input buffer large enough for one T.
     template <typename T>
-    [[nodiscard]] Result<IoRequestBuffer<const T>> input() const noexcept {
+    [[nodiscard]] std::expected<IoRequestBuffer<const T>, NTSTATUS> input() const noexcept {
         void* data{};
         size_t size{};
         const auto status{WdfRequestRetrieveInputBuffer(native_, sizeof(T), &data, &size)};
         if (!NT_SUCCESS(status))
-            return Result<IoRequestBuffer<const T>>::failure(status,
-                                                             IoRequestBuffer<const T>{nullptr, 0});
+            return std::unexpected{status};
         if (reinterpret_cast<ULONG_PTR>(data) % alignof(T) != 0)
-            return Result<IoRequestBuffer<const T>>::failure(STATUS_DATATYPE_MISALIGNMENT,
-                                                             IoRequestBuffer<const T>{nullptr, 0});
-        return Result<IoRequestBuffer<const T>>::success(
-            IoRequestBuffer<const T>{static_cast<const T*>(data), size});
+            return std::unexpected{STATUS_DATATYPE_MISALIGNMENT};
+        return IoRequestBuffer<const T>{static_cast<const T*>(data), size};
     }
 
     /// Retrieve an output buffer large enough for one T.
     template <typename T>
-    [[nodiscard]] Result<IoRequestBuffer<T>> output() const noexcept {
+    [[nodiscard]] std::expected<IoRequestBuffer<T>, NTSTATUS> output() const noexcept {
         void* data{};
         size_t size{};
         const auto status{WdfRequestRetrieveOutputBuffer(native_, sizeof(T), &data, &size)};
         if (!NT_SUCCESS(status))
-            return Result<IoRequestBuffer<T>>::failure(status, IoRequestBuffer<T>{nullptr, 0});
+            return std::unexpected{status};
         if (reinterpret_cast<ULONG_PTR>(data) % alignof(T) != 0)
-            return Result<IoRequestBuffer<T>>::failure(STATUS_DATATYPE_MISALIGNMENT,
-                                                       IoRequestBuffer<T>{nullptr, 0});
-        return Result<IoRequestBuffer<T>>::success(IoRequestBuffer<T>{static_cast<T*>(data), size});
+            return std::unexpected{STATUS_DATATYPE_MISALIGNMENT};
+        return IoRequestBuffer<T>{static_cast<T*>(data), size};
     }
 
     /// Copy one typed value out of the request's input buffer.
     template <typename T>
-    [[nodiscard]] Result<T> read() const noexcept {
+    [[nodiscard]] std::expected<T, NTSTATUS> read() const noexcept {
         static_assert(
-            __is_trivially_copyable(T),
+            std::is_trivially_copyable_v<T>,
             "winwrap::kernel::driver::IoRequest::read requires a trivially copyable type");
         const auto buffer{input<T>()};
         if (!buffer)
-            return Result<T>::failure(buffer.status(), T{});
+            return std::unexpected{buffer.error()};
 
         T value{};
         RtlCopyMemory(&value, buffer->data(), sizeof(T));
-        return Result<T>::success(value);
+        return value;
     }
 
     /// Copy one typed value into the request's output buffer.
     template <typename T>
     [[nodiscard]] NTSTATUS write(const T& value) const noexcept {
         static_assert(
-            __is_trivially_copyable(T),
+            std::is_trivially_copyable_v<T>,
             "winwrap::kernel::driver::IoRequest::write requires a trivially copyable type");
         const auto buffer{output<T>()};
         if (!buffer)
-            return buffer.status();
+            return buffer.error();
 
         RtlCopyMemory(buffer->data(), &value, sizeof(T));
         return STATUS_SUCCESS;

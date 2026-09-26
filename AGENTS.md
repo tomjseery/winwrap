@@ -2,7 +2,7 @@
 
 A C++23 static library of **thin wrappers over native Windows APIs**: top-level windows,
 native child controls, menus, a system-tray icon, synchronous user-mode device I/O, and a
-kernel-safe C++20 header surface for the corresponding KMDF driver device path. Native-handle
+kernel-safe C++23 header surface for the corresponding KMDF driver device path. Native-handle
 interoperability is part of the intended contract. Not a framework, not cross-platform,
 not WinRT.
 Experimental v0.1; release readiness and implementation gaps are tracked below.
@@ -15,7 +15,7 @@ Winwrap's public-API conventions are project-specific:
 
 `libs/winwrap/include/winwrap/` holds the default C++23/WIL user-mode APIs in
 namespace `winwrap`: desktop, file-system, module, and synchronous device I/O.
-`winwrap/kernel/` (`winwrap::kernel`) holds C++20 WDK-only KMDF adapters and debug
+`winwrap/kernel/` (`winwrap::kernel`) holds C++23 KMDF adapters and debug
 printing; `winwrap/protocol/` (`winwrap::protocol`) holds device values that both
 modes compile.
 `libs/winwrap/src/` and `tests/winwrap/` contain the user-mode implementation
