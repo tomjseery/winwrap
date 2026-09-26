@@ -236,11 +236,12 @@ established. MinGW is not supported.
 
 The `winwrap/kernel/driver/` headers require the WDK and KMDF. They avoid the user-mode
 static library and WIL. Operations that produce a value return
-`std::expected<T, NTSTATUS>`; the others return `NTSTATUS`. The driver
-compiles as C++23 with the MSVC STL and UCRT include directories ahead of the WDK
-include path, whose `km\crt\yvals.h` otherwise shadows the STL's. Only header-only
-standard library code is usable: never call `expected::value()`, which throws and leaves
-unresolved runtime symbols at link time. Use `*`, `->`, `has_value()` and `error()`.
+`std::expected<T, NTSTATUS>`; the others return `NTSTATUS`. The driver compiles as C++23
+with the MSVC STL and UCRT include directories ahead of the WDK include path, whose
+`km\crt\yvals.h` otherwise shadows the STL's. Only standard library code that needs no C++
+runtime is usable, so nothing that allocates or throws: never call `expected::value()`,
+which throws and leaves unresolved runtime symbols at link time. Use `*`, `->`,
+`has_value()` and `error()`.
 
 ## Build
 
