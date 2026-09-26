@@ -62,12 +62,21 @@ public:
     /// Wrap a borrowed native device handle received from KMDF.
     constexpr explicit Device(WDFDEVICE native) noexcept : native_{native} {}
 
-    /// Create this device's default I/O queue.
-    [[nodiscard]] Result<Queue> create_default_queue(const Queue::Config& config) const noexcept {
+    /// Create an I/O queue associated with this device.
+    [[nodiscard]] Result<Queue> create_queue(const Queue::Config& config) const noexcept {
         WDF_IO_QUEUE_CONFIG native_config{};
-        WDF_IO_QUEUE_CONFIG_INIT_DEFAULT_QUEUE(&native_config, native_dispatch(config.dispatch));
+        if (config.role == Queue::Role::default_queue)
+            WDF_IO_QUEUE_CONFIG_INIT_DEFAULT_QUEUE(&native_config,
+                                                   native_dispatch(config.dispatch));
+        else
+            WDF_IO_QUEUE_CONFIG_INIT(&native_config, native_dispatch(config.dispatch));
         native_config.PowerManaged = config.power_managed ? WdfTrue : WdfFalse;
+        native_config.AllowZeroLengthRequests = config.allow_zero_length_requests ? TRUE : FALSE;
+        native_config.EvtIoDefault = config.default_request;
+        native_config.EvtIoRead = config.read;
+        native_config.EvtIoWrite = config.write;
         native_config.EvtIoDeviceControl = config.device_control;
+        native_config.EvtIoInternalDeviceControl = config.internal_device_control;
 
         WDFQUEUE native{};
         const auto status{
@@ -75,6 +84,14 @@ public:
         if (!NT_SUCCESS(status))
             return Result<Queue>::failure(status, Queue{nullptr});
         return Result<Queue>::success(Queue{native});
+    }
+
+    /// Route a request type to a queue associated with this device.
+    /// @pre `queue` was created for this device.
+    [[nodiscard]] NTSTATUS route_requests(const Queue& queue,
+                                          Queue::RequestType request_type) const noexcept {
+        return WdfDeviceConfigureRequestDispatching(native_, queue.native(),
+                                                    native_request_type(request_type));
     }
 
     /// Publish a device-interface class that user-mode clients can discover.
@@ -93,8 +110,27 @@ private:
                 return WdfIoQueueDispatchSequential;
             case Queue::Dispatch::parallel:
                 return WdfIoQueueDispatchParallel;
+            case Queue::Dispatch::manual:
+                return WdfIoQueueDispatchManual;
         }
         return WdfIoQueueDispatchSequential;
+    }
+
+    [[nodiscard]] static constexpr WDF_REQUEST_TYPE native_request_type(
+        Queue::RequestType request_type) noexcept {
+        switch (request_type) {
+            case Queue::RequestType::create:
+                return WdfRequestTypeCreate;
+            case Queue::RequestType::read:
+                return WdfRequestTypeRead;
+            case Queue::RequestType::write:
+                return WdfRequestTypeWrite;
+            case Queue::RequestType::device_control:
+                return WdfRequestTypeDeviceControl;
+            case Queue::RequestType::internal_device_control:
+                return WdfRequestTypeDeviceControlInternal;
+        }
+        return WdfRequestTypeDeviceControl;
     }
 
     WDFDEVICE native_;
