@@ -93,8 +93,6 @@ private:
                 return WdfIoQueueDispatchSequential;
             case Queue::Dispatch::parallel:
                 return WdfIoQueueDispatchParallel;
-            case Queue::Dispatch::manual:
-                return WdfIoQueueDispatchManual;
         }
         return WdfIoQueueDispatchSequential;
     }
