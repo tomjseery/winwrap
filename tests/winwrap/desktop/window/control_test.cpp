@@ -1,8 +1,8 @@
-#include "winwrap/user/desktop/window/control.hpp"
+#include "winwrap/desktop/window/control.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 
-#include "winwrap/user/desktop/window/window.hpp"
+#include "winwrap/desktop/window/window.hpp"
 
 namespace {
 // A minimal derived control used only as a compile-time fixture: forming
@@ -11,17 +11,17 @@ namespace {
 // so the build compiles and links it. Two hooks are defined so both branches of
 // the if-constexpr detection get checked. Exercising a control for real needs a
 // live message pump; see CONTROL_PLAN.md section 8.
-struct TestControl : winwrap::user::Control<TestControl> {
+struct TestControl : winwrap::Control<TestControl> {
     static constexpr const wchar_t* class_name = L"BUTTON";
     void on_paint() {}
     void on_mouse_move(int /*x*/, int /*y*/) {}
 };
 
-struct ControlHost : winwrap::user::Window<ControlHost> {
+struct ControlHost : winwrap::Window<ControlHost> {
     static constexpr const wchar_t* class_name = L"WinwrapDefaultProcControlHost";
 };
 
-struct RoutedControl : winwrap::user::Control<RoutedControl> {
+struct RoutedControl : winwrap::Control<RoutedControl> {
     static constexpr const wchar_t* class_name = L"BUTTON";
     bool delegated_to_default{};
 
@@ -35,7 +35,7 @@ struct LeadingBase {
     void* padding{};
 };
 
-struct OffsetControl : LeadingBase, winwrap::user::Control<OffsetControl> {
+struct OffsetControl : LeadingBase, winwrap::Control<OffsetControl> {
     static constexpr const wchar_t* class_name = L"BUTTON";
     static constexpr UINT probe_message{WM_APP + 1};
     bool received{};
@@ -62,7 +62,7 @@ TEST_CASE("Control custom routing can delegate to its subclass default procedure
     REQUIRE(control);
 
     control->delegated_to_default = false;
-    const LRESULT dialog_code = winwrap::user::message::send(control->hwnd(), WM_GETDLGCODE, 0, 0);
+    const LRESULT dialog_code = winwrap::message::send(control->hwnd(), WM_GETDLGCODE, 0, 0);
 
     REQUIRE(control->delegated_to_default);
     CHECK((dialog_code & DLGC_BUTTON) != 0);
@@ -81,7 +81,7 @@ TEST_CASE("Control stores the adjusted final object pointer for subclass routing
     auto control = OffsetControl::create({.parent = host->hwnd(), .id = 1});
     REQUIRE(control);
 
-    winwrap::user::message::send(control->hwnd(), OffsetControl::probe_message);
+    winwrap::message::send(control->hwnd(), OffsetControl::probe_message);
 
     CHECK(control->received);
 }

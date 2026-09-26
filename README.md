@@ -52,26 +52,26 @@ define the boundary between wrapper operations and native interoperability.
 A window with a button, wired to a click handler:
 
 ```cpp
-#include <winwrap/user/desktop/window/controls/button.hpp>
-#include <winwrap/user/desktop/message_loop.hpp>
-#include <winwrap/user/desktop/window/window.hpp>
+#include <winwrap/desktop/window/controls/button.hpp>
+#include <winwrap/desktop/message_loop.hpp>
+#include <winwrap/desktop/window/window.hpp>
 
-class MainWindow : public winwrap::user::Window<MainWindow> {
+class MainWindow : public winwrap::Window<MainWindow> {
 public:
     static constexpr const wchar_t* class_name = L"winwrap_demo";
 
     void on_created() {
-        greet_ = winwrap::user::Button::create(
+        greet_ = winwrap::Button::create(
             {.parent = hwnd(), .id = 1, .text = L"Greet", .x = 12, .y = 12},
             [this] { set_text(L"Hello from winwrap"); });
         if (!greet_)
-            winwrap::user::message_loop::quit(greet_.error().value());
+            winwrap::message_loop::quit(greet_.error().value());
     }
 
-    void on_destroy() { winwrap::user::message_loop::quit(); }
+    void on_destroy() { winwrap::message_loop::quit(); }
 
 private:
-    winwrap::user::CreationResult<winwrap::user::Button> greet_;
+    winwrap::CreationResult<winwrap::Button> greet_;
 };
 
 int wWinMain(HINSTANCE, HINSTANCE, PWSTR, int) {
@@ -80,7 +80,7 @@ int wWinMain(HINSTANCE, HINSTANCE, PWSTR, int) {
         return window.error().value();
 
     window->show();
-    return winwrap::user::message_loop::run();
+    return winwrap::message_loop::run();
 }
 ```
 
@@ -89,7 +89,7 @@ Every hook is optional — define `on_paint`, `on_size(w, h)`, `on_key_down(vk)`
 only when you want them. Extra behaviour composes as a mixin:
 
 ```cpp
-class DropTarget : public winwrap::user::Window<DropTarget, winwrap::user::FileDroppable> {
+class DropTarget : public winwrap::Window<DropTarget, winwrap::FileDroppable> {
 public:
     static constexpr const wchar_t* class_name = L"winwrap_drop";
 
@@ -106,15 +106,15 @@ The tray icon rides the same window bridge: its events arrive as an ordinary win
 message you pick an id for.
 
 ```cpp
-class TrayWindow : public winwrap::user::Window<TrayWindow> {
+class TrayWindow : public winwrap::Window<TrayWindow> {
 public:
     static constexpr const wchar_t* class_name = L"winwrap_tray";
 
     void on_created() {
-        auto image = winwrap::user::icon::load(winwrap::user::SystemIcon::application, winwrap::user::IconSize::small);
+        auto image = winwrap::icon::load(winwrap::SystemIcon::application, winwrap::IconSize::small);
         if (!image)
             return;
-        auto icon = winwrap::user::NotifyIcon::create(
+        auto icon = winwrap::NotifyIcon::create(
             {.owner = hwnd(),
              .callback_msg = tray_callback,
              .id = 1,
@@ -136,14 +136,14 @@ private:
     static constexpr UINT tray_callback{WM_APP + 1};
 
     void show_tray_menu() {
-        auto menu = winwrap::user::Menu::create();
+        auto menu = winwrap::Menu::create();
         if (!menu)
             return;
-        std::ignore = menu->add_item(L"Exit", [] { winwrap::user::message_loop::quit(); });
+        std::ignore = menu->add_item(L"Exit", [] { winwrap::message_loop::quit(); });
         menu->show(hwnd());
     }
 
-    std::optional<winwrap::user::NotifyIcon> tray_;
+    std::optional<winwrap::NotifyIcon> tray_;
 };
 ```
 
@@ -155,39 +155,40 @@ checked `icon::load` result to `set_icon`.
 
 | Header | Gives you |
 |---|---|
-| `winwrap/user/desktop/window/window.hpp` | `Window<T, Mixins…>` — registration, the callback→object bridge, dispatch, teardown |
-| `winwrap/user/desktop/window/control.hpp`, `winwrap/user/desktop/window/controls/*.hpp` | `Control<T, Mixins…>` and concrete `Button`, `Edit`, `Checkbox`, `ComboBox` |
-| `winwrap/user/desktop/notify_icon.hpp` | `NotifyIcon` — a system-tray icon, plus the Explorer-restart re-add path (`taskbar_created_message()` → `add()`) |
-| `winwrap/user/desktop/menu.hpp` | `Menu` — popup menus, items by id or by lambda |
-| `winwrap/user/desktop/drop.hpp` | `Drop` — the `WM_DROPFILES` query protocol as a type |
-| `winwrap/user/desktop/window/message/*.hpp` | direct window/control message routing and behaviors (`MessageRouter`, `FileDroppable`, `Paintable`, …) |
-| `winwrap/user/desktop/window/notification/command/*.hpp` | control notification mixins (`notification::Click`, `TextChange`, `SelectionChange`) and parent-to-child reflection |
-| `winwrap/user/desktop/window/native_window.hpp` | `window::create(NativeWindowConfig)` — any registered window class as an owned `wil::unique_hwnd` |
-| `winwrap/user/desktop/message.hpp` | `message::send` / `message::post` — messages to any window (`BaseWindow::send` / `post` delegate) |
-| `winwrap/user/desktop/message_loop.hpp` | `message_loop::run()` and `message_loop::quit()` |
-| `winwrap/user/desktop/icon.hpp` | `icon::load` — system, module-resource and `.ico` icons as owned `wil::unique_hicon` |
-| `winwrap/user/desktop/shell/change_notification.hpp` | `shell::notify_file_created` / `_deleted` / `_renamed` / `_changed`, the folder equivalents and `notify_associations_changed` — tell Explorer what changed |
-| `winwrap/user/filesystem/attributes.hpp` | `filesystem::attributes` and add/remove/set — file-attribute queries and updates |
-| `winwrap/user/module.hpp` | `module::current` / `loaded` / `path` and the borrowed `Module` view |
-| `winwrap/shared/device/interface.hpp` | `device::Interface` — shared client/driver interface-class value |
-| `winwrap/shared/device/control_code.hpp` | `device::ControlCode` — shared client/driver IOCTL value |
-| `winwrap/user/device.hpp` | `Device` — user-mode present-interface paths, synchronous open and control |
+| `winwrap/desktop/window/window.hpp` | `Window<T, Mixins…>` — registration, the callback→object bridge, dispatch, teardown |
+| `winwrap/desktop/window/control.hpp`, `winwrap/desktop/window/controls/*.hpp` | `Control<T, Mixins…>` and concrete `Button`, `Edit`, `Checkbox`, `ComboBox` |
+| `winwrap/desktop/notify_icon.hpp` | `NotifyIcon` — a system-tray icon, plus the Explorer-restart re-add path (`taskbar_created_message()` → `add()`) |
+| `winwrap/desktop/menu.hpp` | `Menu` — popup menus, items by id or by lambda |
+| `winwrap/desktop/drop.hpp` | `Drop` — the `WM_DROPFILES` query protocol as a type |
+| `winwrap/desktop/window/message/*.hpp` | direct window/control message routing and behaviors (`MessageRouter`, `FileDroppable`, `Paintable`, …) |
+| `winwrap/desktop/window/notification/command/*.hpp` | control notification mixins (`notification::Click`, `TextChange`, `SelectionChange`) and parent-to-child reflection |
+| `winwrap/desktop/window/native_window.hpp` | `window::create(NativeWindowConfig)` — any registered window class as an owned `wil::unique_hwnd` |
+| `winwrap/desktop/message.hpp` | `message::send` / `message::post` — messages to any window (`BaseWindow::send` / `post` delegate) |
+| `winwrap/desktop/message_loop.hpp` | `message_loop::run()` and `message_loop::quit()` |
+| `winwrap/desktop/icon.hpp` | `icon::load` — system, module-resource and `.ico` icons as owned `wil::unique_hicon` |
+| `winwrap/desktop/shell/change_notification.hpp` | `shell::notify_file_created` / `_deleted` / `_renamed` / `_changed`, the folder equivalents and `notify_associations_changed` — tell Explorer what changed |
+| `winwrap/filesystem/attributes.hpp` | `filesystem::attributes` and add/remove/set — file-attribute queries and updates |
+| `winwrap/module.hpp` | `module::current` / `loaded` / `path` and the borrowed `Module` view |
+| `winwrap/protocol/device/interface.hpp` | `protocol::device::Interface` — client/driver interface-class value |
+| `winwrap/protocol/device/control_code.hpp` | `protocol::device::ControlCode` — client/driver IOCTL value |
+| `winwrap/device.hpp` | `Device` — user-mode present-interface paths, synchronous open and control |
 | `winwrap/kernel/debug_print.hpp` | `kernel::debug_print` — DbgPrintEx diagnostics with component and level |
 | `winwrap/kernel/driver/*.hpp` | `driver::Driver`, `Device`, `Queue`, and `Request` — kernel-safe borrowed KMDF adapters |
-| `winwrap/user/error.hpp` | `error::last()`, `error::win32(code)`, `error::nonzero_or_last(result)`, `error::result_or_last(call)` — Win32 failures as `std::error_code` |
+| `winwrap/error.hpp` | `error::last()`, `error::win32(code)`, `error::nonzero_or_last(result)`, `error::result_or_last(call)` — Win32 failures as `std::error_code` |
 
-Types (`Window`, `Module`, `NotifyIcon`, …) live in `winwrap::user`; free-function families
-live in a namespace named for their use (`winwrap::user::icon`, `winwrap::user::message`, …).
+Types (`Window`, `Module`, `NotifyIcon`, …) live in `winwrap`; free-function families
+live in a namespace named for their use (`winwrap::icon`, `winwrap::message`, …).
 
 ## Execution modes
 
-Public headers follow the execution mode: `winwrap/user/` uses C++23 and WIL,
-`winwrap/kernel/` uses C++20 and WDK headers, and `winwrap/shared/` contains
-values available to both. Use `winwrap::user`, `winwrap::kernel`, and
-`winwrap::shared` respectively. The CMake targets `winwrap::user` and
-`winwrap::kernel` express the same dependency boundary; the latter is header only
-and carries no user-mode import libraries. The older `winwrap::winwrap` target
-remains available for user-mode consumers.
+User mode is the default: `winwrap::` and `winwrap/` hold C++23/WIL user-mode APIs.
+Kernel-only code lives in `winwrap::kernel` and `winwrap/kernel/` (C++20, WDK headers).
+Values that both a driver and its clients use live in `winwrap::protocol` and
+`winwrap/protocol/`, and compile in either mode. User-mode headers fail to compile in
+kernel mode, and kernel headers fail to compile in user mode.
+
+Link `winwrap::winwrap` for user mode. `winwrap::kernel` is header only and carries no
+user-mode import libraries.
 
 Kernel diagnostics use `winwrap/kernel/debug_print.hpp`:
 
@@ -202,9 +203,9 @@ queue or defer the call.
 
 ## Device I/O
 
-Device support has two sides. `winwrap::user::Device` owns a user-mode file handle. The
-`winwrap::kernel::driver` types borrow KMDF framework handles because KMDF owns their lifetime. Shared
-`winwrap::shared::device::Interface` and `winwrap::shared::device::ControlCode` values keep the published GUID and complete IOCTL
+Device support has two sides. `winwrap::Device` owns a user-mode file handle. The
+`winwrap::kernel::driver` types borrow KMDF framework handles because KMDF owns their lifetime. The
+`winwrap::protocol::device::Interface` and `winwrap::protocol::device::ControlCode` values keep the published GUID and complete IOCTL
 consistent across both binaries.
 
 `Device::paths(interface_id)` snapshots all currently present interface paths;
@@ -255,7 +256,7 @@ FetchContent_Declare(winwrap
     GIT_TAG <tag>)
 FetchContent_MakeAvailable(winwrap)
 
-target_link_libraries(your_app PRIVATE winwrap::user)
+target_link_libraries(your_app PRIVATE winwrap::winwrap)
 ```
 
 For source consumption, WIL comes in transitively. A full CMake install currently

@@ -1,9 +1,9 @@
-#include "winwrap/user/desktop/menu.hpp"
+#include "winwrap/desktop/menu.hpp"
 
-#include "winwrap/user/desktop/message.hpp"
-#include "winwrap/user/error.hpp"
+#include "winwrap/desktop/message.hpp"
+#include "winwrap/error.hpp"
 
-namespace winwrap::user {
+namespace winwrap {
 
 std::expected<Menu, std::error_code> Menu::create() {
     return error::nonzero_or_last(CreatePopupMenu()).transform([](HMENU h) {
@@ -25,9 +25,8 @@ void Menu::show(HWND owner) {
     SetForegroundWindow(owner);
     POINT pt{};
     GetCursorPos(&pt);
-    const auto picked = static_cast<UINT>(
-        TrackPopupMenuEx(handle_.get(), TPM_RIGHTBUTTON | TPM_RETURNCMD | TPM_NONOTIFY, pt.x,
-                         pt.y, owner, nullptr));
+    const auto picked = static_cast<UINT>(TrackPopupMenuEx(
+        handle_.get(), TPM_RIGHTBUTTON | TPM_RETURNCMD | TPM_NONOTIFY, pt.x, pt.y, owner, nullptr));
     // Best effort: the empty message only lets a background owner dismiss the menu.
     static_cast<void>(message::post(owner, WM_NULL));
     if (picked == 0)
@@ -43,4 +42,4 @@ void Menu::show(HWND owner) {
     static_cast<void>(message::post(owner, WM_COMMAND, picked));
 }
 
-}  // namespace winwrap::user
+}  // namespace winwrap

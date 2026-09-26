@@ -13,11 +13,11 @@ Winwrap's public-API conventions are project-specific:
 
 ## Layout
 
-`libs/winwrap/include/winwrap/user/` holds C++23/WIL user APIs, including
-desktop, file-system, module, and synchronous device I/O wrappers.
-`winwrap/kernel/` holds C++20 WDK-only KMDF adapters and debug printing;
-`winwrap/shared/` holds cross-mode device values. Their public namespaces are
-`winwrap::user`, `winwrap::kernel`, and `winwrap::shared`.
+`libs/winwrap/include/winwrap/` holds the default C++23/WIL user-mode APIs in
+namespace `winwrap`: desktop, file-system, module, and synchronous device I/O.
+`winwrap/kernel/` (`winwrap::kernel`) holds C++20 WDK-only KMDF adapters and debug
+printing; `winwrap/protocol/` (`winwrap::protocol`) holds device values that both
+modes compile.
 `libs/winwrap/src/` and `tests/winwrap/` contain the user-mode implementation
 and tests, including a per-header user-mode compile check. Kernel headers are
 compiled through a real WDK consumer. Build user mode from an

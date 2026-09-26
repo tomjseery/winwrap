@@ -75,14 +75,14 @@ Close these before or while wiring — wifi-toggle needs each one:
 
 1. ~~**`NotifyIcon::set_icon`**~~ — ✅ **Done (2026-09-25).** `set_icon(wil::unique_hicon)`
    sends `NIM_MODIFY` + `NIF_ICON` and swaps the owned icon only after the shell accepts
-   it. Owned icons come from `winwrap/user/desktop/icon.hpp` (`icon::load` for system icons,
+   it. Owned icons come from `winwrap/desktop/icon.hpp` (`icon::load` for system icons,
    module resources and `.ico` files), never from a shared `LoadIconW` handle.
 2. ~~**`on_timer(id)` hook**~~ — ✅ **Done (2026-09-25).** `Window::start_timer(id,
    interval)` / `stop_timer(id)` over `SetTimer`/`KillTimer`, and the built-in
    `TimerTick` mixin routes `WM_TIMER` to `on_timer(UINT_PTR)`. Built into `Window`
    only; raw `TIMERPROC` timers stay with their procedure. See
    `FREE_FUNCTION_WRAPPER_INVESTIGATION.md` for the wider operation survey.
-3. ~~**Message loop**~~ — ✅ **Done (2026-07-13).** `winwrap/user/desktop/message_loop.hpp`:
+3. ~~**Message loop**~~ — ✅ **Done (2026-07-13).** `winwrap/desktop/message_loop.hpp`:
    header-only `run()` (the `GetMessageW`/`TranslateMessage`/`DispatchMessageW` pump;
    returns `msg.wParam`; `-1` guarded by `FAIL_FAST_IF`) + `quit(int = 0)` (over
    `PostQuitMessage`). A window exits the app via `on_destroy` → `winwrap::quit()`.
@@ -119,7 +119,7 @@ app-side GDI (`CreateIconIndirect`); adoption must have an explicit ownership co
   `taskbar_created_message()`; owns `HICON` via `wil::unique_hicon`; `NIM_DELETE` on
   destruct; hand-written Rule-of-Five (the shell registration isn't an RAII handle).
   Builds clean (`/W4` + sanitizers), clang-tidy-clean. **Not yet exercised** by an app.
-- **`error.hpp`** — `winwrap::user::error` (`last`, `win32`, `nonzero_or_last`,
+- **`error.hpp`** — `winwrap::error` (`last`, `win32`, `nonzero_or_last`,
   `result_or_last`) owns every conversion of a Win32 failure into `std::error_code`.
 - **Namespaces (2026-09-25)** — free-function families moved into use-named namespaces
   (`message_loop::run`, `message::send`, `module::current`, `icon::load`,
@@ -127,7 +127,7 @@ app-side GDI (`CreateIconIndirect`); adoption must have an explicit ownership co
   see `CODE_CONVENTIONS.md` §6.
 - **`message_loop.hpp`** — ✅ **Done (2026-07-13).** Header-only `run()` (the message
   pump; returns `msg.wParam`; `-1` → `FAIL_FAST_IF`) + `quit(int = 0)` (over
-  `PostQuitMessage`). App exits via `on_destroy` → `winwrap::user::message_loop::quit()`. Four Catch2 tests,
+  `PostQuitMessage`). App exits via `on_destroy` → `winwrap::message_loop::quit()`. Four Catch2 tests,
   MSVC-clean. Design/rationale: `MESSAGE_LOOP_DESIGN.md`.
 - **Build** — CMake + WIL + install/export + warnings/sanitizers exist. A full-install
   consumer passed in the assessment; explicit dependency metadata, compiler CI and
@@ -284,7 +284,7 @@ app-side GDI (`CreateIconIndirect`); adoption must have an explicit ownership co
 
 ## Task 1 — `Window<T>`: configurability + lifetime + error model — ✅ DONE
 
-Delivered in `libs/winwrap/include/winwrap/user/desktop/window/window.hpp`: `WindowConfig` struct;
+Delivered in `libs/winwrap/include/winwrap/desktop/window/window.hpp`: `WindowConfig` struct;
 inherited static `create()` returning a stable `CreationResult<T>` owner; two-layer
 registration/creation; `last_error()` helper; `RegisterClassW`/`CreateWindowExW`
 error propagation (tolerating `ERROR_CLASS_ALREADY_EXISTS`); `configure_class`
@@ -297,7 +297,7 @@ it just hasn't been shown on screen yet.
 
 ## Task 2 — `Menu` — ✅ DONE
 
-Delivered in `libs/winwrap/include/winwrap/user/desktop/menu.hpp` + `libs/winwrap/src/desktop/menu.cpp`:
+Delivered in `libs/winwrap/include/winwrap/desktop/menu.hpp` + `libs/winwrap/src/desktop/menu.cpp`:
 - **`class Menu final`** — sealed, move-only (owns `HMENU` via `wil::unique_hmenu`).
 - **`create()`** — static factory → `std::expected<Menu, std::error_code>`, wraps
   `CreatePopupMenu` (null → `last_error()`); private ctor adopts the handle.
@@ -320,7 +320,7 @@ into a window (right-click → `show()` → `on_command`); wifi-toggle will cove
 
 ## Task 3 — `NotifyIcon`: the differentiator — ✅ DONE
 
-Delivered in `libs/winwrap/include/winwrap/user/desktop/notify_icon.hpp` + `libs/winwrap/src/desktop/notify_icon.cpp`:
+Delivered in `libs/winwrap/include/winwrap/desktop/notify_icon.hpp` + `libs/winwrap/src/desktop/notify_icon.cpp`:
 - **`class NotifyIcon final`** — move-only; **hand-written Rule-of-Five** (the shell
   registration is keyed by `(hWnd, uID)`, not an RAII handle — moves neuter the
   source, the destructor runs `NIM_DELETE`). Owns the `HICON` via `wil::unique_hicon`.
@@ -503,7 +503,7 @@ engine, no theming framework, no widget toolkit. Not a Qt/wxWidgets replacement.
 - A typed **`TrayEvent`** enum over the raw tray callback message (additive).
 - A **ctor-arg-forwarding `create`** overload (once `std::forward` is taught).
 - **`Drop` RAII view** — ✅ **Done (2026-07-12; built on request, superseding its
-  parked status).** `winwrap/user/desktop/drop.hpp`: `class Drop final`, move-only owner of
+  parked status).** `winwrap/desktop/drop.hpp`: `class Drop final`, move-only owner of
   the `HDROP` (`DragFinish` in the destructor and on move-assign; hand-written
   Rule of Five, the `NotifyIcon` precedent), with `count()` / `path(i)` /
   `paths()` / `point()` / `handle()` hiding the sentinel-index + length-probe

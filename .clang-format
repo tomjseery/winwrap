@@ -10,13 +10,13 @@ AllowShortFunctionsOnASingleLine: Inline
 AllowShortIfStatementsOnASingleLine: Never
 AllowShortLoopsOnASingleLine: false
 SortIncludes: CaseInsensitive
-# <windows.h> (and winwrap/user/win.hpp, which wraps it) must precede other Windows headers
+# <windows.h> (and winwrap/win.hpp, which wraps it) must precede other Windows headers
 # (commctrl.h, shellapi.h, ...), which depend on its macros (CALLBACK etc.). Force them
 # first so SortIncludes can't reorder them alphabetically and break the build.
 IncludeCategories:
-  - Regex: '"winwrap/user/mode\.hpp"'
+  - Regex: '"winwrap/detail/user_mode\.hpp"'
     Priority: 0
-  - Regex: '"winwrap/user/win\.hpp"'
+  - Regex: '"winwrap/win\.hpp"'
     Priority: 1
   - Regex: '<windows\.h>'
     Priority: 1

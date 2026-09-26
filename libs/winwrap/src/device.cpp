@@ -1,4 +1,4 @@
-#include "winwrap/user/device.hpp"
+#include "winwrap/device.hpp"
 
 #include <cfgmgr32.h>
 
@@ -7,9 +7,9 @@
 #include <utility>
 
 #include "device_control.hpp"
-#include "winwrap/user/error.hpp"
+#include "winwrap/error.hpp"
 
-namespace winwrap::user {
+namespace winwrap {
 namespace {
 
 [[nodiscard]] std::error_code configuration_error(CONFIGRET result) {
@@ -111,4 +111,4 @@ std::expected<std::size_t, Device::ControlError> Device::control(
     return detail::control(handle_.get(), code, input, output, &::DeviceIoControl);
 }
 
-}  // namespace winwrap::user
+}  // namespace winwrap

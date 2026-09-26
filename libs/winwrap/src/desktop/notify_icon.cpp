@@ -1,11 +1,11 @@
-#include "winwrap/user/desktop/notify_icon.hpp"
+#include "winwrap/desktop/notify_icon.hpp"
 
 #include <cwchar>
 #include <utility>
 
-#include "winwrap/user/error.hpp"
+#include "winwrap/error.hpp"
 
-namespace winwrap::user {
+namespace winwrap {
 
 NotifyIcon::NotifyIcon(HWND owner, UINT callback_msg, UINT id, wil::unique_hicon icon,
                        const wchar_t* tooltip)
@@ -105,4 +105,4 @@ void NotifyIcon::remove() noexcept {
     }
 }
 
-}  // namespace winwrap::user
+}  // namespace winwrap

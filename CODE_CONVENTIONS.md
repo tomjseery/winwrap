@@ -57,7 +57,7 @@ The verb still tells the reader which operation the factory performs here.
 - **`load`** — acquire an owned copy of an existing image resource, as `icon::load`
   does. When the result is a WIL owner such as `wil::unique_hicon`, no Winwrap type
   exists to host the factory, so it is a free function in the resource's family
-  namespace (`winwrap::user::icon`, header `user/desktop/icon.hpp`) returning `std::expected`.
+  namespace (`winwrap::icon`, header `desktop/icon.hpp`) returning `std::expected`.
 - **`make_*`** — a helper that **builds a plain value and cannot fail**; it returns
   the value by value, never an `expected`. This is the standard-library idiom
   (`std::make_pair`, `make_tuple`, `make_optional`).
@@ -227,29 +227,30 @@ is about state that is *implied by composing the mixin*, not general per-window 
 
 ## 6. Execution-mode namespaces and API families
 
-The first public namespace and header component identifies the execution mode:
+User mode is the default and carries no mode namespace. Only code that runs in
+kernel mode, or in both modes, is marked:
 
 | Mode | Public namespace | Header root | Build target |
 |---|---|---|---|
-| User mode | `winwrap::user` | `winwrap/user/` | `winwrap::user` |
+| User mode | `winwrap` | `winwrap/` | `winwrap::winwrap` |
 | Kernel mode | `winwrap::kernel` | `winwrap/kernel/` | `winwrap::kernel` |
-| Shared values | `winwrap::shared` | `winwrap/shared/` | Header-only dependency of either mode |
+| Driver/client protocol values | `winwrap::protocol` | `winwrap/protocol/` | Header-only dependency of either mode |
 
 User-mode resource types such as `Window`, `Module`, `Device`, and
-`NotifyIcon` live directly in `winwrap::user`. Free-function families keep
-their use-named subnamespaces: `user::error`, `user::message`,
-`user::message_loop`, `user::module`, `user::icon`, `user::window`,
-`user::filesystem`, and `user::shell`. The family name carries the noun,
-so `user::module::path(handle)` does not repeat it in the function name.
-The existing `user::notification` and `user::detail` roles remain.
+`NotifyIcon` live directly in `winwrap`. Free-function families keep
+their use-named subnamespaces: `winwrap::error`, `message`, `message_loop`,
+`module`, `icon`, `window`, `filesystem`, and `shell`. The family name carries
+the noun, so `module::path(handle)` does not repeat it in the function name.
+The existing `notification` and `detail` roles remain.
 
-The cross-mode interface and IOCTL values live in
-`winwrap::shared::device::{Interface, ControlCode}`. The owning user-mode
-connection is `winwrap::user::Device`. Borrowed KMDF objects live in
+The interface and IOCTL values used by both a driver and its clients live in
+`winwrap::protocol::device::{Interface, ControlCode}`. The owning user-mode
+connection is `winwrap::Device`. Borrowed KMDF objects live in
 `winwrap::kernel::driver::{Driver, Device, Queue, Request}`, while kernel
 diagnostics use `winwrap::kernel::debug_print`. Kernel headers depend only on
-WDK and shared headers; user headers and the user static library are not
-kernel dependencies.
+WDK and protocol headers; user headers and the user static library are not
+kernel dependencies. User headers include `winwrap/detail/user_mode.hpp`, which
+rejects kernel-mode compilation.
 
 Keep lowercase snake_case for free operations. Native Win32 macros ignore
 C++ namespaces, so spell wrapper operations distinctly from those macros.

@@ -23,3 +23,8 @@ Baseline coverage and validation are documented in
   demonstrated. **Resolve:** versioned proving apps and a documented manual/automated
   desktop tier with explicit environment requirements. Do not kill Explorer or
   broaden timeouts merely to make an ordinary test run pass.
+- **Host-dependent Shell listener test.** "shell notifications reach a registered
+  Shell listener" fails on this development host, including at commits before the
+  mode-namespace change (observed 2026-09-26). **Resolve:** identify the missing
+  Shell/Explorer precondition, then either make the test establish it or move it to
+  the documented desktop tier with that requirement.

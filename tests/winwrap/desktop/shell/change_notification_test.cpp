@@ -1,4 +1,4 @@
-#include "winwrap/user/desktop/shell/change_notification.hpp"
+#include "winwrap/desktop/shell/change_notification.hpp"
 
 #include <algorithm>
 #include <catch2/catch_test_macros.hpp>
@@ -9,8 +9,8 @@
 #include <string>
 #include <vector>
 
-#include "winwrap/user/desktop/message_loop.hpp"
-#include "winwrap/user/desktop/window/window.hpp"
+#include "winwrap/desktop/message_loop.hpp"
+#include "winwrap/desktop/window/window.hpp"
 
 using namespace std::chrono_literals;
 
@@ -21,7 +21,7 @@ constexpr UINT_PTR timeout_timer{1};
 
 // Records the Shell events delivered for a watched folder, using the raw registration
 // API (the listening half is not wrapped yet), and stops the loop on the expected one.
-struct ChangeWatcher : winwrap::user::Window<ChangeWatcher> {
+struct ChangeWatcher : winwrap::Window<ChangeWatcher> {
     static constexpr const wchar_t* class_name = L"WinwrapShellChangeWatcher";
     std::vector<LONG> events;
     LONG expected{};
@@ -36,13 +36,13 @@ struct ChangeWatcher : winwrap::user::Window<ChangeWatcher> {
                 SHChangeNotification_Unlock(lock);
             }
             if (event == expected)
-                winwrap::user::message_loop::quit();
+                winwrap::message_loop::quit();
             return 0;
         }
         return Window::route_message(msg, wparam, lparam);
     }
 
-    void on_timer(UINT_PTR) { winwrap::user::message_loop::quit(); }  // give up waiting
+    void on_timer(UINT_PTR) { winwrap::message_loop::quit(); }  // give up waiting
 
     // Runs `action` and pumps messages until the Shell reports `event` or 5 s pass.
     bool delivers(LONG event, const std::function<void()>& action) {
@@ -50,7 +50,7 @@ struct ChangeWatcher : winwrap::user::Window<ChangeWatcher> {
         expected = event;
         action();
         REQUIRE(start_timer(timeout_timer, 5s));
-        static_cast<void>(winwrap::user::message_loop::run());
+        static_cast<void>(winwrap::message_loop::run());
         static_cast<void>(stop_timer(timeout_timer));
         return std::ranges::find(events, event) != events.end();
     }
@@ -103,27 +103,27 @@ TEST_CASE("shell notifications reach a registered Shell listener") {
 
         CHECK(w.delivers(SHCNE_CREATE, [&] {
             std::ofstream{file} << "x";
-            winwrap::user::shell::notify_file_created(file);
+            winwrap::shell::notify_file_created(file);
         }));
         CHECK(w.delivers(SHCNE_UPDATEITEM, [&] {
             std::ofstream{file} << "changed";
-            winwrap::user::shell::notify_file_changed(file);
+            winwrap::shell::notify_file_changed(file);
         }));
         CHECK(w.delivers(SHCNE_RENAMEITEM, [&] {
             std::filesystem::rename(file, renamed);
-            winwrap::user::shell::notify_file_renamed(file, renamed);
+            winwrap::shell::notify_file_renamed(file, renamed);
         }));
         CHECK(w.delivers(SHCNE_DELETE, [&] {
             std::filesystem::remove(renamed);
-            winwrap::user::shell::notify_file_deleted(renamed);
+            winwrap::shell::notify_file_deleted(renamed);
         }));
         CHECK(w.delivers(SHCNE_MKDIR, [&] {
             std::filesystem::create_directory(subfolder);
-            winwrap::user::shell::notify_folder_created(subfolder);
+            winwrap::shell::notify_folder_created(subfolder);
         }));
         CHECK(w.delivers(SHCNE_RMDIR, [&] {
             std::filesystem::remove(subfolder);
-            winwrap::user::shell::notify_folder_deleted(subfolder);
+            winwrap::shell::notify_folder_deleted(subfolder);
         }));
     }
     std::filesystem::remove_all(folder);

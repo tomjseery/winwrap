@@ -1,11 +1,11 @@
-#include "winwrap/user/module.hpp"
+#include "winwrap/module.hpp"
 
 #include <algorithm>
 #include <string>
 
-#include "winwrap/user/error.hpp"
+#include "winwrap/error.hpp"
 
-namespace winwrap::user::module {
+namespace winwrap::module {
 
 HMODULE current() noexcept {
     return GetModuleHandleW(nullptr);
@@ -38,4 +38,4 @@ std::expected<std::filesystem::path, std::error_code> path(HMODULE module) {
     }
 }
 
-}  // namespace winwrap::user::module
+}  // namespace winwrap::module
