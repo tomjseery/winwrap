@@ -244,7 +244,9 @@ the noun, so `module::path(handle)` does not repeat it in the function name.
 The existing `notification` and `detail` roles remain.
 
 The interface and IOCTL values used by both a driver and its clients live in
-`winwrap::protocol::device::{Interface, ControlCode}`. The owning user-mode
+`winwrap::protocol::device::{Interface, ControlCode}`. `protocol` holds only such
+driver/client contract values; other code that compiles in both modes gets a namespace
+named for its concept, never a catch-all. The owning user-mode
 connection is `winwrap::Device`. Borrowed KMDF objects live in
 `winwrap::kernel::driver::{Driver, Device, Queue, Request}`, while kernel
 diagnostics use `winwrap::kernel::debug_print`. Kernel headers depend only on
