@@ -9,8 +9,8 @@ change" if left until after the `v0.1` tag. Additive features (6–8) follow.
 > batch (`Drop`, `DropZone`, docs, the constants convention in
 > `cpp:style`) so every task starts from a clean tree.
 
-> **Working style, every session:** per `cpp/CLAUDE.md`, offer Tommy the
-> learning-vs-delivery choice up front. Teach anything off `WHAT_I_KNOW.md`
+> **Working style, every session:** per `cpp:learning`, offer Tommy the
+> learning-vs-delivery choice up front. Teach anything off `cpp:knowledge`
 > before using it. MSVC is ground truth (clangd shows phantoms):
 > `cmd //c '"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvars64.bat" >nul && cmake --build build/dev --target winwrap_test'`
 > then run `build\dev\bin\winwrap_test.exe`.

@@ -139,7 +139,7 @@ Rules for the fragments:
 - Naming: these are **CRTP mixins** (mechanism) / **behaviours** (concept). Do not call them
   "traits" (that means C++ type-traits).
 - One behaviour per file, named for the behaviour (e.g. `clickable.hpp`, never `button.hpp`).
-- Follow `CODE_CONVENTIONS.md` and `windows/CLAUDE.md` (already in the repo).
+- Follow `CODE_CONVENTIONS.md` (already in the repo) and `win32:style`.
 
 ## Verify (ground truth = MSVC, NOT clangd)
 

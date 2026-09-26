@@ -74,9 +74,9 @@ d) **The `HDROP` unpack.** Count query is `DragQueryFileW(h, 0xFFFFFFFF, ...)`;
 
 e) **Additive only.** No BC break anywhere; the pack defaults empty.
 
-## Working style (per NORTH_STAR.md — this is a learning project)
+## Working style (per `cpp:direction` — this is a learning project)
 
-1. **Variadic templates / parameter packs are NOT in `WHAT_I_KNOW.md`** — teach
+1. **Variadic templates / parameter packs are NOT in `cpp:knowledge`** — teach
    them before the `Window` pack change (the engine's
    `template <typename> typename... Mixins` already exists to point at). Same
    for anything else off the known list that comes up.
