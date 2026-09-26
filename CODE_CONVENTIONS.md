@@ -41,17 +41,18 @@ A raw handle returned by an accessor is borrowed; the wrapper retains ownership.
 
 ## 2. Factory & builder naming — `create` vs `make_*`
 
-The verb a function picks tells the reader its contract. The deciding question is
-**"can it fail / does it own a resource?"** — *not* whether it's public or private.
+Follow `cpp:domain-design` for the generic type-owned factory name and return shape.
+The verb still tells the reader which operation the factory performs here.
 
-- **`create`** — an operation that **acquires an OS resource and can fail**. It
-  normally returns `std::expected<T, std::error_code>` because a real constructor
-  cannot report failure. When the OS must retain the wrapper's address, as for
-  `Window<T>` and `Control<T>`, their inherited static factory returns
+- **`create`** — a type-owned factory. Winwrap resource factories normally return
+  `std::expected<T, std::error_code>`. When the OS must retain the wrapper's address,
+  as for `Window<T>` and `Control<T>`, their inherited static factory returns
   `CreationResult<T>`. It combines the expected creation error with the sole owner
   of a permanently addressed `T`, allowing a checked result to use
-  `result->operation()` without exposing `unique_ptr` extraction. The private worker
-  that performs the acquisition takes the same family with a suffix, `create_<thing>`.
+  `result->operation()` without exposing `unique_ptr` extraction.
+  `device::ControlCode::create(Config)` builds an infallible value and returns it
+  directly. A private worker that acquires a resource uses a specific
+  `create_<thing>` name.
 - **`open`** — acquire a handle to an existing named resource, as `Device::open` does.
 - **`load`** — acquire an owned copy of an existing image resource, as `icon::load`
   does. When the result is a WIL owner such as `wil::unique_hicon`, no Winwrap type
@@ -78,8 +79,7 @@ Default construction supplies an empty member slot for controls created during t
 owner's `on_created()` hook.
 
 Public/private is only a *correlation*: resource factories are usually the public
-entry points and value-builders are usually private helpers — but the name follows
-the **failability + ownership**, not the visibility. (`create_window` /
+entry points and value-builders are usually private helpers. (`create_window` /
 `create_control` are private yet correctly `create_*`: they acquire a window and
 can fail.)
 
@@ -124,7 +124,7 @@ follow the wrapper-first rule below.
 
 ## 4. Wrapper-first APIs — abstract the operation, preserve the escape hatch
 
-**Supported desktop operations use Winwrap's API by default.** For a window object,
+**Supported Windows operations use Winwrap's API by default.** For a window object,
 write `window.show()`, `window.set_text(...)` and `window.enable(...)`, not the
 corresponding raw SDK calls. Examples and application code should teach that path.
 Ordinary operations belong on their resource façade even when the implementation
@@ -167,6 +167,11 @@ wrapper, but it does not count as completing missing coverage in a promised
 feature. Preserve binding, ownership, thread and cached-state invariants. A getter
 does not transfer ownership; the choice of getter versus implicit conversion is
 separate from whether an operation should have an ergonomic member function.
+
+The same rule applies to supported WDF device operations. A driver keeps the WDF callback
+ABI, wraps callback handles immediately, and calls `winwrap::driver` operations for device
+creation, queue configuration, interface publication, request buffers, and completion.
+KMDF continues to own its framework objects; the wrapper types are borrowed adapters.
 
 **Wrap intent and complete protocols, not just spelling.** `show()` and `message_loop::quit()`
 are useful one-call intent operations. For a multi-step query such as dropped
@@ -222,7 +227,8 @@ is about state that is *implied by composing the mixin*, not general per-window 
 
 ## 6. Namespaces — types in `winwrap`, free-function families in their own
 
-Types live directly in `winwrap::` (`Window`, `Module`, `NotifyIcon`, `SystemIcon`):
+User-mode types live directly in `winwrap::` (`Window`, `Module`, `Device`, `NotifyIcon`,
+`SystemIcon`):
 a type already groups its own operations as members. **Free functions** live in a nested
 namespace that names their subsystem, for how they are used. Within it, each header
 names one protocol or operation family, so a namespace can span a folder of headers
@@ -251,9 +257,16 @@ names one protocol or operation family, so a namespace can span a folder of head
   `message`, `window`) in code that calls that family: the local hides the namespace.
   Inside Winwrap a window handle is named `hwnd`. Callers who qualify
   (`winwrap::window::create`) are unaffected.
-- Add a new namespace only for a real operation family, not one per header or folder
-  (`cpp:style`). Types and mixins stay in `winwrap::`; `winwrap::notification` and
-  `winwrap::detail` keep their existing roles.
+- Add a new namespace only for a real API family or the supporting-value case below, not one
+  per header or folder (`cpp:style`). Primary resource types and mixins stay in `winwrap::`;
+  `winwrap::notification` and `winwrap::detail` keep their existing roles.
+- A subsystem namespace may also disambiguate short supporting value types that would be
+  vague at the root. `winwrap::device::Interface` and `device::ControlCode` live in
+  `device/interface.hpp` and `device/control_code.hpp`; the primary owning type remains
+  `winwrap::Device` in `device.hpp`. The folder records cohesion, while the namespace earns
+  its place by avoiding generic root names such as `Interface` and `ControlCode`.
+- Kernel WDF object types live in `winwrap::driver` because they have a distinct runtime,
+  lifetime owner, error vocabulary, and toolchain from same-named user-mode concepts.
 
 ## See also
 

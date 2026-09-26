@@ -41,6 +41,29 @@ BOOL WINAPI oversized_successful_control(HANDLE, DWORD, LPVOID, DWORD, LPVOID, D
     return TRUE;
 }
 
+struct ControlCall {
+    LPVOID input{};
+    DWORD input_size{};
+    LPVOID output{};
+    DWORD output_size{};
+};
+
+ControlCall recorded_call{};
+DWORD recorded_returned{};
+
+BOOL WINAPI recording_failed_control(HANDLE, DWORD, LPVOID input, DWORD input_size, LPVOID output,
+                                     DWORD output_size, LPDWORD returned, LPOVERLAPPED) {
+    recorded_call = {
+        .input = input,
+        .input_size = input_size,
+        .output = output,
+        .output_size = output_size,
+    };
+    *returned = recorded_returned;
+    ::SetLastError(ERROR_MORE_DATA);
+    return FALSE;
+}
+
 }  // namespace
 TEST_CASE("paths accepts an empty list") {
     const std::array<wchar_t, 1> empty{L'\0'};
@@ -55,6 +78,31 @@ TEST_CASE("Device::paths returns no paths for an unknown interface") {
     const auto paths{winwrap::Device::paths(unused_interface)};
     REQUIRE(paths.has_value());
     CHECK(paths->empty());
+}
+
+TEST_CASE("device::Interface preserves its native identifier") {
+    constexpr GUID id{0x39bb3c82, 0x92a7, 0x424d, {0x98, 0x5b, 0x48, 0x29, 0xb3, 0x31, 0x0f, 0xc7}};
+    constexpr winwrap::device::Interface interface_id{id};
+
+    CHECK(interface_id.native().Data1 == id.Data1);
+    CHECK(interface_id.native().Data2 == id.Data2);
+    CHECK(interface_id.native().Data3 == id.Data3);
+    CHECK(interface_id.native().Data4[7] == id.Data4[7]);
+}
+
+TEST_CASE("device::ControlCode encodes the native control fields") {
+    constexpr ULONG device_type{0x8000};
+    constexpr ULONG function{0x800};
+    constexpr auto code{winwrap::device::ControlCode::create({
+        .device_type = device_type,
+        .function = function,
+        .method = winwrap::device::ControlCode::Method::buffered,
+        .access = winwrap::device::ControlCode::Access::read,
+    })};
+
+    STATIC_REQUIRE(code.native() ==
+                   CTL_CODE(device_type, function, METHOD_BUFFERED, FILE_READ_DATA));
+    STATIC_REQUIRE(code == winwrap::device::ControlCode{code.native()});
 }
 TEST_CASE("paths preserves one or more entries") {
     const std::array<wchar_t, 6> one{L'o', L'n', L'e', L'\0', L'\0', L'\0'};
@@ -131,6 +179,8 @@ TEST_CASE("device control preserves partial output details on failure") {
     REQUIRE_FALSE(returned.has_value());
     CHECK(returned.error().code.value() == ERROR_MORE_DATA);
     CHECK(returned.error().bytes_returned == 2);
+    REQUIRE(returned.error().native_bytes_returned.has_value());
+    CHECK(*returned.error().native_bytes_returned == 2);
 }
 
 TEST_CASE("device control bounds a failed request's returned byte count") {
@@ -140,6 +190,8 @@ TEST_CASE("device control bounds a failed request's returned byte count") {
     REQUIRE_FALSE(returned.has_value());
     CHECK(returned.error().code.value() == ERROR_MORE_DATA);
     CHECK(returned.error().bytes_returned == output.size());
+    REQUIRE(returned.error().native_bytes_returned.has_value());
+    CHECK(*returned.error().native_bytes_returned == output.size() + 1);
 }
 
 TEST_CASE("device control rejects an over-reported successful byte count") {
@@ -149,4 +201,39 @@ TEST_CASE("device control rejects an over-reported successful byte count") {
     REQUIRE_FALSE(returned.has_value());
     CHECK(returned.error().code.value() == ERROR_INVALID_DATA);
     CHECK(returned.error().bytes_returned == output.size());
+    REQUIRE(returned.error().native_bytes_returned.has_value());
+    CHECK(*returned.error().native_bytes_returned == output.size() + 1);
+}
+
+TEST_CASE("device control preserves storage pointers for zero-length spans") {
+    std::array<std::byte, 1> input{};
+    std::array<std::byte, 1> output{};
+    recorded_returned = 3;
+
+    const auto returned{winwrap::detail::control(nullptr, 0, std::span{input}.first(0),
+                                                 std::span{output}.first(0),
+                                                 &recording_failed_control)};
+
+    REQUIRE_FALSE(returned.has_value());
+    CHECK(recorded_call.input == input.data());
+    CHECK(recorded_call.input_size == 0);
+    CHECK(recorded_call.output == output.data());
+    CHECK(recorded_call.output_size == 0);
+    CHECK(returned.error().bytes_returned == 0);
+    REQUIRE(returned.error().native_bytes_returned.has_value());
+    CHECK(*returned.error().native_bytes_returned == recorded_returned);
+}
+
+TEST_CASE("device control passes null pointers for default empty spans") {
+    recorded_returned = 0;
+
+    const auto returned{winwrap::detail::control(nullptr, 0, {}, {}, &recording_failed_control)};
+
+    REQUIRE_FALSE(returned.has_value());
+    CHECK(recorded_call.input == nullptr);
+    CHECK(recorded_call.input_size == 0);
+    CHECK(recorded_call.output == nullptr);
+    CHECK(recorded_call.output_size == 0);
+    REQUIRE(returned.error().native_bytes_returned.has_value());
+    CHECK(*returned.error().native_bytes_returned == 0);
 }
