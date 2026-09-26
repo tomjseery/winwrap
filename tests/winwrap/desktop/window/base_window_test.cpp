@@ -7,11 +7,11 @@ namespace {
 
 // A real top-level window, created hidden and far off-screen so the tests never flash it.
 struct PlainWindow : winwrap::Window<PlainWindow> {
-    static constexpr const wchar_t* window_class_name = L"WinwrapBaseWindowTest";
+    static constexpr const wchar_t* class_name = L"WinwrapBaseWindowTest";
 };
 
 struct ClosingWindow : winwrap::Window<ClosingWindow> {
-    static constexpr const wchar_t* window_class_name = L"WinwrapBaseWindowClosingTest";
+    static constexpr const wchar_t* class_name = L"WinwrapBaseWindowClosingTest";
     void on_destroy() { winwrap::message_loop::quit(); }
 };
 
@@ -25,7 +25,7 @@ auto make_plain_window(DWORD ex_style = 0) {
                                        .width = 320,
                                        .height = 240});
     REQUIRE(window);
-    return std::move(*window);
+    return window;
 }
 
 }  // namespace
@@ -137,26 +137,26 @@ TEST_CASE("request_close closes the window from the message loop") {
     auto window = ClosingWindow::create({.parent = HWND_MESSAGE});
     REQUIRE(window);
 
-    REQUIRE((*window)->request_close());
-    CHECK((*window)->hwnd() != nullptr);  // nothing happens until the loop runs
+    REQUIRE(window->request_close());
+    CHECK(window->hwnd() != nullptr);  // nothing happens until the loop runs
 
     CHECK(winwrap::message_loop::run() == 0);
-    CHECK((*window)->hwnd() == nullptr);
+    CHECK(window->hwnd() == nullptr);
 }
 
 TEST_CASE("operations on a destroyed window report the Win32 error") {
     auto window = ClosingWindow::create({.parent = HWND_MESSAGE});
     REQUIRE(window);
-    REQUIRE((*window)->request_close());
+    REQUIRE(window->request_close());
     REQUIRE(winwrap::message_loop::run() == 0);
 
-    const auto client = (*window)->client_rect();
-    const auto style = (*window)->style();
+    const auto client = window->client_rect();
+    const auto style = window->style();
     REQUIRE_FALSE(client);
     REQUIRE_FALSE(style);
     CHECK(client.error().value() == ERROR_INVALID_WINDOW_HANDLE);
     CHECK(style.error().value() == ERROR_INVALID_WINDOW_HANDLE);
-    CHECK((*window)->move(0, 0).error().value() == ERROR_INVALID_WINDOW_HANDLE);
-    CHECK((*window)->request_close().error().value() == ERROR_INVALID_WINDOW_HANDLE);
-    CHECK_FALSE((*window)->has_focus());
+    CHECK(window->move(0, 0).error().value() == ERROR_INVALID_WINDOW_HANDLE);
+    CHECK(window->request_close().error().value() == ERROR_INVALID_WINDOW_HANDLE);
+    CHECK_FALSE(window->has_focus());
 }

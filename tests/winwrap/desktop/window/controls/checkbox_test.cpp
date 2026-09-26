@@ -1,13 +1,14 @@
+#include "winwrap/desktop/window/controls/checkbox.hpp"
+
 #include <catch2/catch_test_macros.hpp>
 
-#include "winwrap/desktop/window/controls/checkbox.hpp"
 #include "winwrap/desktop/window/window.hpp"
 
 namespace {
 // A bare host window to parent the checkbox, so the parent -> reflect -> control path
 // can run for real.
 struct CheckboxHost : winwrap::Window<CheckboxHost> {
-    static constexpr const wchar_t* window_class_name = L"WinwrapCheckboxHost";
+    static constexpr const wchar_t* class_name = L"WinwrapCheckboxHost";
 };
 
 constexpr UINT checkbox_id = 1;
@@ -17,10 +18,9 @@ TEST_CASE("Checkbox::click toggles the box and fires on_click through reflection
     auto host = CheckboxHost::create();
     REQUIRE(host);
 
-    auto made = winwrap::Checkbox::create(
-        {.parent = (*host)->hwnd(), .id = checkbox_id, .text = L"Enable"});
-    REQUIRE(made);
-    auto& checkbox = *made;
+    auto checkbox =
+        winwrap::Checkbox::create({.parent = host->hwnd(), .id = checkbox_id, .text = L"Enable"});
+    REQUIRE(checkbox);
 
     bool clicked = false;
     checkbox->on_click = [&] { clicked = true; };
@@ -37,9 +37,8 @@ TEST_CASE("Checkbox check state round-trips through set_checked / checked") {
     auto host = CheckboxHost::create();
     REQUIRE(host);
 
-    auto made = winwrap::Checkbox::create({.parent = (*host)->hwnd(), .id = checkbox_id});
-    REQUIRE(made);
-    auto& checkbox = *made;
+    auto checkbox = winwrap::Checkbox::create({.parent = host->hwnd(), .id = checkbox_id});
+    REQUIRE(checkbox);
 
     REQUIRE_FALSE(checkbox->checked());
     checkbox->set_checked(true);

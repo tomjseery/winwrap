@@ -125,8 +125,8 @@ Call site (the whole point — `wWinMain` shrinks to this):
 int WINAPI wWinMain(HINSTANCE, HINSTANCE, PWSTR, int nShowCmd) {
     auto window = MainWindow::create({.title = L"Hello, winwrap"});
     if (!window)
-        return EXIT_FAILURE;
-    (*window)->show(nShowCmd);
+        return window.error().value();
+    window->show(nShowCmd);
     return winwrap::run();
 }
 ```
@@ -208,7 +208,7 @@ mixin):
 
 ```cpp
 struct MainWindow : winwrap::Window<MainWindow> {
-    static constexpr const wchar_t* window_class_name = L"MainWindow";
+    static constexpr const wchar_t* class_name = L"MainWindow";
     void on_destroy() { winwrap::quit(); }
 };
 ```

@@ -7,8 +7,10 @@
 #include <expected>
 #include <memory>
 #include <system_error>
+#include <utility>
 
 #include "winwrap/desktop/window/base_window.hpp"
+#include "winwrap/desktop/window/creation_result.hpp"
 #include "winwrap/desktop/window/message/focus_aware.hpp"
 #include "winwrap/desktop/window/message/keyboard_input.hpp"
 #include "winwrap/desktop/window/message/message_router.hpp"
@@ -36,9 +38,9 @@ struct ControlConfig {
 /// WS_CHILD window of a system-registered class ("BUTTON", "EDIT", "STATIC", ...).
 /// Derive as `class Button : public winwrap::Control<Button, notification::Click>`: the base
 /// owns creation, the SetWindowSubclass->object bridge, message routing, and teardown,
-/// while T provides `static constexpr const wchar_t* control_class` and composes the
+/// while T provides `static constexpr const wchar_t* class_name` and composes the
 /// mixins it supports. Dispatch resolves at compile time -- no virtual. Non-movable;
-/// lives as a unique_ptr member of the owner window, created in its on_created().
+/// create it with T::create() and keep the returned CreationResult alive.
 ///
 /// Two kinds of message handling, both composed into the same compile-time fold:
 ///
@@ -60,7 +62,7 @@ struct ControlConfig {
 /// directly when it deliberately declines the current message.
 ///
 /// @tparam T           The derived control type. Must provide
-///                     `static constexpr const wchar_t* control_class` and be
+///                     `static constexpr const wchar_t* class_name` and be
 ///                     default-constructible.
 /// @tparam Mixins  Notification mixins to compose (e.g. notification::Click).
 template <typename T, typename... Mixins>
@@ -72,16 +74,14 @@ public:
     Control(Control&&) = delete;
     Control& operator=(Control&&) = delete;
 
-    /// Creates the child control and sets the default GUI font.
+    /// Constructs the final object, creates its child control, and sets the default GUI font.
     /// @param cfg  Control settings (parent, id, text, geometry, style).
-    /// @return     Sole owner of the live control, or the Win32 error
-    ///             (as std::error_code) that stopped creation.
-    [[nodiscard]] static std::expected<std::unique_ptr<T>, std::error_code> create(
-        const ControlConfig& cfg) {
+    /// @return     Stable owner of the live control, or the Win32 creation error.
+    [[nodiscard]] static CreationResult<T> create(const ControlConfig& cfg) {
         auto self = std::unique_ptr<T>{new T{}};
-        if (auto make = self->create_control(cfg); !make)
-            return std::unexpected(make.error());
-        return self;
+        if (auto made = self->create_control(cfg); !made)
+            return CreationResult<T>{made.error()};
+        return CreationResult<T>{std::move(self)};
     }
 
     /// The control's command id, reported with its `WM_COMMAND` notification.
@@ -96,11 +96,14 @@ public:
 
 protected:
     Control() = default;
-    /// Detaches the subclass if the control is still live (the parent destroys the
-    /// HWND, so no DestroyWindow here).
+    /// Detaches the subclass and destroys the child window if it is still live.
     ~Control() {
-        if (hwnd())
-            RemoveWindowSubclass(hwnd(), &subclass_proc, 1);
+        if (hwnd()) {
+            const HWND child = hwnd();
+            RemoveWindowSubclass(child, &subclass_proc, 1);
+            detach();
+            DestroyWindow(child);
+        }
     }
 
 private:
@@ -110,7 +113,7 @@ private:
         DWORD style = WS_CHILD | WS_VISIBLE | cfg.style;
         if constexpr (requires { T::default_style; })
             style |= T::default_style;
-        return window::create({.class_name = T::control_class,
+        return window::create({.class_name = T::class_name,
                                .title = cfg.text,
                                .style = style,
                                .x = cfg.x,
@@ -124,8 +127,9 @@ private:
                 // Until the subclass is installed the control is unbound; on failure `made`
                 // destroys it, so no live window is left without its wrapper.
                 return error::result_or_last([&] {
-                           return SetWindowSubclass(h, &subclass_proc, 1,
-                                                    reinterpret_cast<DWORD_PTR>(this));
+                           return SetWindowSubclass(
+                               h, &subclass_proc, 1,
+                               reinterpret_cast<DWORD_PTR>(static_cast<T*>(this)));
                        })
                     .and_then([](BOOL installed) -> std::expected<void, std::error_code> {
                         // SetWindowSubclass documents no error code for its FALSE result.
@@ -134,7 +138,7 @@ private:
                         return {};
                     })
                     .transform([&] {
-                        // The parent destroys its child windows, so the handle is not kept.
+                        // Control owns destruction; release the temporary HWND owner after binding.
                         attach(made.release());
                         id_ = cfg.id;
                         set_font(static_cast<HFONT>(GetStockObject(DEFAULT_GUI_FONT)));

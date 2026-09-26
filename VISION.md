@@ -34,11 +34,14 @@ KMDF, leaving application and driver architecture outside the library.
    (`unique_hmenu`, `unique_hicon`, …) for the plumbing, winwrap's ergonomic
    types layered on top. Factories, attachment and teardown must make ownership
    visible; current implementation gaps live in [TECH_DEBT.md](TECH_DEBT.md).
-5. **Value-based errors.** The public API returns `std::expected<T, E>`, normally
-   using `std::error_code` for Win32 codes via `std::system_category()`. A focused
-   structured error preserves additional native result data when callers need it,
-   keeping recoverable OS failures explicit. This does not imply exception-disabled
-   support: allocations and user callbacks require a separately specified policy.
+5. **Value-based errors.** The public API normally returns `std::expected<T, E>`,
+   using `std::error_code` for Win32 codes via `std::system_category()`. Callback-bound
+   windows use `CreationResult<T>`, a narrow owner adapter over
+   `std::expected<std::unique_ptr<T>, std::error_code>` that preserves explicit errors
+   while hiding the otherwise unavoidable double pointer unwrap. A focused structured
+   error preserves additional native result data when callers need it. This does not
+   imply exception-disabled support: allocations and user callbacks require a separately
+   specified policy.
 6. **Useful standalone protocols.** A reusable `Shell_NotifyIcon` abstraction accepts
    an HWND; tray events arrive as ordinary window messages. It must remain usable
    with an existing raw-Win32 window, without adopting the Winwrap window base.
