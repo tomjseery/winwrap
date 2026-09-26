@@ -1,15 +1,14 @@
 #include <catch2/catch_test_macros.hpp>
-
-#include "winwrap/user/desktop/window/message/file_droppable.hpp"
-#include "winwrap/user/desktop/window/window.hpp"
-
 #include <string>
 #include <vector>
+
+#include "winwrap/desktop/window/message/file_droppable.hpp"
+#include "winwrap/desktop/window/window.hpp"
 
 namespace {
 // The extensibility acceptance demo: a window gains file drag-drop purely by
 // composing the mixin -- no raw drop API appears anywhere in this file.
-struct DropDemoWindow : winwrap::user::Window<DropDemoWindow, winwrap::user::FileDroppable> {
+struct DropDemoWindow : winwrap::Window<DropDemoWindow, winwrap::FileDroppable> {
     static constexpr const wchar_t* class_name = L"WinwrapDropDemoWindow";
     std::vector<std::wstring> received;
     void on_files_dropped(const std::vector<std::wstring>& paths) { received = paths; }

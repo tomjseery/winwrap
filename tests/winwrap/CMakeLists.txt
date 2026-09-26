@@ -31,7 +31,7 @@ add_executable(winwrap_test
 
 target_link_libraries(winwrap_test
     PRIVATE
-        winwrap::user
+        winwrap::winwrap
         winwrap_warnings
         winwrap_sanitize
         Catch2::Catch2WithMain)
@@ -57,7 +57,7 @@ set(winwrap_header_units)
 foreach(header IN LISTS winwrap_public_headers)
     string(MAKE_C_IDENTIFIER ${header} unit)
     set(unit_source "#include \"${header}\"\n")
-    if(NOT header STREQUAL "winwrap/user/desktop/window/message/detail/hook_case.hpp")
+    if(NOT header STREQUAL "winwrap/desktop/window/message/detail/hook_case.hpp")
         string(APPEND unit_source
             "#ifdef WW_CASE\n#error \"${header} leaks WW_CASE\"\n#endif\n")
     endif()
@@ -69,7 +69,7 @@ endforeach()
 add_library(winwrap_header_check OBJECT ${winwrap_header_units})
 target_link_libraries(winwrap_header_check
     PRIVATE
-        winwrap::user
+        winwrap::winwrap
         winwrap_warnings
         winwrap_sanitize)
 add_dependencies(winwrap_test winwrap_header_check)

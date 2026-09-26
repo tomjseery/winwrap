@@ -1,23 +1,23 @@
-#include <catch2/catch_test_macros.hpp>
+#include "winwrap/desktop/window/message/file_droppable.hpp"
 
-#include "winwrap/user/win.hpp"
+#include "winwrap/win.hpp"
 
 #include <shellapi.h>
 #include <shlobj_core.h>  // DROPFILES
 
 #include <algorithm>
+#include <catch2/catch_test_macros.hpp>
 #include <initializer_list>
 #include <string>
 #include <string_view>
 #include <utility>
 #include <vector>
 
-#include "winwrap/user/desktop/drop.hpp"
-#include "winwrap/user/desktop/window/message/file_droppable.hpp"
-#include "winwrap/user/desktop/window/window.hpp"
+#include "winwrap/desktop/drop.hpp"
+#include "winwrap/desktop/window/window.hpp"
 
 namespace {
-struct DropWindow : winwrap::user::Window<DropWindow, winwrap::user::FileDroppable> {
+struct DropWindow : winwrap::Window<DropWindow, winwrap::FileDroppable> {
     static constexpr const wchar_t* class_name = L"WinwrapFileDropTestWindow";
     std::vector<std::wstring> dropped;
     void on_files_dropped(const std::vector<std::wstring>& paths) { dropped = paths; }
@@ -49,8 +49,7 @@ HDROP make_test_hdrop(std::initializer_list<std::wstring_view> paths) {
 TEST_CASE("FileDroppable unpacks a synthetic WM_DROPFILES into on_files_dropped") {
     DropWindow window;
     HDROP drop = make_test_hdrop({L"C:\\one.txt", L"C:\\two two.png"});
-    const LRESULT result =
-        window.route_message(WM_DROPFILES, reinterpret_cast<WPARAM>(drop), 0);
+    const LRESULT result = window.route_message(WM_DROPFILES, reinterpret_cast<WPARAM>(drop), 0);
     CHECK(result == 0);
     REQUIRE(window.dropped.size() == 2);
     CHECK(window.dropped[0] == L"C:\\one.txt");
@@ -64,7 +63,7 @@ TEST_CASE("FileDroppable leaves other messages unclaimed") {
 }
 
 TEST_CASE("Drop exposes count, paths, and the drop point") {
-    winwrap::user::Drop drop{make_test_hdrop({L"C:\\one.txt", L"C:\\two two.png"})};
+    winwrap::Drop drop{make_test_hdrop({L"C:\\one.txt", L"C:\\two two.png"})};
     CHECK(drop.count() == 2);
     CHECK(drop.path(1) == L"C:\\two two.png");
     const std::vector<std::wstring> all = drop.paths();
@@ -76,8 +75,8 @@ TEST_CASE("Drop exposes count, paths, and the drop point") {
 }
 
 TEST_CASE("Drop moves transfer ownership") {
-    winwrap::user::Drop first{make_test_hdrop({L"C:\\a.txt"})};
-    winwrap::user::Drop second{std::move(first)};
+    winwrap::Drop first{make_test_hdrop({L"C:\\a.txt"})};
+    winwrap::Drop second{std::move(first)};
     CHECK(first.handle() == nullptr);
     REQUIRE(second.count() == 1);
     CHECK(second.path(0) == L"C:\\a.txt");

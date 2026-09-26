@@ -7,11 +7,6 @@ add_library(winwrap STATIC
     src/desktop/menu.cpp)
 add_library(winwrap::winwrap ALIAS winwrap)
 
-add_library(winwrap_user INTERFACE)
-set_target_properties(winwrap_user PROPERTIES EXPORT_NAME user)
-add_library(winwrap::user ALIAS winwrap_user)
-target_link_libraries(winwrap_user INTERFACE winwrap)
-
 add_library(winwrap_kernel INTERFACE)
 set_target_properties(winwrap_kernel PROPERTIES EXPORT_NAME kernel)
 add_library(winwrap::kernel ALIAS winwrap_kernel)
@@ -52,7 +47,7 @@ include(CMakePackageConfigHelpers)
 
 install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
-install(TARGETS winwrap winwrap_user winwrap_kernel EXPORT winwrap-targets)
+install(TARGETS winwrap winwrap_kernel EXPORT winwrap-targets)
 install(EXPORT winwrap-targets
     FILE winwrap-targets.cmake
     NAMESPACE winwrap::
