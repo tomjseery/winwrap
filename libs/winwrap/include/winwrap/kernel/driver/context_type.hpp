@@ -42,4 +42,4 @@ private:
     PCWDF_OBJECT_CONTEXT_TYPE_INFO type_info_;
 };
 
-}  // namespace winwrap::kernel::driver
+}

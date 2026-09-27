@@ -32,4 +32,4 @@ std::expected<FirmwareTable, std::error_code> FirmwareTable::read(const Firmware
     return std::unexpected{error::win32(ERROR_RETRY)};
 }
 
-}  // namespace winwrap
+}
