@@ -11,6 +11,15 @@ Where those say *how to write C++*, this says *how winwrap shapes its API*.
 
 ## 1. Descriptive names and factories
 
+Keep a concept's data and cohesive behavior together. Creation, acquisition, decoding,
+validation, queries and state changes belong on the meaningful owning type where relevant.
+Use instance methods for an existing object and static operations for constructing or
+decoding one. Statelessness alone does not make an operation a free function: a validator
+can still belong to its type. An independent algorithm, cross-type operation or isolated
+operation with no natural type owner remains an associated free function. Do not introduce
+empty service classes or inheritance merely to group unrelated functions. This applies to
+owned values such as a retrieved `FirmwareTable` as well as native resource wrappers.
+
 A public name must say what it represents at the use site. Keep descriptive
 factory-input names such as `WindowConfig`, `ControlConfig`, and
 `NotifyIconConfig`; a bare `Config` is too ambiguous as a general rule, even when
