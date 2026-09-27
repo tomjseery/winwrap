@@ -15,8 +15,8 @@ namespace winwrap {
 
 /// Native firmware-table selection and a caller-defined allocation limit.
 struct FirmwareQuery {
-    DWORD provider;  ///< GetSystemFirmwareTable provider signature.
-    DWORD table_id;  ///< Provider-specific table identifier.
+    DWORD provider;            ///< GetSystemFirmwareTable provider signature.
+    DWORD table_id;            ///< Provider-specific table identifier.
     std::size_t maximum_size;  ///< Maximum bytes to allocate, in [1, UINT_MAX].
 };
 
@@ -38,6 +38,34 @@ public:
 
 private:
     std::vector<std::byte> bytes_;
+};
+
+/// Supplies owned Windows RawSMBIOSData snapshots to a decoder.
+class FirmwareTableSource {
+public:
+    /// Destroy a source through its interface.
+    virtual ~FirmwareTableSource() = default;
+
+    /// Acquire a snapshot or return its error; allocation may throw.
+    [[nodiscard]] virtual std::expected<FirmwareTable, std::error_code> read() const = 0;
+};
+
+/// Maximum raw SMBIOS table size accepted by WindowsFirmware.
+struct WindowsFirmwareConfig {
+    std::size_t maximum_size{1024 * 1024};  ///< Bytes, including RawSMBIOSData header.
+};
+
+/// Reads Windows' raw SMBIOS provider through FirmwareTable.
+class WindowsFirmware final : public FirmwareTableSource {
+public:
+    /// Keep the caller's allocation limit for later reads.
+    explicit WindowsFirmware(WindowsFirmwareConfig config = {}) noexcept : config_{config} {}
+
+    /// Read the current RSMB table; preserve native and limit errors.
+    [[nodiscard]] std::expected<FirmwareTable, std::error_code> read() const override;
+
+private:
+    WindowsFirmwareConfig config_;
 };
 
 }
