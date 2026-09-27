@@ -1,6 +1,8 @@
 add_library(winwrap STATIC
     src/device.cpp
+    src/disk_serial.cpp
     src/firmware.cpp
+    src/system_uuid.cpp
     src/module.cpp
     src/desktop/icon.cpp
     src/desktop/notify_icon.cpp
