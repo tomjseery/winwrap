@@ -175,20 +175,22 @@ Do not also re-implement the native call in a member. Who that owner is depends 
 whether the operation is genuinely free:
 
 - **A genuine free function** is an operation meaningful on any raw handle, whoever
-  created it: showing, moving or destroying any HWND, reading a module's path. It is a
+  created it: showing, moving, destroying or subclassing any HWND, reading a module's path.
+  It is a
   free function in the family namespace taking the raw handle, declared in the owning
   class's header, and the class's members delegate to it. `module.hpp` is the precedent:
   `module::current()`, `module::loaded()` and `module::path()` own the SDK calls and
   `Module` delegates. `base_window.hpp` does the same for windows: `window::show`,
-  `window::destroy`, `window::default_proc`, `window::long_ptr` and the rest own their calls,
-  and `BaseWindow`, `Window` and `Control` delegate.
-- **A class-owned call** belongs to a class's own protocol: creating its window,
-  registering its class, installing its callback bridge or subclass. It stays inside that
-  class, as a private or protected member, not a public free function. When a class
-  hierarchy shares it, it is a protected static on the common base. `BaseWindow::create_hwnd`
-  is the only `CreateWindowExW` call, and `Window<T>::create` / `Control<T>::create` remain
-  the public factories. `RegisterClassW` stays private to `Window`, and `SetWindowSubclass`
-  stays private to `Control`.
+  `window::destroy`, `window::default_proc`, `window::long_ptr`, `window::subclass` and the
+  rest own their calls, and `BaseWindow`, `Window` and `Control` delegate.
+- **A class-owned call** belongs to a class's own protocol: creating its window or
+  registering its class. It stays inside that class, as a private or protected member, not a
+  public free function. When a class hierarchy shares it, it is a protected static on the
+  common base. `BaseWindow::create_hwnd` is the only `CreateWindowExW` call, and
+  `Window<T>::create` / `Control<T>::create` remain the public factories. `RegisterClassW`
+  stays private to `Window`. A class's callback bridge (storing `&self`, recovering it in the
+  procedure) is always class-owned, even when the native call under it is a genuine free
+  function: `Control` builds its bridge on `window::subclass`.
 
 Do not introduce a public type or free function merely to name a native structure a class
 fills internally (a `WNDCLASSW`) or to share an implementation step. A public free function
