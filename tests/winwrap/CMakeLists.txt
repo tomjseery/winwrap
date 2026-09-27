@@ -10,6 +10,8 @@ FetchContent_MakeAvailable(Catch2)
 add_executable(winwrap_test
     firmware_test.cpp
     device_test.cpp
+    disk_serial_test.cpp
+    system_uuid_test.cpp
     desktop/cursor_test.cpp
     desktop/font_test.cpp
     desktop/icon_test.cpp

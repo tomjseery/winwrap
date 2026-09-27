@@ -32,4 +32,10 @@ std::expected<FirmwareTable, std::error_code> FirmwareTable::read(const Firmware
     return std::unexpected{error::win32(ERROR_RETRY)};
 }
 
+std::expected<FirmwareTable, std::error_code> WindowsFirmware::read() const {
+    constexpr DWORD raw_smbios_provider{0x52534d42};
+    return FirmwareTable::read(
+        {.provider = raw_smbios_provider, .table_id = 0, .maximum_size = config_.maximum_size});
+}
+
 }
