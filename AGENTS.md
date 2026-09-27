@@ -19,6 +19,9 @@ Winwrap's public-API conventions are project-specific:
 
 @CODE_CONVENTIONS.md
 
+Coding rules belong in [CODE_CONVENTIONS.md](CODE_CONVENTIONS.md); keep this file
+as the workflow and routing entry point instead of duplicating those rules here.
+
 ## Layout
 
 `libs/winwrap/include/winwrap/` holds the default C++23/WIL user-mode APIs in
