@@ -19,7 +19,8 @@ std::expected<FirmwareTable, std::error_code> FirmwareTable::read(const Firmware
         if (size > query.maximum_size)
             return std::unexpected{error::win32(ERROR_INSUFFICIENT_BUFFER)};
         std::vector<std::byte> bytes(size);
-        const auto count{::GetSystemFirmwareTable(query.provider, query.table_id, bytes.data(), size)};
+        const auto count{
+            ::GetSystemFirmwareTable(query.provider, query.table_id, bytes.data(), size)};
         if (count == 0)
             return std::unexpected{error::last()};
         if (count <= size) {
@@ -31,4 +32,4 @@ std::expected<FirmwareTable, std::error_code> FirmwareTable::read(const Firmware
     return std::unexpected{error::win32(ERROR_RETRY)};
 }
 
-}
+}  // namespace winwrap
