@@ -300,6 +300,11 @@ cmake --build --preset dev
 ctest --preset dev
 ```
 
+Open the editor with `./scripts/Open-Editor.ps1` (VS Code by default, `-Editor nvim`
+for another editor). It enters the MSVC developer shell first so clangd can find
+`windows.h` and the MSVC STL; clangd's own Visual Studio discovery can select an
+instance without C++ tools. Install the recommended clangd extension.
+
 ## Use it from another project
 
 ```cmake
