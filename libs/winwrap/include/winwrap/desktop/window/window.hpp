@@ -21,26 +21,11 @@
 #include "winwrap/desktop/window/message/size_change.hpp"
 #include "winwrap/desktop/window/message/timer_tick.hpp"
 #include "winwrap/desktop/window/message/window_command.hpp"
-#include "winwrap/desktop/window/native_window.hpp"
 #include "winwrap/desktop/window/notification/command/reflection.hpp"
 #include "winwrap/error.hpp"
 #include "winwrap/module.hpp"
 
 namespace winwrap {
-
-/// Per-window settings passed to Window::create -- the CreateWindowExW arguments;
-/// omitted fields take the defaults below.
-struct WindowConfig {
-    const wchar_t* title{L""};         ///< Window title-bar text.
-    DWORD style{WS_OVERLAPPEDWINDOW};  ///< Window styles; the default is not visible -- OR in
-                                       ///< WS_VISIBLE, or call show().
-    DWORD ex_style{0};                 ///< Extended (WS_EX_*) styles.
-    int x{CW_USEDEFAULT};       ///< Left edge in pixels; CW_USEDEFAULT lets Windows place it.
-    int y{CW_USEDEFAULT};       ///< Top edge in pixels; CW_USEDEFAULT lets Windows place it.
-    int width{CW_USEDEFAULT};   ///< Width in pixels; CW_USEDEFAULT lets Windows size it.
-    int height{CW_USEDEFAULT};  ///< Height in pixels; CW_USEDEFAULT lets Windows size it.
-    HWND parent{nullptr};       ///< Owner/parent window; null for a top-level window.
-};
 
 /// CRTP base for a top-level window. Derive as
 /// `class MyWindow : public winwrap::Window<MyWindow>`: the base owns class
@@ -106,7 +91,7 @@ public:
     /// Use from an advanced route_message override when it deliberately declines
     /// the current message; ordinary routing calls it automatically.
     [[nodiscard]] LRESULT default_proc(UINT msg, WPARAM wparam, LPARAM lparam) {
-        return DefWindowProcW(hwnd(), msg, wparam, lparam);
+        return window::default_proc(hwnd(), msg, wparam, lparam);
     }
 
     /// Starts timer `id` on this window, or restarts it with a new interval (SetTimer).
@@ -118,24 +103,14 @@ public:
     ///         negative or above `USER_TIMER_MAXIMUM`.
     std::expected<void, std::error_code> start_timer(UINT_PTR id,
                                                      std::chrono::milliseconds interval) {
-        if (interval.count() < 0 || interval.count() > USER_TIMER_MAXIMUM)
-            return std::unexpected(error::win32(ERROR_INVALID_PARAMETER));
-        // SetTimer(nullptr, ...) would start a thread timer instead of failing.
-        if (!hwnd())
-            return std::unexpected(error::win32(ERROR_INVALID_WINDOW_HANDLE));
-        if (SetTimer(hwnd(), id, static_cast<UINT>(interval.count()), nullptr) == 0)
-            return std::unexpected(error::last());
-        return {};
+        return window::start_timer(hwnd(), id, interval);
     }
 
     /// Stops timer `id` (KillTimer). A tick already waiting in the message queue is
     /// still delivered.
     /// @return Nothing, or the Win32 error, e.g. when no such timer is running.
     std::expected<void, std::error_code> stop_timer(UINT_PTR id) {
-        // KillTimer(nullptr, id) would stop an unrelated thread timer with the same id.
-        if (!hwnd())
-            return std::unexpected(error::win32(ERROR_INVALID_WINDOW_HANDLE));
-        return error::nonzero_or_last(KillTimer(hwnd(), id));
+        return window::stop_timer(hwnd(), id);
     }
 
 protected:
@@ -144,8 +119,8 @@ protected:
         if (hwnd()) {
             // Detach first so the destroy messages don't dispatch into a
             // half-destroyed object.
-            SetWindowLongPtrW(hwnd(), GWLP_USERDATA, 0);
-            DestroyWindow(hwnd());
+            static_cast<void>(window::set_long_ptr(hwnd(), GWLP_USERDATA, 0));
+            static_cast<void>(window::destroy(hwnd()));
         }
     }
 
@@ -158,16 +133,18 @@ protected:
     void on_created() {}
 
 private:
-    std::expected<void, std::error_code> create_window(const WindowConfig& cfg) {
+    // `this T&` rather than `this auto&`: the address stored for the bridge must be exactly
+    // the T* that window_proc casts back.
+    std::expected<void, std::error_code> create_window(this T& self, const WindowConfig& cfg) {
         // --- Registration (per class name): sensible defaults, then let T tweak.
         WNDCLASSW wc{};
         wc.lpfnWndProc = window_proc;
-        wc.hInstance = instance_;
+        wc.hInstance = module::current();
         wc.lpszClassName = T::class_name;
         wc.style = CS_HREDRAW | CS_VREDRAW;
         wc.hCursor = LoadCursorW(nullptr, IDC_ARROW);
         wc.hbrBackground = reinterpret_cast<HBRUSH>(COLOR_WINDOW + 1);
-        static_cast<T*>(this)->configure_class(wc);
+        self.configure_class(wc);
 
         if (RegisterClassW(&wc) == 0) {
             // A class already registered under this name is fine -- anything else
@@ -176,20 +153,12 @@ private:
                 return std::unexpected(ec);
         }
 
-        // --- Creation (per window): `this` rides through so the static callback
-        // can recover the object in WM_NCCREATE.
+        // --- Creation (per window): the object rides through so the static callback
+        // can recover it in WM_NCCREATE.
         // The destructor, not the handle, destroys the window: it must detach first.
-        return window::create({.class_name = T::class_name,
-                               .title = cfg.title,
-                               .style = cfg.style,
-                               .ex_style = cfg.ex_style,
-                               .x = cfg.x,
-                               .y = cfg.y,
-                               .width = cfg.width,
-                               .height = cfg.height,
-                               .parent = cfg.parent,
-                               .create_param = static_cast<T*>(this)})
-            .transform([](wil::unique_hwnd window) { window.release(); });
+        return create_hwnd(T::class_name, cfg, 0, &self).transform([](wil::unique_hwnd hwnd) {
+            hwnd.release();
+        });
     }
 
     static LRESULT CALLBACK window_proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
@@ -198,9 +167,10 @@ private:
             auto* cs = reinterpret_cast<CREATESTRUCTW*>(lparam);
             self = static_cast<T*>(cs->lpCreateParams);
             self->attach(hwnd);
-            SetWindowLongPtrW(hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(self));
+            static_cast<void>(
+                window::set_long_ptr(hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(self)));
         } else {
-            self = reinterpret_cast<T*>(GetWindowLongPtrW(hwnd, GWLP_USERDATA));
+            self = reinterpret_cast<T*>(window::long_ptr(hwnd, GWLP_USERDATA).value_or(0));
         }
 
         if (self) {
@@ -208,15 +178,13 @@ private:
             if (msg == WM_NCDESTROY) {
                 // The window is gone; sever the link so the destructor won't
                 // DestroyWindow a dead handle.
-                SetWindowLongPtrW(hwnd, GWLP_USERDATA, 0);
+                static_cast<void>(window::set_long_ptr(hwnd, GWLP_USERDATA, 0));
                 self->detach();
             }
             return result;
         }
-        return DefWindowProcW(hwnd, msg, wparam, lparam);
+        return window::default_proc(hwnd, msg, wparam, lparam);
     }
-
-    const HINSTANCE instance_{module::current()};
 };
 
 }  // namespace winwrap

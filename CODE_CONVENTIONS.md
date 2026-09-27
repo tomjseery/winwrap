@@ -171,13 +171,29 @@ function sequence for an operation Winwrap promises to support.
 
 **Each native call has one owner inside Winwrap.** When several Winwrap types or
 operations need the same SDK call, one wrapper makes it and the rest reuse that wrapper.
-For a handle whose operations are useful without the owning class, that wrapper is a
-free function taking the raw handle, and the class delegates to it. `module.hpp` is the
-precedent: `module::current()`, `module::loaded()` and `module::path()` own the SDK calls,
-and `Module`, `Window`, `window::create` and `icon::load` call them. Likewise
-`message::send`/`post`, `window::create` and `error::*` are the only callers of
-`SendMessageW`/`PostMessageW`, `CreateWindowExW` and `SetLastError`. Do not also
-re-implement the native call in a member.
+Do not also re-implement the native call in a member. Who that owner is depends on
+whether the operation is genuinely free:
+
+- **A genuine free function** is an operation meaningful on any raw handle, whoever
+  created it: showing, moving or destroying any HWND, reading a module's path. It is a
+  free function in the family namespace taking the raw handle, declared in the owning
+  class's header, and the class's members delegate to it. `module.hpp` is the precedent:
+  `module::current()`, `module::loaded()` and `module::path()` own the SDK calls and
+  `Module` delegates. `base_window.hpp` does the same for windows: `window::show`,
+  `window::destroy`, `window::default_proc`, `window::long_ptr` and the rest own their calls,
+  and `BaseWindow`, `Window` and `Control` delegate.
+- **A class-owned call** belongs to a class's own protocol: creating its window,
+  registering its class, installing its callback bridge or subclass. It stays inside that
+  class, as a private or protected member, not a public free function. When a class
+  hierarchy shares it, it is a protected static on the common base. `BaseWindow::create_hwnd`
+  is the only `CreateWindowExW` call, and `Window<T>::create` / `Control<T>::create` remain
+  the public factories. `RegisterClassW` stays private to `Window`, and `SetWindowSubclass`
+  stays private to `Control`.
+
+Do not introduce a public type or free function merely to name a native structure a class
+fills internally (a `WNDCLASSW`) or to share an implementation step. A public free function
+must be an operation a raw-handle caller genuinely wants. `message::send`/`post` and
+`error::*` remain the only callers of `SendMessageW`/`PostMessageW` and `SetLastError`.
 
 **Give each message Winwrap uses a typed operation.** `WPARAM`/`LPARAM` are two untyped
 numbers whose meaning depends on the message, so they appear only inside the operation
