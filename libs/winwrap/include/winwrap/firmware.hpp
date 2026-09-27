@@ -1,6 +1,7 @@
 #pragma once
 
 #include "winwrap/detail/user_mode.hpp"
+
 #include "winwrap/win.hpp"
 
 #include <cstddef>
@@ -22,13 +23,14 @@ class FirmwareTable final {
 public:
     explicit FirmwareTable(std::vector<std::byte> bytes) noexcept : bytes_{std::move(bytes)} {}
 
-    [[nodiscard]] static std::expected<FirmwareTable, std::error_code> read(const FirmwareQuery& query);
+    [[nodiscard]] static std::expected<FirmwareTable, std::error_code> read(
+        const FirmwareQuery& query);
 
-    [[nodiscard]] std::span<const std::byte> bytes() const & noexcept { return bytes_; }
-    std::span<const std::byte> bytes() const && = delete;
+    [[nodiscard]] std::span<const std::byte> bytes() const& noexcept { return bytes_; }
+    std::span<const std::byte> bytes() const&& = delete;
 
 private:
     std::vector<std::byte> bytes_;
 };
 
-}
+}  // namespace winwrap
