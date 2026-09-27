@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "winwrap/desktop/drop.hpp"
+#include "winwrap/desktop/window/base_window.hpp"
 #include "winwrap/desktop/window/message/detail/hook_case.hpp"
 
 namespace winwrap {
@@ -20,9 +21,9 @@ namespace winwrap {
 /// to accept dropped files automatically -- no `.ex_style = WS_EX_ACCEPTFILES`.
 ///
 /// Registration runs at `WM_NCCREATE` (the first point the HWND is live) via
-/// `DragAcceptFiles`, and *only* when the final type actually defines the hook:
-/// compose the mixin without `on_files_dropped` and nothing registers, so a
-/// handler-less window accepts -- and leaks -- no drop.
+/// window::accept_files (`DragAcceptFiles`), and *only* when the final type actually defines the
+/// hook: compose the mixin without `on_files_dropped` and nothing registers, so a handler-less
+/// window accepts -- and leaks -- no drop.
 ///
 /// @note An elevated process receives no drops from a non-elevated Explorer
 ///       (UIPI filters WM_DROPFILES).
@@ -33,7 +34,7 @@ struct FileDroppable {
                 if constexpr (requires(const std::vector<std::wstring>& paths) {
                                   self.on_files_dropped(paths);
                               })
-                    DragAcceptFiles(self.hwnd(), TRUE);
+                    window::accept_files(self.hwnd());
                 break;
                 WW_CASE(WM_DROPFILES,
                         self.on_files_dropped(Drop{reinterpret_cast<HDROP>(wparam)}.paths()));

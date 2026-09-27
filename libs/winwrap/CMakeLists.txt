@@ -6,7 +6,6 @@ add_library(winwrap STATIC
     src/module.cpp
     src/desktop/icon.cpp
     src/desktop/notify_icon.cpp
-    src/desktop/window/native_window.cpp
     src/desktop/menu.cpp)
 add_library(winwrap::winwrap ALIAS winwrap)
 

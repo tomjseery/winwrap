@@ -31,6 +31,10 @@ struct RoutedControl : winwrap::Control<RoutedControl> {
     }
 };
 
+struct UnregisteredControl : winwrap::Control<UnregisteredControl> {
+    static constexpr const wchar_t* class_name = L"WinwrapNoSuchClass";
+};
+
 struct LeadingBase {
     void* padding{};
 };
@@ -110,4 +114,25 @@ TEST_CASE("Control owner detaches when its parent destroys the child first") {
 
     CHECK(host->hwnd() == nullptr);
     CHECK(control->hwnd() == nullptr);
+}
+
+TEST_CASE("Control creation reports an unregistered window class") {
+    auto host = ControlHost::create({.parent = HWND_MESSAGE});
+    REQUIRE(host);
+
+    auto control = UnregisteredControl::create({.parent = host->hwnd()});
+
+    REQUIRE_FALSE(control);
+    CHECK(control.error().value() == ERROR_CANNOT_FIND_WND_CLASS);
+}
+
+TEST_CASE("Control creation gives the child window its command id") {
+    auto host = ControlHost::create({.parent = HWND_MESSAGE});
+    REQUIRE(host);
+
+    auto control = TestControl::create({.parent = host->hwnd(), .id = 42});
+
+    REQUIRE(control);
+    CHECK(GetDlgCtrlID((*control).hwnd()) == 42);
+    CHECK(GetParent((*control).hwnd()) == host->hwnd());
 }

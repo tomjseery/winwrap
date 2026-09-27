@@ -68,3 +68,16 @@ TEST_CASE("message::send to a destroyed window returns 0") {
 
     CHECK(winwrap::message::send(gone, app_message, 21) == 0);
 }
+
+TEST_CASE("message::register_ gives every caller the same id for a name") {
+    const auto first = winwrap::message::register_(L"WinwrapRegisteredMessageTest");
+    const auto second = winwrap::message::register_(L"WinwrapRegisteredMessageTest");
+    const auto other = winwrap::message::register_(L"WinwrapOtherRegisteredMessageTest");
+
+    REQUIRE(first);
+    REQUIRE(second);
+    REQUIRE(other);
+    CHECK(*first == *second);
+    CHECK(*first >= 0xC000);  // the registered-message range
+    CHECK(*first != *other);
+}

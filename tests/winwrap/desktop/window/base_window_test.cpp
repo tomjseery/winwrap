@@ -1,4 +1,5 @@
 #include <catch2/catch_test_macros.hpp>
+#include <chrono>
 
 #include "winwrap/desktop/message_loop.hpp"
 #include "winwrap/desktop/window/window.hpp"
@@ -159,4 +160,98 @@ TEST_CASE("operations on a destroyed window report the Win32 error") {
     CHECK(window->move(0, 0).error().value() == ERROR_INVALID_WINDOW_HANDLE);
     CHECK(window->request_close().error().value() == ERROR_INVALID_WINDOW_HANDLE);
     CHECK_FALSE(window->has_focus());
+}
+
+TEST_CASE("window operations act on a raw HWND without a wrapper") {
+    auto window = make_plain_window();
+    const HWND raw = window->hwnd();
+
+    winwrap::window::set_text(raw, L"raw");
+    CHECK(winwrap::window::text(raw) == L"raw");
+    CHECK(window->text() == L"raw");  // the member reads the same native state
+
+    REQUIRE(winwrap::window::move(raw, off_screen + 5, off_screen + 5));
+    const auto bounds = winwrap::window::window_rect(raw);
+    REQUIRE(bounds);
+    CHECK(bounds->left == off_screen + 5);
+}
+
+TEST_CASE("long_ptr reads back what set_long_ptr stored and returns the previous value") {
+    // A plain system-class window: nothing else uses its GWLP_USERDATA slot.
+    wil::unique_hwnd raw{CreateWindowExW(0, L"STATIC", L"", 0, 0, 0, 0, 0, HWND_MESSAGE, nullptr,
+                                         GetModuleHandleW(nullptr), nullptr)};
+    REQUIRE(raw);
+
+    const auto previous = winwrap::window::set_long_ptr(raw.get(), GWLP_USERDATA, 1234);
+    REQUIRE(previous);
+    CHECK(*previous == 0);  // zero is a legitimate previous value, not a failure
+
+    const auto current = winwrap::window::long_ptr(raw.get(), GWLP_USERDATA);
+    REQUIRE(current);
+    CHECK(*current == 1234);
+}
+
+TEST_CASE("destroy destroys a raw window and reports a dead one") {
+    auto raw = CreateWindowExW(0, L"STATIC", L"", 0, 0, 0, 0, 0, HWND_MESSAGE, nullptr,
+                               GetModuleHandleW(nullptr), nullptr);
+    REQUIRE(raw);
+
+    REQUIRE(winwrap::window::destroy(raw));
+    CHECK_FALSE(IsWindow(raw));
+
+    const auto again = winwrap::window::destroy(raw);
+    REQUIRE_FALSE(again);
+    CHECK(again.error().value() == ERROR_INVALID_WINDOW_HANDLE);
+}
+
+namespace {
+UINT_PTR subclass_seen_id{};
+
+LRESULT CALLBACK recording_subclass(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam, UINT_PTR id,
+                                    DWORD_PTR data) {
+    if (msg == WM_APP + 7)
+        *reinterpret_cast<UINT_PTR*>(data) = id;
+    return winwrap::window::default_subclass_proc(hwnd, msg, wparam, lparam);
+}
+}  // namespace
+
+TEST_CASE("subclass hooks a raw window until remove_subclass") {
+    wil::unique_hwnd raw{CreateWindowExW(0, L"STATIC", L"", 0, 0, 0, 0, 0, HWND_MESSAGE, nullptr,
+                                         GetModuleHandleW(nullptr), nullptr)};
+    REQUIRE(raw);
+    subclass_seen_id = 0;
+
+    REQUIRE(winwrap::window::subclass(raw.get(), &recording_subclass, 9,
+                                      reinterpret_cast<DWORD_PTR>(&subclass_seen_id)));
+    winwrap::message::send(raw.get(), WM_APP + 7);
+    CHECK(subclass_seen_id == 9);
+
+    CHECK(winwrap::window::remove_subclass(raw.get(), &recording_subclass, 9));
+    CHECK_FALSE(winwrap::window::remove_subclass(raw.get(), &recording_subclass, 9));  // gone
+
+    subclass_seen_id = 0;
+    winwrap::message::send(raw.get(), WM_APP + 7);
+    CHECK(subclass_seen_id == 0);
+}
+
+TEST_CASE("timer operations reject a null window instead of using a thread timer") {
+    using namespace std::chrono_literals;
+    CHECK(winwrap::window::start_timer(nullptr, 1, 10ms).error().value() ==
+          ERROR_INVALID_WINDOW_HANDLE);
+    CHECK(winwrap::window::stop_timer(nullptr, 1).error().value() == ERROR_INVALID_WINDOW_HANDLE);
+}
+
+TEST_CASE("accept_files sets and clears a raw window's drop registration") {
+    auto window = make_plain_window();
+    const HWND raw = window->hwnd();
+
+    winwrap::window::accept_files(raw);
+    CHECK((*winwrap::window::ex_style(raw) & WS_EX_ACCEPTFILES) != 0);
+
+    winwrap::window::accept_files(raw, false);
+    CHECK((*winwrap::window::ex_style(raw) & WS_EX_ACCEPTFILES) == 0);
+}
+
+TEST_CASE("set_foreground reports that a null window cannot take the foreground") {
+    CHECK_FALSE(winwrap::window::set_foreground(nullptr));
 }
