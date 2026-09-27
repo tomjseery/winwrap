@@ -252,14 +252,14 @@ if (table)
     consume(table->bytes());
 ```
 
-`kernel/driver/context_type.hpp` provides `ContextType<T>` for trivial, standard-layout
-KMDF context records, enforced by the `ContextRecord` concept. Supply matching metadata produced by `WDF_DECLARE_CONTEXT_TYPE` or
+`kernel/driver/object_context.hpp` provides `ObjectContext<T>` for trivial, standard-layout
+KMDF context records, enforced by the `Context` concept. Supply matching metadata produced by `WDF_DECLARE_CONTEXT_TYPE` or
 `WDF_DECLARE_CONTEXT_TYPE_WITH_NAME`; keep it alive for every use. `allocate` and `get`
 wrap `WdfObjectAllocateContext` and typed lookup. Returned pointers are borrowed from KMDF,
 valid only during the framework object's lifetime. Use `get` only for the matching context
 type already attached to that object. `ContextConfig` exposes size override, cleanup/destroy
 callbacks, execution level and synchronization scope with native restrictions. The wrapper
-initializes `WDF_OBJECT_ATTRIBUTES` internally; type metadata comes from `ContextType`, and
+initializes `WDF_OBJECT_ATTRIBUTES` internally; type metadata comes from `ObjectContext`, and
 the parent remains null as required for context allocation on an existing object.
 `Device::from_queue` wraps the borrowed device associated with a KMDF queue.
 
