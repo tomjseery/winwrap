@@ -12,8 +12,9 @@ needs a reusable Windows API or kernel/WDF operation, add the generic operation 
 during the same task and pin the tested library revision in the consumer. A second
 application is not required. Keep native configuration, errors and ownership available;
 choose resource classes, justified behavior mixins or associated free functions to fit
-the operation. Synthetic producers, identity parsing, selection policy and fingerprint
-assembly remain in the lab. Follow this repository's independent user/kernel contracts.
+the operation. Standard storage and SMBIOS identifier decoding belongs here. Synthetic
+producers, device selection and client Identity assembly remain in the lab. Follow this
+repository's independent user/kernel contracts.
 
 Winwrap's public-API conventions are project-specific:
 
