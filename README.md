@@ -163,7 +163,7 @@ checked `icon::load` result to `set_icon`.
 | `winwrap/desktop/window/message/*.hpp` | direct window/control message routing and behaviors (`MessageRouter`, `FileDroppable`, `Paintable`, …) |
 | `winwrap/desktop/window/notification/command/*.hpp` | control notification mixins (`notification::Click`, `TextChange`, `SelectionChange`) and parent-to-child reflection |
 | `winwrap/desktop/window/base_window.hpp` | `BaseWindow` and `WindowConfig`, plus `window::show` / `move` / `destroy` / `default_proc` / `long_ptr` / `subclass` / `accept_files` / `set_foreground` / timers … — the same operations on any raw `HWND` (`BaseWindow`'s members delegate) |
-| `winwrap/desktop/message.hpp` | `message::send` / `message::post` — messages to any window (`BaseWindow::send` / `post` delegate); `message::registered` — a system-wide registered message id |
+| `winwrap/desktop/message.hpp` | `message::send` / `message::post` — messages to any window (`BaseWindow::send` / `post` delegate); `message::register_` — registers a named message and returns its system-wide id |
 | `winwrap/desktop/cursor.hpp` | `cursor::position` — the mouse cursor's screen position |
 | `winwrap/desktop/font.hpp` | `font::default_gui` — the stock GUI font native controls use |
 | `winwrap/desktop/message_loop.hpp` | `message_loop::run()` and `message_loop::quit()` |
