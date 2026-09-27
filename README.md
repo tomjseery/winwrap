@@ -229,6 +229,53 @@ If the interface list changes through three size/list attempts, `paths` returns
 `ERROR_RETRY`. A malformed list returns `ERROR_INVALID_DATA`.
 ## Requirements
 
+### Firmware tables and kernel support
+
+`winwrap/firmware.hpp` provides `FirmwareTable`, an owned snapshot of raw table bytes.
+`FirmwareTable::read(FirmwareQuery)` calls `GetSystemFirmwareTable` for the caller's
+provider signature and table ID. `maximum_size` bounds allocation; a growing table is
+retried up to three times. Invalid limits return `ERROR_INVALID_PARAMETER`, limits
+exceeded return `ERROR_INSUFFICIENT_BUFFER`, and repeated growth returns `ERROR_RETRY`.
+Other native failures retain their Win32 error. Allocation follows normal C++ exception
+semantics. `bytes()` is a read-only borrowed view valid while the table's storage remains
+alive and unchanged; it cannot be called on a temporary. Copies own independent bytes;
+moved-from objects remain valid with unspecified byte contents. Construction from an
+owned byte vector supports externally obtained snapshots without interpreting their format.
+
+```cpp
+const auto table = winwrap::FirmwareTable::read({
+    .provider = provider_signature,
+    .table_id = table_id,
+    .maximum_size = 1024 * 1024,
+});
+if (table)
+    consume(table->bytes());
+```
+
+`kernel/driver/object_context.hpp` provides `ObjectContext<T>` for trivial, standard-layout
+KMDF context records, enforced by the `Context` concept. Supply matching metadata produced by `WDF_DECLARE_CONTEXT_TYPE` or
+`WDF_DECLARE_CONTEXT_TYPE_WITH_NAME`; keep it alive for every use. `allocate` and `get`
+wrap `WdfObjectAllocateContext` and typed lookup. Returned pointers are borrowed from KMDF,
+valid only during the framework object's lifetime. Use `get` only for the matching context
+type already attached to that object. `ContextConfig` exposes size override, cleanup/destroy
+callbacks, execution level and synchronization scope with native restrictions. The wrapper
+initializes `WDF_OBJECT_ATTRIBUTES` internally; type metadata comes from `ObjectContext`, and
+the parent remains null as required for context allocation on an existing object.
+`Device::from_queue` wraps the borrowed device associated with a KMDF queue.
+
+`kernel/random.hpp` provides `kernel::random::fill(span, RandomConfig)` over
+`BCryptGenRandom`, preserving `NTSTATUS`. It generates bytes without assigning them any
+application meaning. The span can have a runtime size; successful `expected<void, NTSTATUS>`
+means the bytes were written to that caller-owned buffer. Empty spans succeed without an API
+call. The wrapper does not allocate storage. Link `Cng.lib`. The default system provider requires `PASSIVE_LEVEL`;
+an explicit provider/flags combination has the native CNG IRQL and memory requirements.
+The provider handle is borrowed and must remain valid during the call. No identity,
+firmware format, or synthetic-data policy is part of these operations.
+
+References: [firmware reads](https://learn.microsoft.com/en-us/windows/win32/api/sysinfoapi/nf-sysinfoapi-getsystemfirmwaretable),
+[KMDF context space](https://learn.microsoft.com/en-us/windows-hardware/drivers/wdf/framework-object-context-space),
+[Windows random bytes](https://learn.microsoft.com/en-us/windows/win32/api/bcrypt/nf-bcrypt-bcryptgenrandom).
+
 User mode requires Windows and a sufficiently recent MSVC C++23 toolchain: both `std::expected` and
 explicit object parameters are required. The assessment verified MSVC 19.50 x64.
 clang-cl is an intended target, but a supported-version CI matrix has not yet been

@@ -63,6 +63,11 @@ public:
     /// Wrap a borrowed native device handle received from KMDF.
     constexpr explicit Device(WDFDEVICE native) noexcept : native_{native} {}
 
+    /// Borrow the device associated with a live KMDF queue; KMDF retains ownership.
+    [[nodiscard]] static Device from_queue(const IoQueue& queue) noexcept {
+        return Device{WdfIoQueueGetDevice(queue.native())};
+    }
+
     /// Create an I/O queue associated with this device.
     [[nodiscard]] std::expected<IoQueue, NTSTATUS> create_queue(
         const IoQueue::Config& config) const noexcept {
