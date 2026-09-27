@@ -18,7 +18,6 @@
 #include "winwrap/desktop/window/message/message_router.hpp"
 #include "winwrap/desktop/window/message/mouse_input.hpp"
 #include "winwrap/desktop/window/message/paintable.hpp"
-#include "winwrap/desktop/window/native_window.hpp"
 #include "winwrap/error.hpp"
 
 namespace winwrap {
@@ -102,36 +101,39 @@ protected:
     ~Control() {
         if (hwnd()) {
             const HWND child = hwnd();
-            RemoveWindowSubclass(child, &subclass_proc, 1);
+            RemoveWindowSubclass(child, &subclass_proc, subclass_id);
             detach();
-            DestroyWindow(child);
+            static_cast<void>(window::destroy(child));
         }
     }
 
 private:
-    std::expected<void, std::error_code> create_control(const ControlConfig& cfg) {
+    // Identifies Control's subclass among any others installed on the same window.
+    static constexpr UINT_PTR subclass_id = 1;
+
+    // `this T&` rather than `this auto&`: the address stored for the bridge must be exactly
+    // the T* that subclass_proc casts back.
+    std::expected<void, std::error_code> create_control(this T& self, const ControlConfig& cfg) {
         // WS_CHILD | WS_VISIBLE always; the control type's baseline style (e.g.
         // BS_AUTOCHECKBOX) when it declares one; then the caller's extra styles.
         DWORD style = WS_CHILD | WS_VISIBLE | cfg.style;
         if constexpr (requires { T::default_style; })
             style |= T::default_style;
-        return window::create({.class_name = T::class_name,
-                               .title = cfg.text,
-                               .style = style,
-                               .x = cfg.x,
-                               .y = cfg.y,
-                               .width = cfg.width,
-                               .height = cfg.height,
-                               .parent = cfg.parent,
-                               .child_id = cfg.id})
-            .and_then([&](wil::unique_hwnd made) -> std::expected<void, std::error_code> {
-                const HWND h = made.get();
-                // Until the subclass is installed the control is unbound; on failure `made`
+        return create_hwnd(T::class_name,
+                           {.title = cfg.text,
+                            .style = style,
+                            .x = cfg.x,
+                            .y = cfg.y,
+                            .width = cfg.width,
+                            .height = cfg.height,
+                            .parent = cfg.parent},
+                           cfg.id, nullptr)
+            .and_then([&](wil::unique_hwnd hwnd) -> std::expected<void, std::error_code> {
+                // Until the subclass is installed the control is unbound; on failure `hwnd`
                 // destroys it, so no live window is left without its wrapper.
                 return error::result_or_last([&] {
-                           return SetWindowSubclass(
-                               h, &subclass_proc, 1,
-                               reinterpret_cast<DWORD_PTR>(static_cast<T*>(this)));
+                           return SetWindowSubclass(hwnd.get(), &subclass_proc, subclass_id,
+                                                    reinterpret_cast<DWORD_PTR>(&self));
                        })
                     .and_then([](BOOL installed) -> std::expected<void, std::error_code> {
                         // SetWindowSubclass documents no error code for its FALSE result.
@@ -141,12 +143,13 @@ private:
                     })
                     .transform([&] {
                         // Control owns destruction; release the temporary HWND owner after binding.
-                        attach(made.release());
-                        id_ = cfg.id;
-                        set_font(static_cast<HFONT>(GetStockObject(DEFAULT_GUI_FONT)));
+                        self.attach(hwnd.release());
+                        self.id_ = cfg.id;
+                        self.set_font(static_cast<HFONT>(GetStockObject(DEFAULT_GUI_FONT)));
                     });
             });
     }
+
     static LRESULT CALLBACK subclass_proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam,
                                           UINT_PTR /*id_subclass*/, DWORD_PTR ref_data) {
         T* self = reinterpret_cast<T*>(ref_data);
@@ -154,7 +157,7 @@ private:
         if (msg == WM_NCDESTROY) {
             // The HWND is going away -- detach our proc and sever the dangling
             // pointer so the dtor won't RemoveWindowSubclass a dead handle.
-            RemoveWindowSubclass(hwnd, &subclass_proc, 1);
+            RemoveWindowSubclass(hwnd, &subclass_proc, subclass_id);
             self->detach();
         }
         return result;

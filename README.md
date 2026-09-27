@@ -162,7 +162,7 @@ checked `icon::load` result to `set_icon`.
 | `winwrap/desktop/drop.hpp` | `Drop` — the `WM_DROPFILES` query protocol as a type |
 | `winwrap/desktop/window/message/*.hpp` | direct window/control message routing and behaviors (`MessageRouter`, `FileDroppable`, `Paintable`, …) |
 | `winwrap/desktop/window/notification/command/*.hpp` | control notification mixins (`notification::Click`, `TextChange`, `SelectionChange`) and parent-to-child reflection |
-| `winwrap/desktop/window/native_window.hpp` | `window::create(NativeWindowConfig)` — any registered window class as an owned `wil::unique_hwnd` |
+| `winwrap/desktop/window/base_window.hpp` | `BaseWindow` and `WindowConfig`, plus `window::show` / `move` / `destroy` / `default_proc` / `long_ptr` / timers … — the same operations on any raw `HWND` (`BaseWindow`'s members delegate) |
 | `winwrap/desktop/message.hpp` | `message::send` / `message::post` — messages to any window (`BaseWindow::send` / `post` delegate) |
 | `winwrap/desktop/message_loop.hpp` | `message_loop::run()` and `message_loop::quit()` |
 | `winwrap/desktop/icon.hpp` | `icon::load` — system, module-resource and `.ico` icons as owned `wil::unique_hicon` |
