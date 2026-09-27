@@ -124,7 +124,9 @@ app-side GDI (`CreateIconIndirect`); adoption must have an explicit ownership co
 - **Namespaces (2026-09-25)** — free-function families moved into use-named namespaces
   (`message_loop::run`, `message::send`, `module::current`, `icon::load`,
   `window::create`, `filesystem::attributes`, `shell::notify_folder_changed`);
-  see `CODE_CONVENTIONS.md` §6.
+  see `CODE_CONVENTIONS.md` §6. (2026-09-27: `window::create` / `NativeWindowConfig`
+  became the protected `BaseWindow::create_hwnd`; raw-HWND operations are `window::*` in
+  `base_window.hpp` — see §4.)
 - **`message_loop.hpp`** — ✅ **Done (2026-07-13).** Header-only `run()` (the message
   pump; returns `msg.wParam`; `-1` → `FAIL_FAST_IF`) + `quit(int = 0)` (over
   `PostQuitMessage`). App exits via `on_destroy` → `winwrap::message_loop::quit()`. Four Catch2 tests,

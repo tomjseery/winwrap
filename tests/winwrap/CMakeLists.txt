@@ -12,6 +12,8 @@ add_executable(winwrap_test
     device_test.cpp
     disk_serial_test.cpp
     system_uuid_test.cpp
+    desktop/cursor_test.cpp
+    desktop/font_test.cpp
     desktop/icon_test.cpp
     desktop/notify_icon_test.cpp
     desktop/shell/change_notification_test.cpp
@@ -22,7 +24,6 @@ add_executable(winwrap_test
     desktop/window/message/file_droppable_test.cpp
     desktop/window/message/timer_tick_test.cpp
     desktop/message_test.cpp
-    desktop/window/native_window_test.cpp
     module_test.cpp
     desktop/window/control_test.cpp
     desktop/window/controls/button_test.cpp
