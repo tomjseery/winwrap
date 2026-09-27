@@ -379,24 +379,21 @@ protected:
     /// Creates a window of the registered class `class_name` in the running executable
     /// (CreateWindowExW), owned by the returned handle until the caller binds it. Native
     /// messages such as `WM_NCCREATE` and `WM_CREATE` reach the class's window procedure
-    /// before this returns. With `WS_CHILD` in `config.style`, `child_id` becomes the
-    /// window's id (its `WM_COMMAND` id); a top-level window gets no menu.
+    /// before this returns. The window never gets a menu bar.
+    /// @param child_id      A child window's id (its `WM_COMMAND` id); 0 for a top-level window.
     /// @param create_param  Passed to `WM_NCCREATE`/`WM_CREATE` as `lpCreateParams`.
     /// @return The owned window, or the Win32 error: e.g. `ERROR_CANNOT_FIND_WND_CLASS`, or
     ///         `ERROR_INVALID_HANDLE` when a window procedure rejects creation. A creation
     ///         refused without any recorded error is `ERROR_CANCELLED`.
     [[nodiscard]] static std::expected<wil::unique_hwnd, std::error_code> create_hwnd(
         const wchar_t* class_name, const WindowConfig& config, UINT child_id, void* create_param) {
-        // CreateWindowExW reuses one argument as a top-level window's menu or a child's id.
-        const HMENU child_id_or_menu =
-            (config.style & WS_CHILD) != 0
-                ? reinterpret_cast<HMENU>(static_cast<UINT_PTR>(child_id))
-                : nullptr;
         return error::result_or_last([&] {
+                   // A child window's id travels in the HMENU parameter; 0 is no menu.
                    return CreateWindowExW(config.ex_style, class_name, config.title, config.style,
                                           config.x, config.y, config.width, config.height,
-                                          config.parent, child_id_or_menu, module::current(),
-                                          create_param);
+                                          config.parent,
+                                          reinterpret_cast<HMENU>(static_cast<UINT_PTR>(child_id)),
+                                          module::current(), create_param);
                })
             .and_then([](HWND hwnd) -> std::expected<wil::unique_hwnd, std::error_code> {
                 // Null with no recorded error: a window procedure refused creation silently.
