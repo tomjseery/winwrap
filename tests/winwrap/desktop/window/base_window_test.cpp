@@ -204,6 +204,36 @@ TEST_CASE("destroy destroys a raw window and reports a dead one") {
     CHECK(again.error().value() == ERROR_INVALID_WINDOW_HANDLE);
 }
 
+namespace {
+UINT_PTR subclass_seen_id{};
+
+LRESULT CALLBACK recording_subclass(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam, UINT_PTR id,
+                                    DWORD_PTR data) {
+    if (msg == WM_APP + 7)
+        *reinterpret_cast<UINT_PTR*>(data) = id;
+    return winwrap::window::default_subclass_proc(hwnd, msg, wparam, lparam);
+}
+}  // namespace
+
+TEST_CASE("subclass hooks a raw window until remove_subclass") {
+    wil::unique_hwnd raw{CreateWindowExW(0, L"STATIC", L"", 0, 0, 0, 0, 0, HWND_MESSAGE, nullptr,
+                                         GetModuleHandleW(nullptr), nullptr)};
+    REQUIRE(raw);
+    subclass_seen_id = 0;
+
+    REQUIRE(winwrap::window::subclass(raw.get(), &recording_subclass, 9,
+                                      reinterpret_cast<DWORD_PTR>(&subclass_seen_id)));
+    winwrap::message::send(raw.get(), WM_APP + 7);
+    CHECK(subclass_seen_id == 9);
+
+    CHECK(winwrap::window::remove_subclass(raw.get(), &recording_subclass, 9));
+    CHECK_FALSE(winwrap::window::remove_subclass(raw.get(), &recording_subclass, 9));  // gone
+
+    subclass_seen_id = 0;
+    winwrap::message::send(raw.get(), WM_APP + 7);
+    CHECK(subclass_seen_id == 0);
+}
+
 TEST_CASE("timer operations reject a null window instead of using a thread timer") {
     using namespace std::chrono_literals;
     CHECK(winwrap::window::start_timer(nullptr, 1, 10ms).error().value() ==

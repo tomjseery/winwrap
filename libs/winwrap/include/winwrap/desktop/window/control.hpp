@@ -92,7 +92,7 @@ public:
     /// Use from an advanced route_message override when it deliberately declines
     /// the current message; ordinary routing calls it automatically.
     [[nodiscard]] LRESULT default_proc(UINT msg, WPARAM wparam, LPARAM lparam) {
-        return DefSubclassProc(hwnd(), msg, wparam, lparam);
+        return window::default_subclass_proc(hwnd(), msg, wparam, lparam);
     }
 
 protected:
@@ -101,7 +101,7 @@ protected:
     ~Control() {
         if (hwnd()) {
             const HWND child = hwnd();
-            RemoveWindowSubclass(child, &subclass_proc, subclass_id);
+            window::remove_subclass(child, &subclass_proc, subclass_id);
             detach();
             static_cast<void>(window::destroy(child));
         }
@@ -131,16 +131,8 @@ private:
             .and_then([&](wil::unique_hwnd hwnd) -> std::expected<void, std::error_code> {
                 // Until the subclass is installed the control is unbound; on failure `hwnd`
                 // destroys it, so no live window is left without its wrapper.
-                return error::result_or_last([&] {
-                           return SetWindowSubclass(hwnd.get(), &subclass_proc, subclass_id,
-                                                    reinterpret_cast<DWORD_PTR>(&self));
-                       })
-                    .and_then([](BOOL installed) -> std::expected<void, std::error_code> {
-                        // SetWindowSubclass documents no error code for its FALSE result.
-                        if (!installed)
-                            return std::unexpected(error::win32(ERROR_GEN_FAILURE));
-                        return {};
-                    })
+                return window::subclass(hwnd.get(), &subclass_proc, subclass_id,
+                                        reinterpret_cast<DWORD_PTR>(&self))
                     .transform([&] {
                         // Control owns destruction; release the temporary HWND owner after binding.
                         self.attach(hwnd.release());
@@ -157,7 +149,7 @@ private:
         if (msg == WM_NCDESTROY) {
             // The HWND is going away -- detach our proc and sever the dangling
             // pointer so the dtor won't RemoveWindowSubclass a dead handle.
-            RemoveWindowSubclass(hwnd, &subclass_proc, subclass_id);
+            window::remove_subclass(hwnd, &subclass_proc, subclass_id);
             self->detach();
         }
         return result;

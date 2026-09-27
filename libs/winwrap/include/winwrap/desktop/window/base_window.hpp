@@ -4,6 +4,7 @@
 
 #include "winwrap/win.hpp"
 
+#include <commctrl.h>
 #include <wil/resource.h>
 
 #include <chrono>
@@ -32,6 +33,38 @@ inline std::expected<void, std::error_code> destroy(HWND hwnd) {
 /// procedure returns this for every message it does not handle itself.
 inline LRESULT default_proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
     return DefWindowProcW(hwnd, msg, wparam, lparam);
+}
+
+/// Installs `procedure` as subclass `id` of `hwnd`, or replaces the reference data of an
+/// existing one with the same procedure and id (SetWindowSubclass). Each subclass is
+/// identified by its procedure and id, so several chain on one window without disturbing
+/// `GWLP_WNDPROC` or `GWLP_USERDATA`; the procedure receives `data` on every call. Only the
+/// thread that owns the window may subclass it.
+/// @return Nothing, or the Win32 error; `ERROR_GEN_FAILURE` when the call fails without
+///         recording one, which SetWindowSubclass does not promise to.
+[[nodiscard]] inline std::expected<void, std::error_code> subclass(HWND hwnd,
+                                                                   SUBCLASSPROC procedure,
+                                                                   UINT_PTR id, DWORD_PTR data) {
+    return error::result_or_last([&] { return SetWindowSubclass(hwnd, procedure, id, data); })
+        .and_then([](BOOL installed) -> std::expected<void, std::error_code> {
+            if (!installed)
+                return std::unexpected(error::win32(ERROR_GEN_FAILURE));
+            return {};
+        });
+}
+
+/// Removes subclass `id` installed with `procedure` (RemoveWindowSubclass).
+/// @return Whether a matching subclass was installed and is now removed. Windows records no
+///         error code for a failed removal.
+inline bool remove_subclass(HWND hwnd, SUBCLASSPROC procedure, UINT_PTR id) noexcept {
+    return RemoveWindowSubclass(hwnd, procedure, id) != FALSE;
+}
+
+/// Passes a message on to the next subclass in the chain, or finally to the window's own
+/// procedure (DefSubclassProc). A subclass procedure returns this for every message it does
+/// not handle itself -- the subclass counterpart of default_proc.
+inline LRESULT default_subclass_proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
+    return DefSubclassProc(hwnd, msg, wparam, lparam);
 }
 
 /// The window value at `index` (GetWindowLongPtrW): a `GWL_*`/`GWLP_*` index such as
