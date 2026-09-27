@@ -240,3 +240,18 @@ TEST_CASE("timer operations reject a null window instead of using a thread timer
           ERROR_INVALID_WINDOW_HANDLE);
     CHECK(winwrap::window::stop_timer(nullptr, 1).error().value() == ERROR_INVALID_WINDOW_HANDLE);
 }
+
+TEST_CASE("accept_files sets and clears a raw window's drop registration") {
+    auto window = make_plain_window();
+    const HWND raw = window->hwnd();
+
+    winwrap::window::accept_files(raw);
+    CHECK((*winwrap::window::ex_style(raw) & WS_EX_ACCEPTFILES) != 0);
+
+    winwrap::window::accept_files(raw, false);
+    CHECK((*winwrap::window::ex_style(raw) & WS_EX_ACCEPTFILES) == 0);
+}
+
+TEST_CASE("set_foreground reports that a null window cannot take the foreground") {
+    CHECK_FALSE(winwrap::window::set_foreground(nullptr));
+}

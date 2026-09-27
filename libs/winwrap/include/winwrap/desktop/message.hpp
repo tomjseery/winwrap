@@ -33,4 +33,12 @@ inline LRESULT send(HWND hwnd, UINT msg, WPARAM wparam = 0, LPARAM lparam = 0) {
     return error::nonzero_or_last(PostMessageW(hwnd, msg, wparam, lparam));
 }
 
+/// The message id registered system-wide under `name` (RegisterWindowMessageW), such as
+/// Explorer's `L"TaskbarCreated"` broadcast. Every process registering the same name gets the
+/// same id, in the range 0xC000 through 0xFFFF, for the rest of the session.
+/// @return The message id, or the Win32 error.
+[[nodiscard]] inline std::expected<UINT, std::error_code> registered(const wchar_t* name) {
+    return error::nonzero_or_last(RegisterWindowMessageW(name));
+}
+
 }  // namespace winwrap::message

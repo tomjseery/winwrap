@@ -11,6 +11,7 @@
 #include <system_error>
 #include <utility>
 
+#include "winwrap/desktop/font.hpp"
 #include "winwrap/desktop/window/base_window.hpp"
 #include "winwrap/desktop/window/creation_result.hpp"
 #include "winwrap/desktop/window/message/focus_aware.hpp"
@@ -137,7 +138,7 @@ private:
                         // Control owns destruction; release the temporary HWND owner after binding.
                         self.attach(hwnd.release());
                         self.id_ = cfg.id;
-                        self.set_font(static_cast<HFONT>(GetStockObject(DEFAULT_GUI_FONT)));
+                        self.set_font(font::default_gui());
                     });
             });
     }

@@ -57,15 +57,6 @@ entry once its resolution condition is met; Git preserves the history.
 
 ## Errors, text and native operations
 
-- **Native-call ownership outside the window family.** CODE_CONVENTIONS §4 (genuine free
-  function vs class-owned call) was applied to windows, controls and timers only.
-  `FileDroppable` still calls `DragAcceptFiles` directly, and `Drop`, `Menu`, `NotifyIcon`
-  and control-specific messages (`BM_*`, `CB_*`) have not been classified. `Control` calls
-  `GetStockObject(DEFAULT_GUI_FONT)` directly; that is a genuine free operation for a future
-  `font` family (borrowed stock fonts beside owned `CreateFontIndirectW` fonts), deferred until
-  fonts are more than one call. **Resolve:**
-  classify each remaining native call, add raw-handle free functions only where a raw-handle
-  caller genuinely wants the operation, and keep the rest class-owned.
 - **M5 / fallibility audit.** Text setting, combo insertion/selection, registered
   message creation and some menu setup/posting calls ignore meaningful failures.
   Zero does not universally mean failure; some messages use CB_ERR/CB_ERRSPACE

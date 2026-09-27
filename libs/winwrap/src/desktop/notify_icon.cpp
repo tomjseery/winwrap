@@ -3,6 +3,7 @@
 #include <cwchar>
 #include <utility>
 
+#include "winwrap/desktop/message.hpp"
 #include "winwrap/error.hpp"
 
 namespace winwrap {
@@ -85,7 +86,7 @@ std::expected<void, std::error_code> NotifyIcon::add() {
 }
 
 UINT NotifyIcon::taskbar_created_message() {
-    static const UINT msg = RegisterWindowMessageW(L"TaskbarCreated");
+    static const UINT msg = message::registered(L"TaskbarCreated").value_or(0);
     return msg;
 }
 
