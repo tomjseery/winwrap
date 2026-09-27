@@ -5,6 +5,7 @@
 #include "winwrap/win.hpp"
 
 #include <commctrl.h>
+#include <shellapi.h>
 #include <wil/resource.h>
 
 #include <chrono>
@@ -186,6 +187,22 @@ inline std::expected<void, std::error_code> focus(HWND hwnd) {
     return error::result_or_last([&] { return SetFocus(hwnd); }).transform([](HWND) {});
 }
 
+/// Brings the window's thread to the foreground and activates the window
+/// (SetForegroundWindow). Windows lets a process do this only in limited circumstances, such
+/// as while handling the user's latest input, so it can be refused.
+/// @return Whether the window was brought to the foreground. Windows records no error code
+///         for a refusal.
+inline bool set_foreground(HWND hwnd) noexcept {
+    return SetForegroundWindow(hwnd) != FALSE;
+}
+
+/// Registers or unregisters the window to receive files dropped from Explorer as
+/// `WM_DROPFILES` (DragAcceptFiles, which sets or clears `WS_EX_ACCEPTFILES`).
+/// Window types compose the FileDroppable mixin instead, which calls this for them.
+inline void accept_files(HWND hwnd, bool accept = true) noexcept {
+    DragAcceptFiles(hwnd, accept ? TRUE : FALSE);
+}
+
 /// Whether the window has the calling thread's keyboard focus (GetFocus); false for null.
 [[nodiscard]] inline bool has_focus(HWND hwnd) noexcept {
     return hwnd && GetFocus() == hwnd;
@@ -328,6 +345,11 @@ public:
 
     /// Whether this window has the calling thread's keyboard focus (GetFocus).
     [[nodiscard]] bool has_focus() const noexcept { return window::has_focus(hwnd_); }
+
+    /// Brings this window to the foreground and activates it (SetForegroundWindow).
+    /// @return Whether Windows allowed it; a process may take the foreground only in limited
+    ///         circumstances, such as while handling the user's latest input.
+    bool set_foreground() noexcept { return window::set_foreground(hwnd_); }
 
     /// Asks the window to close as if the user clicked its close button: posts `WM_CLOSE`,
     /// so `on_close` (or the default destroy) runs later from the message loop, never
