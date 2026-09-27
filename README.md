@@ -174,6 +174,9 @@ checked `icon::load` result to `set_icon`.
 | `winwrap/protocol/device/interface.hpp` | `protocol::device::Interface` — client/driver interface-class value |
 | `winwrap/protocol/device/control_code.hpp` | `protocol::device::ControlCode` — client/driver IOCTL value |
 | `winwrap/device.hpp` | `Device` — user-mode present-interface paths, synchronous open and control |
+| `winwrap/disk_serial.hpp` | `DiskSerial` — standard storage query and owned serial value |
+| `winwrap/firmware.hpp` | `FirmwareTable`, `FirmwareTableSource`, `WindowsFirmware` — owned tables and raw SMBIOS acquisition |
+| `winwrap/system_uuid.hpp` | `SystemUuid` — SMBIOS Type 1 UUID reader and owned value |
 | `winwrap/kernel/debug_print.hpp` | `kernel::debug_print` — DbgPrintEx diagnostics with component and level |
 | `winwrap/kernel/driver/*.hpp` | `driver::Driver`, `Device`, `IoQueue`, and `IoRequest` — kernel-safe borrowed KMDF adapters |
 | `winwrap/error.hpp` | `error::last()`, `error::win32(code)`, `error::nonzero_or_last(result)`, `error::result_or_last(call)` — Win32 failures as `std::error_code` |
@@ -223,6 +226,14 @@ are preserved independently from their lengths, including storage-backed zero-le
 spans. `handle()` borrows the native handle without transferring ownership. There is no
 overlapped-I/O API; asynchronous requests need separate buffer and cancellation lifetimes.
 
+`DiskSerial::read(device, config)` sends the standard storage property query to an
+already open device, negotiates a descriptor size within
+`DiskSerialConfig::maximum_descriptor_size` (64 KiB by default), and decodes its
+NUL-terminated serial. `DiskSerial::decode(bytes)` accepts an already retrieved
+descriptor. Both return an owned value or `std::error_code`; `value()` borrows its
+text. The caller selects and opens the device. A class GUID can enumerate devices,
+but does not decide which disk an application should use.
+
 Configuration Manager returns `CONFIGRET`, not a `GetLastError` code. WinWrap
 uses `CM_MapCrToWin32Err` and `std::system_category()` for those failures.
 Several distinct `CONFIGRET` values may map to one Win32 code; an unmapped value
@@ -243,6 +254,14 @@ semantics. `bytes()` is a read-only borrowed view valid while the table's storag
 alive and unchanged; it cannot be called on a temporary. Copies own independent bytes;
 moved-from objects remain valid with unspecified byte contents. Construction from an
 owned byte vector supports externally obtained snapshots without interpreting their format.
+
+`FirmwareTableSource` supplies owned raw SMBIOS snapshots. `WindowsFirmware` reads
+the Windows RSMB provider; `WindowsFirmwareConfig::maximum_size` controls its
+allocation limit (1 MiB by default). `SystemUuid::read(source)` accepts any
+implementation of that source contract, and `SystemUuid::decode(bytes)` accepts
+raw SMBIOS bytes directly. The UUID reader validates SMBIOS framing and Type 1
+byte order, returning an owned value or an error. A software device can implement
+the same source contract without WinWrap knowing its private control code.
 
 ```cpp
 const auto table = winwrap::FirmwareTable::read({
