@@ -21,9 +21,11 @@
       "path": "(?i:\\.(c|cc|cpp|cxx|h|hh|hpp|hxx|ixx))$",
       "skills": [
         "cpp:style",
-        "cpp:domain-design"
+        "cpp:domain-design",
+        "cpp:mixins",
+        "cpp:structure"
       ],
-      "note": "C++ style and data, invariant, and operation design."
+      "note": "C++ style, data and invariant design, behavior composition, and project structure."
     },
     {
       "path": "(?i:(^|/)(CMakeLists\\.txt|CMakePresets\\.json|[^/]+\\.cmake))$",
