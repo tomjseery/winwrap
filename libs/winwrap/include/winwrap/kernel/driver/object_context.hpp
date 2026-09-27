@@ -9,7 +9,7 @@ namespace winwrap::kernel::driver {
 
 /// A trivial, standard-layout type that fits KMDF context storage alignment.
 template <typename T>
-concept ContextRecord = std::is_trivial_v<T> && std::is_standard_layout_v<T> &&
+concept Context = std::is_trivial_v<T> && std::is_standard_layout_v<T> &&
                         (alignof(T) <= MEMORY_ALLOCATION_ALIGNMENT);
 
 /// Optional attributes for attaching context to an existing KMDF object.
@@ -23,11 +23,11 @@ struct ContextConfig {
 
 /// Borrowed KMDF type metadata used to attach and retrieve per-object context records.
 /// KMDF owns each attached record; this descriptor owns neither metadata nor storage.
-template <ContextRecord T>
-class ContextType final {
+template <Context T>
+class ObjectContext final {
 public:
     /// Borrow matching WDF_DECLARE_CONTEXT_TYPE metadata for T; it must outlive all uses.
-    constexpr explicit ContextType(PCWDF_OBJECT_CONTEXT_TYPE_INFO type_info) noexcept
+    constexpr explicit ObjectContext(PCWDF_OBJECT_CONTEXT_TYPE_INFO type_info) noexcept
         : type_info_{type_info} {}
 
     /// Attach context storage to a live KMDF object; return a borrowed pointer or NTSTATUS.
