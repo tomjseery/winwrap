@@ -253,16 +253,21 @@ if (table)
 ```
 
 `kernel/driver/context_type.hpp` provides `ContextType<T>` for trivial, standard-layout
-KMDF context records. Supply matching metadata produced by `WDF_DECLARE_CONTEXT_TYPE` or
+KMDF context records, enforced by the `ContextRecord` concept. Supply matching metadata produced by `WDF_DECLARE_CONTEXT_TYPE` or
 `WDF_DECLARE_CONTEXT_TYPE_WITH_NAME`; keep it alive for every use. `allocate` and `get`
 wrap `WdfObjectAllocateContext` and typed lookup. Returned pointers are borrowed from KMDF,
 valid only during the framework object's lifetime. Use `get` only for the matching context
-type already attached to that object. Native object attributes remain configurable.
+type already attached to that object. `ContextConfig` exposes size override, cleanup/destroy
+callbacks, execution level and synchronization scope with native restrictions. The wrapper
+initializes `WDF_OBJECT_ATTRIBUTES` internally; type metadata comes from `ContextType`, and
+the parent remains null as required for context allocation on an existing object.
 `Device::from_queue` wraps the borrowed device associated with a KMDF queue.
 
 `kernel/random.hpp` provides `kernel::random::fill(span, RandomConfig)` over
 `BCryptGenRandom`, preserving `NTSTATUS`. It generates bytes without assigning them any
-application meaning. Link `Cng.lib`. The default system provider requires `PASSIVE_LEVEL`;
+application meaning. The span can have a runtime size; successful `expected<void, NTSTATUS>`
+means the bytes were written to that caller-owned buffer. Empty spans succeed without an API
+call. The wrapper does not allocate storage. Link `Cng.lib`. The default system provider requires `PASSIVE_LEVEL`;
 an explicit provider/flags combination has the native CNG IRQL and memory requirements.
 The provider handle is borrowed and must remain valid during the call. No identity,
 firmware format, or synthetic-data policy is part of these operations.
