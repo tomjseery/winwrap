@@ -43,16 +43,20 @@ template <typename H>
 
 /// Runs a Win32 call whose zero/null result is also a legitimate value (GetWindowLongPtrW,
 /// SetFocus, ...): clears the last error first, then treats a zero result as failure only
-/// when the call recorded an error.
-/// @return The call's result, possibly zero, or the error it recorded.
+/// when the call recorded an error. On success the caller's previous last error is restored,
+/// so the check leaves no trace -- a window procedure using this cannot erase an error that
+/// Windows recorded before dispatching to it, such as a failed CreateWindowExW's.
+/// @return The call's result, possibly zero, or the error it recorded (left as the last error).
 template <std::invocable F>
 [[nodiscard]] std::expected<std::invoke_result_t<F>, std::error_code> result_or_last(F&& call) {
+    const DWORD previous = GetLastError();
     SetLastError(ERROR_SUCCESS);
     auto result = std::invoke(std::forward<F>(call));
     if (!result) {
         if (auto recorded = last(); recorded.value() != ERROR_SUCCESS)
             return std::unexpected(recorded);
     }
+    SetLastError(previous);
     return result;
 }
 

@@ -26,6 +26,16 @@ struct RoutedWindow : winwrap::Window<RoutedWindow> {
         return Window::route_message(msg, wparam, lparam);
     }
 };
+// Refuses its own creation at WM_CREATE, as a window procedure may.
+struct RejectingWindow : winwrap::Window<RejectingWindow> {
+    static constexpr const wchar_t* class_name = L"WinwrapRejectingWindow";
+
+    LRESULT route_message(UINT msg, WPARAM wparam, LPARAM lparam) {
+        if (msg == WM_CREATE)
+            return -1;
+        return Window::route_message(msg, wparam, lparam);
+    }
+};
 }  // namespace
 
 TEST_CASE("Window<T> compiles and links") {
@@ -51,4 +61,11 @@ TEST_CASE("Window factory carries a native creation error") {
 
     REQUIRE_FALSE(window);
     CHECK(window.error());
+}
+
+TEST_CASE("Window creation reports a window procedure that refuses creation") {
+    auto window = RejectingWindow::create({.parent = HWND_MESSAGE});
+
+    REQUIRE_FALSE(window);
+    CHECK(window.error().value() == ERROR_INVALID_HANDLE);  // what Windows records
 }
