@@ -86,7 +86,7 @@ std::expected<void, std::error_code> NotifyIcon::add() {
 }
 
 UINT NotifyIcon::taskbar_created_message() {
-    static const UINT msg = message::registered(L"TaskbarCreated").value_or(0);
+    static const UINT msg = message::register_(L"TaskbarCreated").value_or(0);
     return msg;
 }
 
