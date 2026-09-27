@@ -32,4 +32,4 @@ struct RandomConfig {
     return {};
 }
 
-}  // namespace winwrap::kernel::random
+}

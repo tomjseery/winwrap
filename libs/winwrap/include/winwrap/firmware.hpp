@@ -33,4 +33,4 @@ private:
     std::vector<std::byte> bytes_;
 };
 
-}  // namespace winwrap
+}
