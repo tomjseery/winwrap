@@ -9,7 +9,27 @@ never override:
 
 Where those say *how to write C++*, this says *how winwrap shapes its API*.
 
+## Public API contracts
+
+Public C++ headers require concise `///` Doxygen documentation on types, concepts and
+public operations. State purpose and non-obvious ownership, lifetime, preconditions and
+error/output contracts. In particular, explain output buffers and `expected<void, E>`
+success semantics. This explicit API-documentation requirement is an exception to the
+general no-comments default; keep implementation narration out of function bodies.
+Express template admission requirements as named concepts where they describe a coherent
+contract; reserve `static_assert` for ABI/layout checks and internal invariants. Review new
+and changed public declarations for both constraints and documentation before delivery.
+
 ## 1. Descriptive names and factories
+
+Keep a concept's data and cohesive behavior together. Creation, acquisition, decoding,
+validation, queries and state changes belong on the meaningful owning type where relevant.
+Use instance methods for an existing object and static operations for constructing or
+decoding one. Statelessness alone does not make an operation a free function: a validator
+can still belong to its type. An independent algorithm, cross-type operation or isolated
+operation with no natural type owner remains an associated free function. Do not introduce
+empty service classes or inheritance merely to group unrelated functions. This applies to
+owned values such as a retrieved `FirmwareTable` as well as native resource wrappers.
 
 A public name must say what it represents at the use site. Keep descriptive
 factory-input names such as `WindowConfig`, `ControlConfig`, and
@@ -23,6 +43,13 @@ When a public factory takes more than about two arguments, or two easily swapped
 arguments of the same type, gather them into a descriptively named input record and use
 C++20 designated initializers. Passive config records collect input; the factory
 performs validation and resource acquisition.
+
+When a wrapper exposes several native structure options, use a descriptively named public
+configuration record such as `ContextConfig`, even if the raw API packages them in one pointer.
+Initialize and populate SDK/WDK structures inside the wrapper. Expose supported native options
+and their constraints; omit fields owned by the wrapper or prohibited by that operation.
+Native handles and callback signatures may remain interoperable. Before delivery, check each
+new wrapper against this configuration rule and the public Doxygen requirements in `cpp:style`.
 
 ```cpp
 auto device = Device::open({

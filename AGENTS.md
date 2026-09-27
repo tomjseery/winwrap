@@ -7,9 +7,20 @@ interoperability is part of the intended contract. Not a framework, not cross-pl
 not WinRT.
 Experimental v0.1; release readiness and implementation gaps are tracked below.
 
+Sandbox HWID is an active consumer developed jointly with this library. When that lab
+needs a reusable Windows API or kernel/WDF operation, add the generic operation here
+during the same task and pin the tested library revision in the consumer. A second
+application is not required. Keep native configuration, errors and ownership available;
+choose resource classes, justified behavior mixins or associated free functions to fit
+the operation. Synthetic producers, identity parsing, selection policy and fingerprint
+assembly remain in the lab. Follow this repository's independent user/kernel contracts.
+
 Winwrap's public-API conventions are project-specific:
 
 @CODE_CONVENTIONS.md
+
+Coding rules belong in [CODE_CONVENTIONS.md](CODE_CONVENTIONS.md); keep this file
+as the workflow and routing entry point instead of duplicating those rules here.
 
 ## Layout
 
