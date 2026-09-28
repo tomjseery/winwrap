@@ -205,6 +205,12 @@ reflection forwarding a `WM_COMMAND` unchanged. The generic `message::send`/`pos
 `BaseWindow::send`/`post` remain the escape hatch for messages Winwrap does not wrap,
 such as an application's own `WM_APP + n`.
 
+**Size native buffers from their type.** A byte count, `cbSize` or `void*` buffer appears
+only inside the operation that owns the native call. Operations that move an object as bytes
+take the object and size it from its type: `std::span`/`std::bit_cast` first, then
+`kernel::memory`, `Device::control<T>` and `IoRequest::read<T>`, constrained so pointers and
+views, whose bytes are an address, do not compile.
+
 **Raw handles are the escape hatch, not the normal operation API.** An unsupported
 operation or integration with another HWND-based library may use a borrowed
 `hwnd()` / `handle()` directly. That remains supported without first adding a
@@ -290,8 +296,8 @@ The existing `notification` and `detail` roles remain.
 
 The interface and IOCTL values used by both a driver and its clients live in
 `winwrap::protocol::device::{Interface, ControlCode}`. `protocol` is the only surface
-shared by kernel and user mode, and holds only driver/client contract values; it is not a
-dumping ground for mode-neutral helpers. The owning user-mode
+shared by kernel and user mode, and holds only the driver/client contract: those values and
+`ControlData`, the rule for request data. It is not a dumping ground for mode-neutral helpers. The owning user-mode
 connection is `winwrap::Device`. Borrowed KMDF objects live in
 `winwrap::kernel::driver::{Driver, Device, IoQueue, IoRequest}`, while kernel
 diagnostics use `winwrap::kernel::debug_print`. Kernel headers depend only on
