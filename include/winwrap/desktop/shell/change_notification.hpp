@@ -7,20 +7,22 @@
 #include <shlobj.h>
 #include <wil/resource.h>
 
+#include <array>
 #include <expected>
 #include <filesystem>
 #include <optional>
-#include <span>
 #include <system_error>
 #include <utility>
 
 /// Shell (Explorer) integration.
 namespace winwrap::shell {
 
-/// One Shell change delivered to a ChangeRegistration's owner window. Holds the Shell's
-/// shared memory for the change (SHChangeNotification_Lock) and releases it on
-/// destruction (SHChangeNotification_Unlock). Move-only. The ShellChangeAware mixin
-/// creates one per delivery; a window that routes messages itself calls lock().
+/// One Shell change delivered to a ChangeRegistration's owner window: its event and its own
+/// copies of the changed items' ID lists, freed on destruction (ILFree). The Shell's data
+/// for a delivery is valid only while that delivery is processed, so lock() copies what it
+/// needs and releases the Shell's lock before returning. Move-only; a moved-from
+/// notification has no event and no items. The ShellChangeAware mixin creates one per
+/// delivery; a window that routes messages itself calls lock().
 class ChangeNotification final {
 public:
     /// The message every ChangeRegistration posts to its owner, registered once per
@@ -28,13 +30,31 @@ public:
     /// with an application's `WM_APP + n`.
     [[nodiscard]] static std::expected<UINT, std::error_code> message();
 
-    /// Takes the change carried by one message() delivery.
+    /// Takes the change carried by one message() delivery: locks the Shell's data
+    /// (SHChangeNotification_Lock), copies the item ID lists and unlocks
+    /// (SHChangeNotification_Unlock). Call it while processing that delivery.
     /// @param wparam  The delivery's `wParam`, the Shell's handle to the change.
     /// @param lparam  The delivery's `lParam`, the id of the process that posted it.
     /// @return The change, or the error; `ERROR_GEN_FAILURE` when the Shell no longer
-    ///         holds it and records no reason.
+    ///         holds it and records no reason, `ERROR_NOT_ENOUGH_MEMORY` when an item
+    ///         cannot be copied.
     [[nodiscard]] static std::expected<ChangeNotification, std::error_code> lock(WPARAM wparam,
                                                                                  LPARAM lparam);
+
+    /// Takes over `other`'s event and items; `other` is left with neither.
+    ChangeNotification(ChangeNotification&& other) noexcept
+        : items_{std::move(other.items_)}, event_{std::exchange(other.event_, 0)} {}
+
+    /// Frees this notification's items and takes over `other`'s event and items.
+    ChangeNotification& operator=(ChangeNotification&& other) noexcept {
+        items_ = std::move(other.items_);
+        event_ = std::exchange(other.event_, 0);
+        return *this;
+    }
+
+    ChangeNotification(const ChangeNotification&) = delete;
+    ChangeNotification& operator=(const ChangeNotification&) = delete;
+    ~ChangeNotification() = default;
 
     /// The SHCNE_* event. `SHCNE_INTERRUPT` is also set when the file system, rather than a
     /// Shell notification, reported it.
@@ -49,32 +69,30 @@ public:
     /// `SHCNE_RENAMEITEM` and `SHCNE_RENAMEFOLDER`.
     [[nodiscard]] std::optional<std::filesystem::path> new_path() const;
 
-    /// The event's two native item ID lists, either of which may be null. Borrowed: valid
-    /// only while this ChangeNotification lives, and meaningful only for events that carry
-    /// items (see path()).
-    [[nodiscard]] std::span<const PIDLIST_ABSOLUTE, 2> items() const noexcept {
-        return std::span<const PIDLIST_ABSOLUTE, 2>{items_, 2};
+    /// The two item ID lists, borrowed from this notification, which remains their owner.
+    /// Either may be null; both are null for events that carry no items (see path()).
+    [[nodiscard]] std::array<PCIDLIST_ABSOLUTE, 2> items() const noexcept {
+        return {items_[0].get(), items_[1].get()};
     }
 
 private:
-    using unique_lock = wil::unique_any<HANDLE, decltype(&::SHChangeNotification_Unlock),
-                                        ::SHChangeNotification_Unlock>;
+    using unique_item_list = wil::unique_any<PIDLIST_ABSOLUTE, decltype(&::ILFree), ::ILFree>;
 
-    ChangeNotification(unique_lock lock, PIDLIST_ABSOLUTE* items, LONG event) noexcept
-        : lock_{std::move(lock)}, items_{items}, event_{event} {}
+    explicit ChangeNotification(LONG event) noexcept : event_{event} {}
 
-    unique_lock lock_;
-    PIDLIST_ABSOLUTE* items_{};
+    std::array<unique_item_list, 2> items_;
     LONG event_{};
 };
 
-// Every function below tells the Shell about a change the application already made, so
-// open Explorer views and the icon cache can refresh (SHChangeNotify). None waits for
-// Explorer, and none reports failure: SHChangeNotify returns nothing. The file and folder
-// variants map to distinct Shell events; a deleted or renamed path can no longer be
-// inspected, so the caller says which kind it was. Each sends the long form of its paths:
-// the Shell matches items by their long names, so a notification naming an 8.3 short path
-// would reach no listener. A path that no longer exists keeps its own last component.
+/// @name Telling the Shell what changed
+/// Each function below tells the Shell about a change the application already made, so
+/// open Explorer views and the icon cache can refresh (SHChangeNotify). None waits for
+/// Explorer, and none reports failure: SHChangeNotify returns nothing. The file and folder
+/// variants map to distinct Shell events; a deleted or renamed path can no longer be
+/// inspected, so the caller says which kind it was. Each sends the long form of its paths:
+/// the Shell matches items by their long names, so a notification naming an 8.3 short path
+/// would reach no listener. A path that no longer exists keeps its own last component.
+/// @{
 
 /// A file was created at `file` (SHCNE_CREATE).
 void notify_file_created(const std::filesystem::path& file);
@@ -104,5 +122,7 @@ void notify_folder_changed(const std::filesystem::path& folder);
 /// File-type associations changed, so the Shell refreshes icons and handlers
 /// (SHCNE_ASSOCCHANGED).
 void notify_associations_changed();
+
+/// @}
 
 }  // namespace winwrap::shell

@@ -98,10 +98,11 @@ inline std::expected<LONG_PTR, std::error_code> set_long_ptr(HWND hwnd, int inde
 /// The window's caption (title-bar text, button label, static text, edit contents) as UTF-16.
 [[nodiscard]] inline std::wstring text(HWND hwnd) {
     const int len = GetWindowTextLengthW(hwnd);
+    if (len <= 0)
+        return {};
     std::wstring buf(static_cast<size_t>(len), L'\0');
-    if (len > 0)
-        GetWindowTextW(hwnd, buf.data(),
-                       static_cast<int>(buf.size() + 1));  // writes len chars + the trailing NUL
+    const int copied = GetWindowTextW(hwnd, buf.data(), static_cast<int>(buf.size() + 1));
+    buf.resize(static_cast<size_t>(copied > 0 ? copied : 0));
     return buf;
 }
 

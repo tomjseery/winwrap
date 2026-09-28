@@ -113,14 +113,18 @@ Each change is posted to the owner as `shell::ChangeNotification::message()`, a 
 Winwrap registers once per session so it cannot collide with an application's `WM_APP + n`.
 The owner's thread must pump messages. Composing `ShellChangeAware` routes each delivery to
 `on_shell_change(const shell::ChangeNotification&)`; a window that routes messages itself
-calls `ChangeNotification::lock(wparam, lparam)`. A `ChangeNotification` holds the Shell's
-shared memory for that change (`SHChangeNotification_Lock`) and releases it on destruction.
+calls `ChangeNotification::lock(wparam, lparam)` while processing that delivery. The
+Shell's locked data (`SHChangeNotification_Lock`) is valid only during the delivery, even
+while the lock is held: reading it after the window procedure returns faults. `lock` therefore
+copies the item ID lists (`ILCloneFull`) and unlocks before returning, and the
+`ChangeNotification` owns those copies (`ILFree`), so it stays valid after it is moved or kept.
 `event()` is the SHCNE_* code, with `SHCNE_INTERRUPT` set for file-system reports.
 `path()` and, for renames, `new_path()` decode the item ID lists with
-`SHGetPathFromIDListEx`, which needs no COM initialization. They are empty for items outside
-the file system and for the events whose items are not item ID lists, the list Microsoft's
-ChangeNotifyWatcher sample excludes. `items()` borrows the native lists while the
-notification lives. The Shell may combine many item changes into one `SHCNE_UPDATEDIR`.
+`SHGetPathFromIDListEx`, which needs no COM initialization; `SHGetNameFromIDList` fails with
+`CO_E_NOTINITIALIZED` on a thread without COM. They are empty for items outside the file
+system. Events whose items are not item ID lists, the list Microsoft's ChangeNotifyWatcher
+sample excludes, copy no items. `items()` borrows the owned lists. The Shell may combine many
+item changes into one `SHCNE_UPDATEDIR`.
 
 References: [registering](https://learn.microsoft.com/en-us/windows/win32/api/shlobj_core/nf-shlobj_core-shchangenotifyregister),
 [reading a delivery](https://learn.microsoft.com/en-us/windows/win32/api/shlobj_core/nf-shlobj_core-shchangenotification_lock),

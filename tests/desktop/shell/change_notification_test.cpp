@@ -28,7 +28,6 @@ struct ShellChange {
     std::optional<std::filesystem::path> new_path;
 };
 
-// Records the Shell changes delivered to it and stops the loop on the expected one.
 struct ChangeWatcher : winwrap::Window<ChangeWatcher, winwrap::ShellChangeAware> {
     static constexpr const wchar_t* class_name = L"WinwrapShellChangeWatcher";
     std::vector<ShellChange> changes;
@@ -42,7 +41,6 @@ struct ChangeWatcher : winwrap::Window<ChangeWatcher, winwrap::ShellChangeAware>
 
     void on_timer(UINT_PTR) { winwrap::message_loop::quit(); }  // give up waiting
 
-    // Runs `action` and pumps messages until the Shell reports `event` or 5 s pass.
     std::optional<ShellChange> delivered(LONG event, const std::function<void()>& action) {
         changes.clear();
         expected = event;
@@ -55,6 +53,27 @@ struct ChangeWatcher : winwrap::Window<ChangeWatcher, winwrap::ShellChangeAware>
             return std::nullopt;
         return *found;
     }
+};
+
+struct RoutingWatcher : winwrap::Window<RoutingWatcher> {
+    static constexpr const wchar_t* class_name = L"WinwrapShellRoutingWatcher";
+    std::optional<winwrap::shell::ChangeNotification> taken;
+    std::optional<ShellChange> moved_from;
+
+    LRESULT route_message(UINT msg, WPARAM wparam, LPARAM lparam) {
+        if (const auto message = winwrap::shell::ChangeNotification::message();
+            message && msg == *message) {
+            if (auto change = winwrap::shell::ChangeNotification::lock(wparam, lparam)) {
+                taken.emplace(std::move(*change));
+                moved_from = ShellChange{change->event(), change->path(), change->new_path()};
+                winwrap::message_loop::quit();
+            }
+            return 0;
+        }
+        return Window::route_message(msg, wparam, lparam);
+    }
+
+    void on_timer(UINT_PTR) { winwrap::message_loop::quit(); }
 };
 
 std::filesystem::path make_temp_folder() {
@@ -160,6 +179,36 @@ TEST_CASE("a notification naming an 8.3 path reaches the listener as the long pa
 
         REQUIRE(changed);
         CHECK(changed->path == file);
+    }
+    std::filesystem::remove_all(folder);
+}
+
+TEST_CASE("a window routing messages itself takes a change with lock and can move it") {
+    const auto folder = make_temp_folder();
+    const auto file = folder / L"routed.txt";
+    auto watcher = RoutingWatcher::create({.parent = HWND_MESSAGE});
+    REQUIRE(watcher);
+    {
+        const auto registration = winwrap::shell::ChangeRegistration::create({
+            .owner = watcher->hwnd(),
+            .folder = folder,
+            .sources = SHCNRF_ShellLevel,
+        });
+        REQUIRE(registration);
+
+        std::ofstream{file} << "x";
+        winwrap::shell::notify_file_created(file);
+        REQUIRE(watcher->start_timer(timeout_timer, 5s));
+        static_cast<void>(winwrap::message_loop::run());
+        static_cast<void>(watcher->stop_timer(timeout_timer));
+
+        REQUIRE(watcher->taken);
+        CHECK(watcher->taken->event() == SHCNE_CREATE);
+        CHECK(watcher->taken->path() == file);
+        REQUIRE(watcher->moved_from);
+        CHECK(watcher->moved_from->event == 0);
+        CHECK_FALSE(watcher->moved_from->path);
+        watcher->taken.reset();
     }
     std::filesystem::remove_all(folder);
 }
