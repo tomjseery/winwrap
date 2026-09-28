@@ -28,8 +28,8 @@ reasoning lives in [ASSESSMENT.md](ASSESSMENT.md).
   setup can publish success without destruction invalidation. (`Control` now checks
   `SetWindowSubclass` and destroys the unbound child on failure, but that path has no
   deterministic test.) **Resolve:** API-specific error handling and rollback for
-  `Window`'s binding, plus a call seam that lets tests prove neither wrapper can return
-  a live-looking unbound object.
+  `Window`'s binding, plus tests that prove neither wrapper can return a live-looking
+  unbound object.
 - **H4 / reentrancy and teardown.** Native callbacks use `self` after user code on
   NC destruction. Synchronous APIs, derived/member teardown and modal menu tracking
   can reenter before owners are safe. Current base-destructor detach is insufficient
@@ -96,8 +96,8 @@ reasoning lives in [ASSESSMENT.md](ASSESSMENT.md).
 
 - **H6 / registration acquisition state.** NotifyIcon cleanup attempts NIM_DELETE
   even after acquisition fails; duplicate identities and partial add/version
-  success need distinct rollback. **Resolve:** track actual acquired registration,
-  inject shell-call outcomes and prove failed creation cannot delete another icon.
+  success need distinct rollback. **Resolve:** track actual acquired registration
+  and prove failed creation cannot delete another icon.
 - **M7 / broadcast host.** A message-only HWND cannot receive TaskbarCreated.
   Documentation corrected the proposed host, but application recovery is unproved.
   **Resolve:** hidden top-level receiver or explicit forwarder and a controlled
