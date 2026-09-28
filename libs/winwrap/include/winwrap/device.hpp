@@ -6,7 +6,6 @@
 
 #include <wil/resource.h>
 
-#include <concepts>
 #include <cstddef>
 #include <expected>
 #include <optional>
@@ -79,7 +78,6 @@ public:
     /// A reply shorter than sizeof(T) fails with ERROR_INVALID_DATA and reports the byte
     /// count Windows wrote.
     template <winwrap::protocol::device::ControlData T>
-        requires std::default_initializable<T>
     [[nodiscard]] std::expected<T, ControlError> control(
         DWORD code, const winwrap::protocol::device::ControlData auto& input) const {
         T value{};
@@ -96,7 +94,6 @@ public:
 
     /// Send `input` and receive exactly one T using a typed device-control code.
     template <winwrap::protocol::device::ControlData T>
-        requires std::default_initializable<T>
     [[nodiscard]] std::expected<T, ControlError> control(
         winwrap::protocol::device::ControlCode code,
         const winwrap::protocol::device::ControlData auto& input) const {
