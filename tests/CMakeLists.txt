@@ -40,9 +40,6 @@ target_link_libraries(winwrap_test
         winwrap_sanitize
         Catch2::Catch2WithMain)
 
-# Device control's injected-call seam is private implementation test support.
-target_include_directories(winwrap_test PRIVATE ${PROJECT_SOURCE_DIR}/src)
-
 include(Catch)
 catch_discover_tests(winwrap_test)
 

@@ -11,8 +11,13 @@ Baseline coverage and validation are documented in
 - **Missing adversarial native tests.** No dedicated Menu/NotifyIcon tests; limited
   creation failure, collision, lifetime-order, multiple-inheritance, result and
   reentrancy coverage. **Resolve:** add regression tests for the corresponding
-  library debt, using narrow call seams only where safe deterministic failures
-  otherwise cannot be obtained.
+  library debt against real Windows calls; production code carries no test seams
+  or fakes.
+- **Device control guards against a misbehaving driver.** `Device::control` bounds
+  a byte count larger than the output buffer, rejects one on success, and passes
+  storage-backed zero-length spans' pointers through. No real device in the suite
+  produces these, so they are untested. **Resolve:** a test driver, such as Sandbox
+  HWID's, that returns those results through a real handle.
 - **Synthetic notification versus real input.** Parent WM_COMMAND sends prove
   reflection but do not prove native clicking, editing, caret or default behavior.
   Compile-only `REQUIRE(true)` cases do not prove runtime behavior.
