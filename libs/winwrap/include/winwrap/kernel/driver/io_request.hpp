@@ -5,6 +5,7 @@
 
 #include "winwrap/kernel/driver/detail/wdf.hpp"
 #include "winwrap/kernel/memory.hpp"
+#include "winwrap/protocol/device/control_data.hpp"
 
 namespace winwrap::kernel::driver {
 
@@ -61,7 +62,7 @@ public:
     }
 
     /// Copy one typed value out of the request's input buffer.
-    template <memory::TriviallyCopyable T>
+    template <winwrap::protocol::device::ControlData T>
         requires std::default_initializable<T>
     [[nodiscard]] std::expected<T, NTSTATUS> read() const noexcept {
         const auto buffer{input<T>()};
@@ -74,7 +75,7 @@ public:
     }
 
     /// Copy one typed value, or a whole array, into the request's output buffer.
-    template <memory::TriviallyCopyable T>
+    template <winwrap::protocol::device::ControlData T>
     [[nodiscard]] NTSTATUS write(const T& value) const noexcept {
         const auto buffer{output<T>()};
         if (!buffer)

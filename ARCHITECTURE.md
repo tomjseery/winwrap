@@ -35,6 +35,13 @@ are preserved independently from their lengths, including storage-backed zero-le
 spans. `handle()` borrows the native handle without transferring ownership. There is no
 overlapped-I/O API; asynchronous requests need separate buffer and cancellation lifetimes.
 
+`control<T>(code, input)` sends one object and receives exactly one `T`, sizing both
+buffers from their types. A reply shorter than `sizeof(T)` fails with `ERROR_INVALID_DATA`
+and keeps the byte count Windows reported. Both types must satisfy
+`protocol::device::ControlData`: trivially copyable structs, arrays, numbers and
+enumerations. Pointers, handles and spans are rejected because their bytes are an address;
+use the span overload for variable-length buffers.
+
 `DiskSerial::read(device, config)` sends the standard storage property query to an
 already open device, negotiates a descriptor size within
 `DiskSerialConfig::maximum_descriptor_size` (64 KiB by default), and decodes its
@@ -128,7 +135,8 @@ every byte, padding included. Zero a reply before filling it for user mode: `{}`
 initialization does not guarantee zeroed padding, and a request copies every byte of the
 reply. `memory::copy(destination, source)` requires one trivially copyable type on both
 sides, so mismatched sizes fail to compile and arrays copy whole. `IoRequest::read` and
-`write` admit the same `TriviallyCopyable` types.
+`write` admit `protocol::device::ControlData`, the same rule the client's typed
+`Device::control<T>` uses, so a pointer cannot send a kernel address to user mode.
 
 References: [firmware reads](https://learn.microsoft.com/en-us/windows/win32/api/sysinfoapi/nf-sysinfoapi-getsystemfirmwaretable),
 [KMDF context space](https://learn.microsoft.com/en-us/windows-hardware/drivers/wdf/framework-object-context-space),
