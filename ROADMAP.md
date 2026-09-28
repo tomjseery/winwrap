@@ -286,7 +286,7 @@ app-side GDI (`CreateIconIndirect`); adoption must have an explicit ownership co
 
 ## Task 1 — `Window<T>`: configurability + lifetime + error model — ✅ DONE
 
-Delivered in `libs/winwrap/include/winwrap/desktop/window/window.hpp`: `WindowConfig` struct;
+Delivered in `include/winwrap/desktop/window/window.hpp`: `WindowConfig` struct;
 inherited static `create()` returning a stable `CreationResult<T>` owner; two-layer
 registration/creation; `last_error()` helper; `RegisterClassW`/`CreateWindowExW`
 error propagation (tolerating `ERROR_CLASS_ALREADY_EXISTS`); `configure_class`
@@ -299,7 +299,7 @@ it just hasn't been shown on screen yet.
 
 ## Task 2 — `Menu` — ✅ DONE
 
-Delivered in `libs/winwrap/include/winwrap/desktop/menu.hpp` + `libs/winwrap/src/desktop/menu.cpp`:
+Delivered in `include/winwrap/desktop/menu.hpp` + `src/desktop/menu.cpp`:
 - **`class Menu final`** — sealed, move-only (owns `HMENU` via `wil::unique_hmenu`).
 - **`create()`** — static factory → `std::expected<Menu, std::error_code>`, wraps
   `CreatePopupMenu` (null → `last_error()`); private ctor adopts the handle.
@@ -322,7 +322,7 @@ into a window (right-click → `show()` → `on_command`); wifi-toggle will cove
 
 ## Task 3 — `NotifyIcon`: the differentiator — ✅ DONE
 
-Delivered in `libs/winwrap/include/winwrap/desktop/notify_icon.hpp` + `libs/winwrap/src/desktop/notify_icon.cpp`:
+Delivered in `include/winwrap/desktop/notify_icon.hpp` + `src/desktop/notify_icon.cpp`:
 - **`class NotifyIcon final`** — move-only; **hand-written Rule-of-Five** (the shell
   registration is keyed by `(hWnd, uID)`, not an RAII handle — moves neuter the
   source, the destructor runs `NIM_DELETE`). Owns the `HICON` via `wil::unique_hicon`.
@@ -362,7 +362,7 @@ here's the planned order. **None of this blocks v0.1.**
 
 A second library comparison, this one asking "what building block is missing?" rather
 than the 2026-07-12 one's "what does wifi-toggle need?". Checked against the full
-contents of the public include tree (now `libs/winwrap/include/winwrap/`), not a
+contents of the public include tree (now `include/winwrap/`), not a
 name scan. Feeds the v0.2 / v0.3 sections
 below; nothing here is a new pillar.
 
