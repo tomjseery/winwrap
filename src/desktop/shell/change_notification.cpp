@@ -1,6 +1,8 @@
 #include "winwrap/desktop/shell/change_notification.hpp"
 
+#include <cstddef>
 #include <cwchar>
+#include <span>
 #include <string>
 
 #include "winwrap/desktop/message.hpp"
@@ -8,6 +10,9 @@
 
 namespace winwrap::shell {
 namespace {
+
+using unique_lock = wil::unique_any<HANDLE, decltype(&::SHChangeNotification_Unlock),
+                                    ::SHChangeNotification_Unlock>;
 
 // The events whose two "items" are not item ID lists, per Microsoft's ChangeNotifyWatcher
 // sample: SHCNE_UPDATEIMAGE, for example, carries a system image list index.
@@ -106,20 +111,30 @@ std::expected<ChangeNotification, std::error_code> ChangeNotification::lock(WPAR
         .and_then([&](HANDLE locked) -> std::expected<ChangeNotification, std::error_code> {
             if (!locked)
                 return std::unexpected(error::win32(ERROR_GEN_FAILURE));
-            return ChangeNotification{unique_lock{locked}, items, event};
+            const unique_lock held{locked};
+            ChangeNotification change{event};
+            if (!items || !carries_items(event))
+                return change;
+            const std::span<const PIDLIST_ABSOLUTE, 2> locked_items{items, 2};
+            for (std::size_t index{}; index < change.items_.size(); ++index) {
+                if (!locked_items[index])
+                    continue;
+                change.items_[index].reset(::ILCloneFull(locked_items[index]));
+                if (!change.items_[index])
+                    return std::unexpected(error::win32(ERROR_NOT_ENOUGH_MEMORY));
+            }
+            return change;
         });
 }
 
 std::optional<std::filesystem::path> ChangeNotification::path() const {
-    if (!carries_items(event_))
-        return std::nullopt;
-    return file_system_path(items()[0]);
+    return file_system_path(items_[0].get());
 }
 
 std::optional<std::filesystem::path> ChangeNotification::new_path() const {
     if ((event_ & (SHCNE_RENAMEITEM | SHCNE_RENAMEFOLDER)) == 0)
         return std::nullopt;
-    return file_system_path(items()[1]);
+    return file_system_path(items_[1].get());
 }
 
 }  // namespace winwrap::shell

@@ -178,6 +178,31 @@ TEST_CASE("window operations act on a raw HWND without a wrapper") {
     CHECK(bounds->left == off_screen + 5);
 }
 
+namespace {
+
+// GetWindowTextLengthW documents that the length may exceed the text, for example across
+// ANSI/Unicode conversion; this window reports that extra length itself.
+struct OverstatedLengthWindow : winwrap::Window<OverstatedLengthWindow> {
+    static constexpr const wchar_t* class_name = L"WinwrapOverstatedLengthTest";
+    LRESULT route_message(UINT msg, WPARAM wparam, LPARAM lparam) {
+        constexpr LRESULT extra_length{5};
+        if (msg == WM_GETTEXTLENGTH)
+            return Window::route_message(msg, wparam, lparam) + extra_length;
+        return Window::route_message(msg, wparam, lparam);
+    }
+};
+
+}  // namespace
+
+TEST_CASE("text returns only the characters the window copied") {
+    auto window = OverstatedLengthWindow::create({.parent = HWND_MESSAGE});
+    REQUIRE(window);
+    window->set_text(L"abc");
+
+    CHECK(window->text() == L"abc");
+    CHECK(window->text().size() == 3);
+}
+
 TEST_CASE("long_ptr reads back what set_long_ptr stored and returns the previous value") {
     // A plain system-class window: nothing else uses its GWLP_USERDATA slot.
     wil::unique_hwnd raw{CreateWindowExW(0, L"STATIC", L"", 0, 0, 0, 0, 0, HWND_MESSAGE, nullptr,

@@ -12,8 +12,8 @@ namespace winwrap {
 
 /// WINDOW mixin: routes each shell::ChangeRegistration delivery to the final type's
 /// `on_shell_change(const shell::ChangeNotification&)`. The notification is borrowed for
-/// that call only; the mixin releases the Shell's copy when the hook returns. Compose it
-/// without the hook and deliveries fall through unhandled.
+/// that call; the mixin destroys it when the hook returns. Compose it without the hook and
+/// deliveries fall through unhandled.
 ///
 /// The window only receives changes while a shell::ChangeRegistration names it as owner:
 ///
