@@ -1,5 +1,6 @@
 #pragma once
 
+#include <concepts>
 #include <expected>
 
 #include "winwrap/kernel/driver/detail/wdf.hpp"
@@ -61,6 +62,7 @@ public:
 
     /// Copy one typed value out of the request's input buffer.
     template <memory::TriviallyCopyable T>
+        requires std::default_initializable<T>
     [[nodiscard]] std::expected<T, NTSTATUS> read() const noexcept {
         const auto buffer{input<T>()};
         if (!buffer)
