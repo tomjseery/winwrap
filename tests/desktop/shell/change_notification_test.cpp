@@ -62,7 +62,14 @@ std::filesystem::path make_temp_folder() {
                   (L"winwrap_shell_test_" + std::to_wstring(GetCurrentProcessId()));
     std::filesystem::remove_all(folder);
     std::filesystem::create_directory(folder);
-    return folder;
+    return std::filesystem::canonical(folder);
+}
+
+std::filesystem::path short_path(const std::filesystem::path& path) {
+    std::wstring shortened(GetShortPathNameW(path.c_str(), nullptr, 0), L'\0');
+    shortened.resize(
+        GetShortPathNameW(path.c_str(), shortened.data(), static_cast<DWORD>(shortened.size())));
+    return shortened;
 }
 
 }  // namespace
@@ -127,6 +134,32 @@ TEST_CASE("shell notifications reach a registered Shell listener") {
         });
         REQUIRE(removed);
         CHECK(removed->path == subfolder);
+    }
+    std::filesystem::remove_all(folder);
+}
+
+TEST_CASE("a notification naming an 8.3 path reaches the listener as the long path") {
+    const auto folder = make_temp_folder();
+    const auto file = folder / L"long_file_name.txt";
+    std::ofstream{file} << "x";
+    const auto shortened = short_path(file);
+    if (shortened == file)
+        SKIP("this volume creates no 8.3 names");
+    auto watcher = ChangeWatcher::create({.parent = HWND_MESSAGE});
+    REQUIRE(watcher);
+    {
+        const auto registration = winwrap::shell::ChangeRegistration::create({
+            .owner = watcher->hwnd(),
+            .folder = folder,
+            .sources = SHCNRF_ShellLevel,
+        });
+        REQUIRE(registration);
+
+        const auto changed = watcher->delivered(
+            SHCNE_UPDATEITEM, [&] { winwrap::shell::notify_file_changed(shortened); });
+
+        REQUIRE(changed);
+        CHECK(changed->path == file);
     }
     std::filesystem::remove_all(folder);
 }
