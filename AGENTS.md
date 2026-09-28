@@ -53,6 +53,7 @@ compiled through a real WDK consumer. Build user mode from an
 | Read | Before you |
 |---|---|
 | `VISION.md` | make a design call — pillars, non-goals |
+| `ARCHITECTURE.md` | change a subsystem's native contract or the kernel surface |
 | `ROADMAP.md` | start work — queue + locked decisions |
 | `MIXINS.md`, `MESSAGE_LOOP_DESIGN.md` | touch mixins, dispatch, or the loop |
 | `TECH_DEBT.md` | wonder why something is shaped oddly |
