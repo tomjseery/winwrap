@@ -6,14 +6,14 @@ This is the pattern the library repeats for every message feature, so it's
 written down once here.
 
 This describes the current implementation, not a guarantee that every lifecycle
-edge is settled. [Library debt](libs/winwrap/TECH_DEBT.md) owns the outstanding result,
+edge is settled. [Library debt](TECH_DEBT.md) owns the outstanding result,
 reflection, header and reentrancy contracts; [ASSESSMENT.md](ASSESSMENT.md) explains
 the recommended evolution.
 
 See also: [VISION.md](VISION.md) (the "on-event callbacks, hiding the `WM_COMMAND`-id
-plumbing" goal), `libs/winwrap/include/winwrap/desktop/window/message/` (direct
+plumbing" goal), `include/winwrap/desktop/window/message/` (direct
 window/control message routing) and
-`libs/winwrap/include/winwrap/desktop/window/notification/command/reflection.hpp` (the reflection engine), `CODE_CONVENTIONS.md §3`
+`include/winwrap/desktop/window/notification/command/reflection.hpp` (the reflection engine), `CODE_CONVENTIONS.md §3`
 (where shared code lives).
 
 ## The two kinds of message mixin
@@ -149,7 +149,7 @@ code on the derived window type. `FileDroppable` is the worked example.
    ```
 
 2. Keep the header self-contained — it must compile on its own and must not leak
-   `WW_CASE`; the per-header check in `tests/winwrap/CMakeLists.txt` enforces both.
+   `WW_CASE`; the per-header check in `tests/CMakeLists.txt` enforces both.
    There is no aggregate
    header to register it in.
 

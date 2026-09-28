@@ -1,8 +1,8 @@
 # Test technical debt
 
 Baseline coverage and validation are documented in
-[ASSESSMENT.md](../../ASSESSMENT.md). This file owns test-infrastructure/coverage gaps;
-[library debt](../../libs/winwrap/TECH_DEBT.md) owns the production contracts they must verify.
+[ASSESSMENT.md](../ASSESSMENT.md). This file owns test-infrastructure/coverage gaps;
+[library debt](../TECH_DEBT.md) owns the production contracts they must verify.
 
 - **Unsafe fixed temporary filename.** Filesystem tests use a fixed temp path and
   remove any pre-existing file there; parallel runs collide. **Resolve:** unique
