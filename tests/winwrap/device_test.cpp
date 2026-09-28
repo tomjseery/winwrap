@@ -243,6 +243,9 @@ TEST_CASE("device control passes null pointers for default empty spans") {
 
 TEST_CASE("ControlData admits plain data and rejects addresses") {
     using winwrap::protocol::device::ControlData;
+    struct UninitializableConstant {
+        const int value;
+    };
     STATIC_REQUIRE(ControlData<STORAGE_PROPERTY_QUERY>);
     STATIC_REQUIRE(ControlData<DWORD>);
     STATIC_REQUIRE(ControlData<char[21]>);
@@ -250,6 +253,7 @@ TEST_CASE("ControlData admits plain data and rejects addresses") {
     STATIC_REQUIRE_FALSE(ControlData<const STORAGE_PROPERTY_QUERY*>);
     STATIC_REQUIRE_FALSE(ControlData<HANDLE>);
     STATIC_REQUIRE_FALSE(ControlData<std::span<const std::byte>>);
+    STATIC_REQUIRE_FALSE(ControlData<UninitializableConstant>);
 }
 
 // Needs a first physical disk; opening it without access rights needs no elevation.
