@@ -29,7 +29,7 @@ struct QuietWindow : winwrap::Window<QuietWindow> {
 bool timer_proc_called{};
 void CALLBACK record_timer_proc(HWND hwnd, UINT, UINT_PTR id, DWORD) {
     timer_proc_called = true;
-    KillTimer(hwnd, id);
+    CHECK(winwrap::window::stop_timer(hwnd, id));
     winwrap::message_loop::quit();
 }
 
