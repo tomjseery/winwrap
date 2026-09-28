@@ -100,7 +100,8 @@ inline std::expected<LONG_PTR, std::error_code> set_long_ptr(HWND hwnd, int inde
     const int len = GetWindowTextLengthW(hwnd);
     std::wstring buf(static_cast<size_t>(len), L'\0');
     if (len > 0)
-        GetWindowTextW(hwnd, buf.data(), len + 1);  // writes len chars + the trailing NUL
+        GetWindowTextW(hwnd, buf.data(),
+                       static_cast<int>(buf.size() + 1));  // writes len chars + the trailing NUL
     return buf;
 }
 

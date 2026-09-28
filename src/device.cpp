@@ -86,8 +86,9 @@ std::expected<std::vector<std::wstring>, std::error_code> Device::paths(const GU
             return std::unexpected(error::win32(ERROR_INVALID_DATA));
 
         std::vector<wchar_t> list(characters, L'\0');
-        const auto listing{::CM_Get_Device_Interface_ListW(
-            &class_id, nullptr, list.data(), characters, CM_GET_DEVICE_INTERFACE_LIST_PRESENT)};
+        const auto listing{::CM_Get_Device_Interface_ListW(&class_id, nullptr, list.data(),
+                                                           static_cast<ULONG>(list.size()),
+                                                           CM_GET_DEVICE_INTERFACE_LIST_PRESENT)};
         if (listing == CR_BUFFER_SMALL)
             continue;
         if (listing != CR_SUCCESS)
