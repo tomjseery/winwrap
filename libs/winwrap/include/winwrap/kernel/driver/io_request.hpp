@@ -72,7 +72,7 @@ public:
         return value;
     }
 
-    /// Copy one typed value, or a whole array, into the request's output buffer.
+    /// Copy one typed value into the request's output buffer; use std::array for array data.
     template <winwrap::protocol::device::ControlData T>
     [[nodiscard]] NTSTATUS write(const T& value) const noexcept {
         const auto buffer{output<T>()};

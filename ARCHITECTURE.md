@@ -38,9 +38,10 @@ overlapped-I/O API; asynchronous requests need separate buffer and cancellation 
 `control<T>(code, input)` sends one object and receives exactly one `T`, sizing both
 buffers from their types. A reply shorter than `sizeof(T)` fails with `ERROR_INVALID_DATA`
 and keeps the byte count Windows reported. Both types must satisfy
-`protocol::device::ControlData`: default-initializable, trivially copyable structs, arrays,
-numbers and enumerations. Pointers, handles and spans are rejected because their bytes are
-an address; use the span overload for variable-length buffers.
+`protocol::device::ControlData`: default-initializable, trivially copyable structs,
+`std::array`s, numbers and enumerations. C arrays are rejected because they cannot be returned
+by value. Pointers, handles and spans are rejected because their bytes are an address; use
+the span overload for variable-length buffers.
 
 `DiskSerial::read(device, config)` sends the standard storage property query to an
 already open device, negotiates a descriptor size within
