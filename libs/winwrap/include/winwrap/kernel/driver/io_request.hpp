@@ -1,9 +1,10 @@
 #pragma once
 
 #include <expected>
-#include <type_traits>
 
 #include "winwrap/kernel/driver/detail/wdf.hpp"
+#include "winwrap/kernel/memory.hpp"
+#include "winwrap/protocol/device/control_data.hpp"
 
 namespace winwrap::kernel::driver {
 
@@ -60,31 +61,25 @@ public:
     }
 
     /// Copy one typed value out of the request's input buffer.
-    template <typename T>
+    template <winwrap::protocol::device::ControlData T>
     [[nodiscard]] std::expected<T, NTSTATUS> read() const noexcept {
-        static_assert(
-            std::is_trivially_copyable_v<T>,
-            "winwrap::kernel::driver::IoRequest::read requires a trivially copyable type");
         const auto buffer{input<T>()};
         if (!buffer)
             return std::unexpected{buffer.error()};
 
         T value{};
-        RtlCopyMemory(&value, buffer->data(), sizeof(T));
+        memory::copy(value, *buffer->data());
         return value;
     }
 
-    /// Copy one typed value into the request's output buffer.
-    template <typename T>
+    /// Copy one typed value into the request's output buffer; use std::array for array data.
+    template <winwrap::protocol::device::ControlData T>
     [[nodiscard]] NTSTATUS write(const T& value) const noexcept {
-        static_assert(
-            std::is_trivially_copyable_v<T>,
-            "winwrap::kernel::driver::IoRequest::write requires a trivially copyable type");
         const auto buffer{output<T>()};
         if (!buffer)
             return buffer.error();
 
-        RtlCopyMemory(buffer->data(), &value, sizeof(T));
+        memory::copy(*buffer->data(), value);
         return STATUS_SUCCESS;
     }
 

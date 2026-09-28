@@ -1,6 +1,9 @@
 #include "winwrap/device.hpp"
 
+#include "winwrap/win.hpp"
+
 #include <wil/resource.h>
+#include <winioctl.h>
 
 #include <array>
 #include <catch2/catch_test_macros.hpp>
@@ -236,4 +239,44 @@ TEST_CASE("device control passes null pointers for default empty spans") {
     CHECK(recorded_call.output_size == 0);
     REQUIRE(returned.error().native_bytes_returned.has_value());
     CHECK(*returned.error().native_bytes_returned == 0);
+}
+
+TEST_CASE("ControlData admits plain data and rejects addresses") {
+    using winwrap::protocol::device::ControlData;
+    struct UninitializableConstant {
+        const int value;
+    };
+    STATIC_REQUIRE(ControlData<STORAGE_PROPERTY_QUERY>);
+    STATIC_REQUIRE(ControlData<DWORD>);
+    STATIC_REQUIRE(ControlData<std::array<std::byte, 4>>);
+    STATIC_REQUIRE_FALSE(ControlData<char[21]>);
+    STATIC_REQUIRE_FALSE(ControlData<const STORAGE_PROPERTY_QUERY*>);
+    STATIC_REQUIRE_FALSE(ControlData<HANDLE>);
+    STATIC_REQUIRE_FALSE(ControlData<std::span<const std::byte>>);
+    STATIC_REQUIRE_FALSE(ControlData<UninitializableConstant>);
+}
+
+// Needs a first physical disk; opening it without access rights needs no elevation.
+TEST_CASE("typed device control returns exactly one object of the requested type") {
+    const auto device{winwrap::Device::open({
+        .path = LR"(\\.\PhysicalDrive0)",
+        .share_mode = FILE_SHARE_READ | FILE_SHARE_WRITE,
+    })};
+    REQUIRE(device);
+    STORAGE_PROPERTY_QUERY query{};
+    query.PropertyId = StorageDeviceProperty;
+    query.QueryType = PropertyStandardQuery;
+
+    const auto header{
+        device->control<STORAGE_DESCRIPTOR_HEADER>(IOCTL_STORAGE_QUERY_PROPERTY, query)};
+    REQUIRE(header);
+    CHECK(header->Size > sizeof(STORAGE_DESCRIPTOR_HEADER));
+
+    const auto oversized{
+        device->control<std::array<std::byte, 4096>>(IOCTL_STORAGE_QUERY_PROPERTY, query)};
+    REQUIRE_FALSE(oversized);
+    CHECK(oversized.error().code.value() == ERROR_INVALID_DATA);
+    CHECK(oversized.error().bytes_returned == header->Size);
+    REQUIRE(oversized.error().native_bytes_returned.has_value());
+    CHECK(*oversized.error().native_bytes_returned == header->Size);
 }
