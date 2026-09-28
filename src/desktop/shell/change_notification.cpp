@@ -28,7 +28,67 @@ namespace {
     return std::filesystem::path{std::move(path)};
 }
 
+[[nodiscard]] std::filesystem::path long_path(const std::filesystem::path& path) {
+    if (const DWORD required{::GetLongPathNameW(path.c_str(), nullptr, 0)}; required != 0) {
+        std::wstring long_form(required, L'\0');
+        const DWORD written{::GetLongPathNameW(path.c_str(), long_form.data(),
+                                               static_cast<DWORD>(long_form.size()))};
+        if (written != 0 && written < long_form.size()) {
+            long_form.resize(written);
+            return std::filesystem::path{std::move(long_form)};
+        }
+    }
+    const auto parent{path.parent_path()};
+    if (parent.empty() || parent == path)
+        return path;
+    return long_path(parent) / path.filename();
+}
+
+void notify(LONG event, const std::filesystem::path& item) {
+    ::SHChangeNotify(event, SHCNF_PATHW, long_path(item).c_str(), nullptr);
+}
+
+void notify(LONG event, const std::filesystem::path& from, const std::filesystem::path& to) {
+    ::SHChangeNotify(event, SHCNF_PATHW, long_path(from).c_str(), long_path(to).c_str());
+}
+
 }  // namespace
+
+void notify_file_created(const std::filesystem::path& file) {
+    notify(SHCNE_CREATE, file);
+}
+
+void notify_folder_created(const std::filesystem::path& folder) {
+    notify(SHCNE_MKDIR, folder);
+}
+
+void notify_file_deleted(const std::filesystem::path& file) {
+    notify(SHCNE_DELETE, file);
+}
+
+void notify_folder_deleted(const std::filesystem::path& folder) {
+    notify(SHCNE_RMDIR, folder);
+}
+
+void notify_file_renamed(const std::filesystem::path& from, const std::filesystem::path& to) {
+    notify(SHCNE_RENAMEITEM, from, to);
+}
+
+void notify_folder_renamed(const std::filesystem::path& from, const std::filesystem::path& to) {
+    notify(SHCNE_RENAMEFOLDER, from, to);
+}
+
+void notify_file_changed(const std::filesystem::path& file) {
+    notify(SHCNE_UPDATEITEM, file);
+}
+
+void notify_folder_changed(const std::filesystem::path& folder) {
+    notify(SHCNE_UPDATEDIR, folder);
+}
+
+void notify_associations_changed() {
+    ::SHChangeNotify(SHCNE_ASSOCCHANGED, SHCNF_IDLIST, nullptr, nullptr);
+}
 
 std::expected<UINT, std::error_code> ChangeNotification::message() {
     static const auto registered{winwrap::message::register_(L"WinwrapShellChangeNotification")};

@@ -94,6 +94,10 @@ if (table)
 Sending and receiving are separate. The `shell::notify_*` free functions in
 `desktop/shell/change_notification.hpp` each make one `SHChangeNotify` call to tell the Shell
 about a change the application already made; they own nothing and report no failure.
+They send the long form of each path (`GetLongPathNameW`): the Shell matches items by long
+names, and a notification naming an 8.3 short path reaches no listener, Explorer included.
+A path that no longer exists, such as a deleted file, has its existing ancestors lengthened
+and keeps its last component as given.
 
 Receiving needs two owned resources. `shell::ChangeRegistration::create({.owner = hwnd,
 .folder = folder})` registers one folder (`SHChangeNotifyRegister` with exactly one entry,
