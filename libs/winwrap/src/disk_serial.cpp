@@ -23,19 +23,18 @@ std::expected<DiskSerial, std::error_code> DiskSerial::read(const Device& device
     STORAGE_PROPERTY_QUERY query{};
     query.PropertyId = StorageDeviceProperty;
     query.QueryType = PropertyStandardQuery;
-    STORAGE_DESCRIPTOR_HEADER header{};
-    const auto input{std::as_bytes(std::span{&query, 1})};
-    const auto header_size_result{device.control(IOCTL_STORAGE_QUERY_PROPERTY, input,
-                                                 std::as_writable_bytes(std::span{&header, 1}))};
-    if (!header_size_result)
-        return std::unexpected{header_size_result.error().code};
-    if (*header_size_result != sizeof(header) || header.Size < minimum_size)
+    const auto header{
+        device.control<STORAGE_DESCRIPTOR_HEADER>(IOCTL_STORAGE_QUERY_PROPERTY, query)};
+    if (!header)
+        return std::unexpected{header.error().code};
+    if (header->Size < minimum_size)
         return std::unexpected{error::win32(ERROR_INVALID_DATA)};
-    if (header.Size > config.maximum_descriptor_size)
+    if (header->Size > config.maximum_descriptor_size)
         return std::unexpected{error::win32(ERROR_INSUFFICIENT_BUFFER)};
 
-    std::vector<std::byte> bytes(header.Size);
-    const auto byte_count_result{device.control(IOCTL_STORAGE_QUERY_PROPERTY, input, bytes)};
+    std::vector<std::byte> bytes(header->Size);
+    const auto byte_count_result{
+        device.control(IOCTL_STORAGE_QUERY_PROPERTY, std::as_bytes(std::span{&query, 1}), bytes)};
     if (!byte_count_result)
         return std::unexpected{byte_count_result.error().code};
     if (*byte_count_result != bytes.size())

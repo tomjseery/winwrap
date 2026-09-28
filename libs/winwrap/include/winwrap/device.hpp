@@ -6,6 +6,7 @@
 
 #include <wil/resource.h>
 
+#include <concepts>
 #include <cstddef>
 #include <expected>
 #include <optional>
@@ -15,7 +16,9 @@
 #include <utility>
 #include <vector>
 
+#include "winwrap/error.hpp"
 #include "winwrap/protocol/device/control_code.hpp"
+#include "winwrap/protocol/device/control_data.hpp"
 #include "winwrap/protocol/device/interface.hpp"
 
 namespace winwrap {
@@ -69,6 +72,35 @@ public:
         winwrap::protocol::device::ControlCode code, std::span<const std::byte> input,
         std::span<std::byte> output) const {
         return control(code.native(), input, output);
+    }
+
+    /// Send `input` and receive exactly one T, such as
+    /// `control<STORAGE_DESCRIPTOR_HEADER>(IOCTL_STORAGE_QUERY_PROPERTY, query)`.
+    /// A reply shorter than sizeof(T) fails with ERROR_INVALID_DATA and reports the byte
+    /// count Windows wrote.
+    template <winwrap::protocol::device::ControlData T>
+        requires std::default_initializable<T>
+    [[nodiscard]] std::expected<T, ControlError> control(
+        DWORD code, const winwrap::protocol::device::ControlData auto& input) const {
+        T value{};
+        const auto written{control(code, std::as_bytes(std::span{&input, 1}),
+                                   std::as_writable_bytes(std::span{&value, 1}))};
+        if (!written)
+            return std::unexpected{written.error()};
+        if (*written != sizeof(T))
+            return std::unexpected{ControlError{.code = error::win32(ERROR_INVALID_DATA),
+                                                .bytes_returned = *written,
+                                                .native_bytes_returned = *written}};
+        return value;
+    }
+
+    /// Send `input` and receive exactly one T using a typed device-control code.
+    template <winwrap::protocol::device::ControlData T>
+        requires std::default_initializable<T>
+    [[nodiscard]] std::expected<T, ControlError> control(
+        winwrap::protocol::device::ControlCode code,
+        const winwrap::protocol::device::ControlData auto& input) const {
+        return control<T>(code.native(), input);
     }
 
     /// Borrow the native handle; this Device remains its owner.
