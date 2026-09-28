@@ -60,7 +60,9 @@ add_library(winwrap STATIC
     src/module.cpp
     src/desktop/icon.cpp
     src/desktop/notify_icon.cpp
-    src/desktop/menu.cpp)
+    src/desktop/menu.cpp
+    src/desktop/shell/change_notification.cpp
+    src/desktop/shell/change_registration.cpp)
 add_library(winwrap::winwrap ALIAS winwrap)
 
 add_library(winwrap_kernel INTERFACE)

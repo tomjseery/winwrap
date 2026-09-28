@@ -1,7 +1,7 @@
 # winwrap architecture
 
-The contracts behind the public headers: execution modes, device I/O, firmware tables and
-the kernel surface. [README.md](README.md) covers what the library is and how to use it;
+The contracts behind the public headers: execution modes, device I/O, firmware tables,
+Shell change notifications and the kernel surface. [README.md](README.md) covers what the library is and how to use it;
 [CODE_CONVENTIONS.md](CODE_CONVENTIONS.md) covers how its API is shaped.
 
 ## Execution modes
@@ -88,6 +88,39 @@ const auto table = winwrap::FirmwareTable::read({
 if (table)
     consume(table->bytes());
 ```
+
+## Shell change notifications
+
+Sending and receiving are separate. The `shell::notify_*` free functions in
+`desktop/shell/change_notification.hpp` each make one `SHChangeNotify` call to tell the Shell
+about a change the application already made; they own nothing and report no failure.
+
+Receiving needs two owned resources. `shell::ChangeRegistration::create({.owner = hwnd,
+.folder = folder})` registers one folder (`SHChangeNotifyRegister` with exactly one entry,
+as its documentation requires) and unregisters when destroyed. It is move-only. `events`
+selects the SHCNE_* events, `recursive` includes the subtree, and `sources` chooses
+Shell-level and/or file-system (interrupt-level) reports. The registration always adds
+`SHCNRF_NewDelivery`, which Microsoft recommends for every client, and adds
+`SHCNRF_RecursiveInterrupt` for a recursive interrupt-level registration, which that flag
+requires. The folder must exist; a parse failure keeps its Win32 code, such as
+`ERROR_FILE_NOT_FOUND`. A null owner is `ERROR_INVALID_WINDOW_HANDLE`.
+
+Each change is posted to the owner as `shell::ChangeNotification::message()`, a message
+Winwrap registers once per session so it cannot collide with an application's `WM_APP + n`.
+The owner's thread must pump messages. Composing `ShellChangeAware` routes each delivery to
+`on_shell_change(const shell::ChangeNotification&)`; a window that routes messages itself
+calls `ChangeNotification::lock(wparam, lparam)`. A `ChangeNotification` holds the Shell's
+shared memory for that change (`SHChangeNotification_Lock`) and releases it on destruction.
+`event()` is the SHCNE_* code, with `SHCNE_INTERRUPT` set for file-system reports.
+`path()` and, for renames, `new_path()` decode the item ID lists with
+`SHGetPathFromIDListEx`, which needs no COM initialization. They are empty for items outside
+the file system and for the events whose items are not item ID lists, the list Microsoft's
+ChangeNotifyWatcher sample excludes. `items()` borrows the native lists while the
+notification lives. The Shell may combine many item changes into one `SHCNE_UPDATEDIR`.
+
+References: [registering](https://learn.microsoft.com/en-us/windows/win32/api/shlobj_core/nf-shlobj_core-shchangenotifyregister),
+[reading a delivery](https://learn.microsoft.com/en-us/windows/win32/api/shlobj_core/nf-shlobj_core-shchangenotification_lock),
+[event items](https://learn.microsoft.com/en-us/windows/win32/api/shlobj_core/nf-shlobj_core-shchangenotify).
 
 ## Kernel support
 
