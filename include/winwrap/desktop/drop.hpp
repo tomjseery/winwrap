@@ -54,7 +54,7 @@ public:
     [[nodiscard]] std::wstring path(UINT index) const {
         const UINT len = DragQueryFileW(handle_, index, nullptr, 0);
         std::wstring result(len, L'\0');
-        DragQueryFileW(handle_, index, result.data(), len + 1);
+        DragQueryFileW(handle_, index, result.data(), static_cast<UINT>(result.size() + 1));
         return result;
     }
 
