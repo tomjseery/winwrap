@@ -25,12 +25,12 @@ as the workflow and routing entry point instead of duplicating those rules here.
 
 ## Layout
 
-`libs/winwrap/include/winwrap/` holds the default C++23/WIL user-mode APIs in
+`include/winwrap/` holds the default C++23/WIL user-mode APIs in
 namespace `winwrap`: desktop, file-system, module, and synchronous device I/O.
 `winwrap/kernel/` (`winwrap::kernel`) holds C++23 KMDF adapters and debug
 printing; `winwrap/protocol/` (`winwrap::protocol`) holds device values that both
 modes compile.
-`libs/winwrap/src/` and `tests/winwrap/` contain the user-mode implementation
+`src/` and `tests/` contain the user-mode implementation
 and tests, including a per-header user-mode compile check. Kernel headers are
 compiled through a real WDK consumer. Build user mode from an
 *x64 Native Tools* prompt: `cmake --preset dev`,
@@ -62,7 +62,7 @@ compiled through a real WDK consumer. Build user mode from an
 
 The assessment is dated evidence and proposed direction, not an implementation
 plan or blanket authorization to expand scope. This table is the topic index;
-`TECH_DEBT.md` links the library and test owners. Keep `CLAUDE.md` importing this
+`TECH_DEBT.md` owns library debt and links the test owner. Keep `CLAUDE.md` importing this
 file so both agent entry points use the same guidance.
 
 `*_PROMPT.md` are one-off session briefs, not standing guidance.
