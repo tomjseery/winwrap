@@ -23,8 +23,9 @@ Baseline coverage and validation are documented in
   demonstrated. **Resolve:** versioned proving apps and a documented manual/automated
   desktop tier with explicit environment requirements. Do not kill Explorer or
   broaden timeouts merely to make an ordinary test run pass.
-- **Host-dependent Shell listener test.** "shell notifications reach a registered
-  Shell listener" fails on this development host, including at commits before the
-  mode-namespace change (observed 2026-09-26). **Resolve:** identify the missing
-  Shell/Explorer precondition, then either make the test establish it or move it to
-  the documented desktop tier with that requirement.
+- **Short-path Shell listener test.** "shell notifications reach a registered
+  Shell listener" receives no events when `%TEMP%` has an 8.3 component
+  (`C:\Users\TOMMYS~1\...`, this host's default); with a long-path `TEMP` it passes
+  (observed 2026-09-28, sandboxed and unsandboxed). **Resolve:** determine whether a
+  short-path `shell::notify_*` reaches a long-path listener such as Explorer; normalize
+  paths in the library if not, otherwise build the test folder from a long path.
