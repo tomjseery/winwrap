@@ -6,11 +6,13 @@
 #include <array>
 #include <cstdint>
 
+#include "winwrap/error.hpp"
+
 namespace winwrap {
 namespace {
 
 std::unexpected<std::error_code> invalid_data() {
-    return std::unexpected{std::error_code{ERROR_INVALID_DATA, std::system_category()}};
+    return std::unexpected{error::win32(ERROR_INVALID_DATA)};
 }
 
 std::uint32_t little_endian_size(std::span<const std::byte> bytes) {
