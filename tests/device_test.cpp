@@ -8,66 +8,31 @@
 #include <array>
 #include <catch2/catch_test_macros.hpp>
 #include <cstddef>
+#include <expected>
 #include <filesystem>
 #include <span>
 #include <system_error>
-
-#include "device_control.hpp"
+#include <vector>
 
 namespace {
 
-BOOL WINAPI successful_control(HANDLE, DWORD, LPVOID, DWORD, LPVOID, DWORD, LPDWORD returned,
-                               LPOVERLAPPED) {
-    constexpr DWORD byte_count{2};
-    *returned = byte_count;
-    return TRUE;
+// Opening the first physical disk without access rights needs no elevation.
+std::expected<winwrap::Device, std::error_code> open_first_disk() {
+    return winwrap::Device::open({
+        .path = LR"(\\.\PhysicalDrive0)",
+        .share_mode = FILE_SHARE_READ | FILE_SHARE_WRITE,
+    });
 }
 
-BOOL WINAPI partial_control(HANDLE, DWORD, LPVOID, DWORD, LPVOID, DWORD, LPDWORD returned,
-                            LPOVERLAPPED) {
-    constexpr DWORD byte_count{2};
-    *returned = byte_count;
-    ::SetLastError(ERROR_MORE_DATA);
-    return FALSE;
-}
-
-BOOL WINAPI oversized_partial_control(HANDLE, DWORD, LPVOID, DWORD, LPVOID, DWORD output_size,
-                                      LPDWORD returned, LPOVERLAPPED) {
-    *returned = output_size + 1;
-    ::SetLastError(ERROR_MORE_DATA);
-    return FALSE;
-}
-
-BOOL WINAPI oversized_successful_control(HANDLE, DWORD, LPVOID, DWORD, LPVOID, DWORD output_size,
-                                         LPDWORD returned, LPOVERLAPPED) {
-    *returned = output_size + 1;
-    return TRUE;
-}
-
-struct ControlCall {
-    LPVOID input{};
-    DWORD input_size{};
-    LPVOID output{};
-    DWORD output_size{};
-};
-
-ControlCall recorded_call{};
-DWORD recorded_returned{};
-
-BOOL WINAPI recording_failed_control(HANDLE, DWORD, LPVOID input, DWORD input_size, LPVOID output,
-                                     DWORD output_size, LPDWORD returned, LPOVERLAPPED) {
-    recorded_call = {
-        .input = input,
-        .input_size = input_size,
-        .output = output,
-        .output_size = output_size,
-    };
-    *returned = recorded_returned;
-    ::SetLastError(ERROR_MORE_DATA);
-    return FALSE;
+STORAGE_PROPERTY_QUERY device_property_query() {
+    STORAGE_PROPERTY_QUERY query{};
+    query.PropertyId = StorageDeviceProperty;
+    query.QueryType = PropertyStandardQuery;
+    return query;
 }
 
 }  // namespace
+
 TEST_CASE("paths accepts an empty list") {
     const std::array<wchar_t, 1> empty{L'\0'};
     const auto paths{winwrap::detail::paths(empty)};
@@ -169,78 +134,6 @@ TEST_CASE("device open owns a temporary file handle") {
         cleanup.release();
 }
 
-TEST_CASE("device control returns the actual byte count") {
-    std::array<std::byte, 4> output{};
-    const auto returned{winwrap::detail::control(nullptr, 0, {}, output, &successful_control)};
-    REQUIRE(returned.has_value());
-    CHECK(*returned == 2);
-}
-
-TEST_CASE("device control preserves partial output details on failure") {
-    std::array<std::byte, 4> output{};
-    const auto returned{winwrap::detail::control(nullptr, 0, {}, output, &partial_control)};
-    REQUIRE_FALSE(returned.has_value());
-    CHECK(returned.error().code.value() == ERROR_MORE_DATA);
-    CHECK(returned.error().bytes_returned == 2);
-    REQUIRE(returned.error().native_bytes_returned.has_value());
-    CHECK(*returned.error().native_bytes_returned == 2);
-}
-
-TEST_CASE("device control bounds a failed request's returned byte count") {
-    std::array<std::byte, 4> output{};
-    const auto returned{
-        winwrap::detail::control(nullptr, 0, {}, output, &oversized_partial_control)};
-    REQUIRE_FALSE(returned.has_value());
-    CHECK(returned.error().code.value() == ERROR_MORE_DATA);
-    CHECK(returned.error().bytes_returned == output.size());
-    REQUIRE(returned.error().native_bytes_returned.has_value());
-    CHECK(*returned.error().native_bytes_returned == output.size() + 1);
-}
-
-TEST_CASE("device control rejects an over-reported successful byte count") {
-    std::array<std::byte, 4> output{};
-    const auto returned{
-        winwrap::detail::control(nullptr, 0, {}, output, &oversized_successful_control)};
-    REQUIRE_FALSE(returned.has_value());
-    CHECK(returned.error().code.value() == ERROR_INVALID_DATA);
-    CHECK(returned.error().bytes_returned == output.size());
-    REQUIRE(returned.error().native_bytes_returned.has_value());
-    CHECK(*returned.error().native_bytes_returned == output.size() + 1);
-}
-
-TEST_CASE("device control preserves storage pointers for zero-length spans") {
-    std::array<std::byte, 1> input{};
-    std::array<std::byte, 1> output{};
-    recorded_returned = 3;
-
-    const auto returned{winwrap::detail::control(nullptr, 0, std::span{input}.first(0),
-                                                 std::span{output}.first(0),
-                                                 &recording_failed_control)};
-
-    REQUIRE_FALSE(returned.has_value());
-    CHECK(recorded_call.input == input.data());
-    CHECK(recorded_call.input_size == 0);
-    CHECK(recorded_call.output == output.data());
-    CHECK(recorded_call.output_size == 0);
-    CHECK(returned.error().bytes_returned == 0);
-    REQUIRE(returned.error().native_bytes_returned.has_value());
-    CHECK(*returned.error().native_bytes_returned == recorded_returned);
-}
-
-TEST_CASE("device control passes null pointers for default empty spans") {
-    recorded_returned = 0;
-
-    const auto returned{winwrap::detail::control(nullptr, 0, {}, {}, &recording_failed_control)};
-
-    REQUIRE_FALSE(returned.has_value());
-    CHECK(recorded_call.input == nullptr);
-    CHECK(recorded_call.input_size == 0);
-    CHECK(recorded_call.output == nullptr);
-    CHECK(recorded_call.output_size == 0);
-    REQUIRE(returned.error().native_bytes_returned.has_value());
-    CHECK(*returned.error().native_bytes_returned == 0);
-}
-
 TEST_CASE("ControlData admits plain data and rejects addresses") {
     using winwrap::protocol::device::ControlData;
     struct UninitializableConstant {
@@ -256,16 +149,10 @@ TEST_CASE("ControlData admits plain data and rejects addresses") {
     STATIC_REQUIRE_FALSE(ControlData<UninitializableConstant>);
 }
 
-// Needs a first physical disk; opening it without access rights needs no elevation.
 TEST_CASE("typed device control returns exactly one object of the requested type") {
-    const auto device{winwrap::Device::open({
-        .path = LR"(\\.\PhysicalDrive0)",
-        .share_mode = FILE_SHARE_READ | FILE_SHARE_WRITE,
-    })};
+    const auto device{open_first_disk()};
     REQUIRE(device);
-    STORAGE_PROPERTY_QUERY query{};
-    query.PropertyId = StorageDeviceProperty;
-    query.QueryType = PropertyStandardQuery;
+    const auto query{device_property_query()};
 
     const auto header{
         device->control<STORAGE_DESCRIPTOR_HEADER>(IOCTL_STORAGE_QUERY_PROPERTY, query)};
@@ -279,4 +166,39 @@ TEST_CASE("typed device control returns exactly one object of the requested type
     CHECK(oversized.error().bytes_returned == header->Size);
     REQUIRE(oversized.error().native_bytes_returned.has_value());
     CHECK(*oversized.error().native_bytes_returned == header->Size);
+}
+
+TEST_CASE("device control returns the number of bytes the device wrote") {
+    const auto device{open_first_disk()};
+    REQUIRE(device);
+    const auto query{device_property_query()};
+    const auto header{
+        device->control<STORAGE_DESCRIPTOR_HEADER>(IOCTL_STORAGE_QUERY_PROPERTY, query)};
+    REQUIRE(header);
+
+    std::vector<std::byte> output(header->Size + 1);
+    const auto written{
+        device->control(IOCTL_STORAGE_QUERY_PROPERTY, std::as_bytes(std::span{&query, 1}), output)};
+    REQUIRE(written);
+    CHECK(*written == header->Size);
+
+    std::array<std::byte, 4> truncated{};
+    const auto partial{device->control(IOCTL_STORAGE_QUERY_PROPERTY,
+                                       std::as_bytes(std::span{&query, 1}), truncated)};
+    REQUIRE(partial);
+    CHECK(*partial == truncated.size());
+}
+
+TEST_CASE("device control keeps the native error of a failed request") {
+    const auto device{open_first_disk()};
+    REQUIRE(device);
+    std::array<std::byte, sizeof(DISK_GEOMETRY) - 1> too_small{};
+
+    const auto written{device->control(IOCTL_DISK_GET_DRIVE_GEOMETRY_EX, {}, too_small)};
+
+    REQUIRE_FALSE(written);
+    CHECK(written.error().code.value() == ERROR_INSUFFICIENT_BUFFER);
+    CHECK(written.error().bytes_returned == 0);
+    REQUIRE(written.error().native_bytes_returned.has_value());
+    CHECK(*written.error().native_bytes_returned == 0);
 }
