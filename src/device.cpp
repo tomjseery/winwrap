@@ -6,7 +6,6 @@
 #include <limits>
 #include <utility>
 
-#include "device_control.hpp"
 #include "winwrap/error.hpp"
 
 namespace winwrap {
@@ -19,31 +18,6 @@ namespace {
 }  // namespace
 
 namespace detail {
-
-std::expected<std::size_t, Device::ControlError> control(HANDLE handle, DWORD code,
-                                                         std::span<const std::byte> input,
-                                                         std::span<std::byte> output,
-                                                         DeviceControl device_control) {
-    constexpr auto maximum{static_cast<std::size_t>(std::numeric_limits<DWORD>::max())};
-    if (input.size() > maximum || output.size() > maximum)
-        return std::unexpected(Device::ControlError{.code = error::win32(ERROR_INVALID_PARAMETER)});
-
-    DWORD returned{};
-    const BOOL succeeded{device_control(handle, code, const_cast<std::byte*>(input.data()),
-                                        static_cast<DWORD>(input.size()), output.data(),
-                                        static_cast<DWORD>(output.size()), &returned, nullptr)};
-    const auto failure{succeeded == FALSE ? error::last() : std::error_code{}};
-    const auto bounded_returned{std::min(static_cast<std::size_t>(returned), output.size())};
-    if (succeeded == FALSE)
-        return std::unexpected(Device::ControlError{.code = failure,
-                                                    .bytes_returned = bounded_returned,
-                                                    .native_bytes_returned = returned});
-    if (returned > output.size())
-        return std::unexpected(Device::ControlError{.code = error::win32(ERROR_INVALID_DATA),
-                                                    .bytes_returned = bounded_returned,
-                                                    .native_bytes_returned = returned});
-    return static_cast<std::size_t>(returned);
-}
 
 std::expected<std::vector<std::wstring>, std::error_code> paths(
     std::span<const wchar_t> characters) {
@@ -86,8 +60,9 @@ std::expected<std::vector<std::wstring>, std::error_code> Device::paths(const GU
             return std::unexpected(error::win32(ERROR_INVALID_DATA));
 
         std::vector<wchar_t> list(characters, L'\0');
-        const auto listing{::CM_Get_Device_Interface_ListW(
-            &class_id, nullptr, list.data(), characters, CM_GET_DEVICE_INTERFACE_LIST_PRESENT)};
+        const auto listing{::CM_Get_Device_Interface_ListW(&class_id, nullptr, list.data(),
+                                                           static_cast<ULONG>(list.size()),
+                                                           CM_GET_DEVICE_INTERFACE_LIST_PRESENT)};
         if (listing == CR_BUFFER_SMALL)
             continue;
         if (listing != CR_SUCCESS)
@@ -108,7 +83,25 @@ std::expected<Device, std::error_code> Device::open(const Config& config) {
 
 std::expected<std::size_t, Device::ControlError> Device::control(
     DWORD code, std::span<const std::byte> input, std::span<std::byte> output) const {
-    return detail::control(handle_.get(), code, input, output, &::DeviceIoControl);
+    constexpr auto maximum{static_cast<std::size_t>(std::numeric_limits<DWORD>::max())};
+    if (input.size() > maximum || output.size() > maximum)
+        return std::unexpected(ControlError{.code = error::win32(ERROR_INVALID_PARAMETER)});
+
+    DWORD returned{};
+    const BOOL succeeded{::DeviceIoControl(
+        handle_.get(), code, const_cast<std::byte*>(input.data()), static_cast<DWORD>(input.size()),
+        output.data(), static_cast<DWORD>(output.size()), &returned, nullptr)};
+    const auto failure{succeeded == FALSE ? error::last() : std::error_code{}};
+    const auto bounded_returned{std::min(static_cast<std::size_t>(returned), output.size())};
+    if (succeeded == FALSE)
+        return std::unexpected(ControlError{.code = failure,
+                                            .bytes_returned = bounded_returned,
+                                            .native_bytes_returned = returned});
+    if (returned > output.size())
+        return std::unexpected(ControlError{.code = error::win32(ERROR_INVALID_DATA),
+                                            .bytes_returned = bounded_returned,
+                                            .native_bytes_returned = returned});
+    return static_cast<std::size_t>(returned);
 }
 
 }  // namespace winwrap

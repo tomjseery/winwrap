@@ -160,7 +160,7 @@ checked `icon::load` result to `set_icon`.
 | `winwrap/desktop/notify_icon.hpp` | `NotifyIcon` — a system-tray icon, plus the Explorer-restart re-add path (`taskbar_created_message()` → `add()`) |
 | `winwrap/desktop/menu.hpp` | `Menu` — popup menus, items by id or by lambda |
 | `winwrap/desktop/drop.hpp` | `Drop` — the `WM_DROPFILES` query protocol as a type |
-| `winwrap/desktop/window/message/*.hpp` | direct window/control message routing and behaviors (`MessageRouter`, `FileDroppable`, `Paintable`, …) |
+| `winwrap/desktop/window/message/*.hpp` | direct window/control message routing and behaviors (`MessageRouter`, `FileDroppable`, `ShellChangeAware`, `Paintable`, …) |
 | `winwrap/desktop/window/notification/command/*.hpp` | control notification mixins (`notification::Click`, `TextChange`, `SelectionChange`) and parent-to-child reflection |
 | `winwrap/desktop/window/base_window.hpp` | `BaseWindow` and `WindowConfig`, plus `window::show` / `move` / `destroy` / `default_proc` / `long_ptr` / `subclass` / `accept_files` / `set_foreground` / timers … — the same operations on any raw `HWND` (`BaseWindow`'s members delegate) |
 | `winwrap/desktop/message.hpp` | `message::send` / `message::post` — messages to any window (`BaseWindow::send` / `post` delegate); `message::register_` — registers a named message and returns its system-wide id |
@@ -168,7 +168,8 @@ checked `icon::load` result to `set_icon`.
 | `winwrap/desktop/font.hpp` | `font::default_gui` — the stock GUI font native controls use |
 | `winwrap/desktop/message_loop.hpp` | `message_loop::run()` and `message_loop::quit()` |
 | `winwrap/desktop/icon.hpp` | `icon::load` — system, module-resource and `.ico` icons as owned `wil::unique_hicon` |
-| `winwrap/desktop/shell/change_notification.hpp` | `shell::notify_file_created` / `_deleted` / `_renamed` / `_changed`, the folder equivalents and `notify_associations_changed` — tell Explorer what changed |
+| `winwrap/desktop/shell/change_notification.hpp` | `shell::notify_file_created` / `_deleted` / `_renamed` / `_changed`, the folder equivalents and `notify_associations_changed` — tell Explorer what changed; `shell::ChangeNotification` — one received change, its event and decoded paths |
+| `winwrap/desktop/shell/change_registration.hpp` | `shell::ChangeRegistration` — watch a folder for Shell changes; unregisters when destroyed |
 | `winwrap/filesystem/attributes.hpp` | `filesystem::attributes` and add/remove/set — file-attribute queries and updates |
 | `winwrap/module.hpp` | `module::current` / `loaded` / `path` and the borrowed `Module` view |
 | `winwrap/protocol/device/interface.hpp` | `protocol::device::Interface` — client/driver interface-class value |
