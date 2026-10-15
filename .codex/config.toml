@@ -1,23 +1,26 @@
-# cpp-agents comes from the global tj-agents/cpp Git marketplace (v0.3.0+).
-# This project selects cpp + msvc + win32 and disables the legacy compatibility packages.
-[plugins."cpp@cpp-agents"]
+# BEGIN repo-declared agent capabilities
+[marketplaces.tj-agents]
+source_type = "git"
+source = "https://github.com/tj-agents/marketplace.git"
+ref = "v1.0.0"
+sparse_paths = [".agents/plugins", ".claude-plugin"]
+
+[plugins."base@tj-agents"]
 enabled = true
 
-[plugins."msvc@cpp-agents"]
+[plugins."cpp@tj-agents"]
 enabled = true
 
-[plugins."win32@cpp-agents"]
+[plugins."engineering@tj-agents"]
 enabled = true
 
-[plugins."base@cpp-agents"]
-enabled = false
+[plugins."machine@tj-agents"]
+enabled = true
 
-[plugins."windows@cpp-agents"]
-enabled = false
+[plugins."msvc@tj-agents"]
+enabled = true
 
-[plugins."gcc@cpp-agents"]
-enabled = false
+[plugins."win32@tj-agents"]
+enabled = true
 
-# Core agent roles are profile-scoped; Concertable project delivery is unrelated here.
-[plugins."concertable@agent-standards"]
-enabled = false
+# END repo-declared agent capabilities
