@@ -4,7 +4,7 @@
       "source": {
         "source": "github",
         "repo": "tj-agents/marketplace",
-        "ref": "v1.0.0"
+        "ref": "v1.1.0"
       },
       "autoUpdate": false
     }

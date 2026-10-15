@@ -1,15 +1,17 @@
 {
-  "schema_version": 2,
-  "marketplace": {
-    "repository": "tj-agents/marketplace",
-    "revision": "v1.0.0"
+  "schema_version": 3,
+  "marketplaces": {
+    "tj-agents": {
+      "repository": "tj-agents/marketplace",
+      "revision": "v1.1.0"
+    }
   },
   "plugins": [
-    "base",
-    "cpp",
-    "engineering",
-    "machine",
-    "msvc",
-    "win32"
+    "base@tj-agents",
+    "cpp@tj-agents",
+    "engineering@tj-agents",
+    "machine@tj-agents",
+    "msvc@tj-agents",
+    "win32@tj-agents"
   ]
 }
