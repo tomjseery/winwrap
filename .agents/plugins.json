@@ -1,9 +1,8 @@
 {
-  "schema_version": 3,
+  "schema_version": 1,
   "marketplaces": {
     "tj-agents": {
-      "repository": "tj-agents/marketplace",
-      "revision": "v1.1.0"
+      "repository": "tj-agents/marketplace"
     }
   },
   "plugins": [
