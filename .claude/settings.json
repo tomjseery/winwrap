@@ -14,6 +14,7 @@
     "engineering@tj-agents": true,
     "machine@tj-agents": true,
     "msvc@tj-agents": true,
+    "personal@tj-agents": true,
     "win32@tj-agents": true
   },
   "permissions": {
