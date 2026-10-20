@@ -19,6 +19,9 @@ enabled = true
 [plugins."msvc@tj-agents"]
 enabled = true
 
+[plugins."personal@tj-agents"]
+enabled = true
+
 [plugins."win32@tj-agents"]
 enabled = true
 
