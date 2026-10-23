@@ -9,12 +9,14 @@
     }
   },
   "enabledPlugins": {
+    "agent-store@tj-agents": true,
     "base@tj-agents": true,
     "cpp@tj-agents": true,
     "engineering@tj-agents": true,
     "machine@tj-agents": true,
     "msvc@tj-agents": true,
-    "win32@tj-agents": true
+    "win32@tj-agents": true,
+    "workflow@tj-agents": true
   },
   "permissions": {
     "allow": []
