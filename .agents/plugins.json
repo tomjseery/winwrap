@@ -6,11 +6,13 @@
     }
   },
   "plugins": [
+    "agent-store@tj-agents",
     "base@tj-agents",
     "cpp@tj-agents",
     "engineering@tj-agents",
     "machine@tj-agents",
     "msvc@tj-agents",
-    "win32@tj-agents"
+    "win32@tj-agents",
+    "workflow@tj-agents"
   ]
 }
