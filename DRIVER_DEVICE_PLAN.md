@@ -125,3 +125,17 @@ Progress: the WinWrap factory, convention, and focused test are implemented.
 MSVC's `gdb` preset builds the library, header checks, and tests. All 11
 device-related tests and the full 84/84 CTest suite pass on the host. The
 SandboxHwid exact pin and real WDK consumer build are pending. No VM work ran.
+
+## Delivery outcome (2026-09-26)
+
+WinWrap PR #12 was reviewed, brought onto current main, and merged as
+`3e1dad3e2353853ce87ad8f05f9519ad6f6fab70`. Sandbox HWID PR #2 pins the
+final reviewed WinWrap head `459e5f805c3640d96a7ac88f2033c877e42c0d5b`
+and merged as `374e4b70bcf775c96848ea8c251f671815332883`.
+
+The final WinWrap head builds with MSVC and passes all 11 device tests. Its
+full suite passed 92/93; the sole Explorer notification failure also reproduces
+at the pre-merge main commit on this host. Sandbox HWID passes all 9 host CTests
+at the final pin. The current host lacks WDK 10.0.28000.0, so the final
+alignment repair has no fresh WDK build. No VM work ran, and no PR delivery
+work remains.
