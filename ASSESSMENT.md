@@ -33,7 +33,7 @@ Windows-only GUI framework is not the recommended destination.
 ## Evidence and limits
 
 The repository baseline assessed is commit
-`60f34a552d12b529b4eb5848711f6ac487c546e2`. Ecosystem observations were checked on
+`ae785b179294c32dc7e03a78d8a11909cd7bfe6d`. Ecosystem observations were checked on
 2026-09-13. This document is a dated assessment, not an evergreen competitor census
 or an implementation plan. Recommendations below are recommendations, not newly
 locked API decisions.

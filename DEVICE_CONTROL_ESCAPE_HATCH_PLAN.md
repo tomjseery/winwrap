@@ -166,14 +166,14 @@ wrapper-everything" discipline this investigation is checking WinWrap's own code
 ## Progress and findings
 
 - 2026-09-25: Investigation brief written from the sandbox-hwid consumer session.
-- 2026-09-25: Investigated from WinWrap `main` at `e8db4f857527c9ce8f30ddcca6a2bf8d84b14eae`.
+- 2026-09-25: Investigated from WinWrap `main` at `9b5bef563b29d70c725ddd9099d284b8271b3752`.
   The checkout has only this untracked brief, but is 14 commits behind its local
-  `origin/main`; the requested `050c212fa9a02ca3a7117ffdce93f09e01c2cbb8` is on
+  `origin/main`; the requested `b571aa894c958c3d48ee32dbd89ffbda6dacdf83` is on
   `origin/main`, not an ancestor of this checkout. Inspecting that exact commit showed
   the same `detail::control` pointer normalization, bounded failure count, public
   signature, and tests. No branch or source file was changed.
 - The consumer evidence is in the clean `Feature/Winwrap-Device-Client` worktree at
-  `64dd55265532b55dfbcfdba11cc476eb60eec344`. The sandbox-hwid root checkout is
+  `d0e992ecbb732e81e017e5878494c8d19374ef6e`. The sandbox-hwid root checkout is
   a different branch with unrelated edits and an older integration document.
 - `DEVICE_IO_PLAN.md`, `device_control.hpp`, and `device_test.cpp` provide no rationale
   or test for converting an empty span to `nullptr`. The injected-call seam already
@@ -222,11 +222,11 @@ wrapper-everything" discipline this investigation is checking WinWrap's own code
   creating their tray fixture because this host session cannot register the shell icon.
   Re-running those two tests alone produced the same fixture failure. No Device or
   changed-path test failed.
-- 2026-09-25: WinWrap commit `01d9d43839f1246fb80f8fe7a48469813a59d8f1`
+- 2026-09-25: WinWrap commit `b56cf6e9d086d3b6b5422bcf8417c6dbd33e8bba`
   was reviewed, pushed, and opened as draft PR #12. GitHub reports that exact code
   commit and no remote checks.
 - 2026-09-25: sandbox-hwid's existing PR #2 branch was pinned to WinWrap `01d9d43`.
-  Commit `0b9ec1464204faf839ea27894256f433a2cd1144` routes all ten negative probe
+  Commit `10dedd1669628577a9a7a76a479ac3b727d9aabf` routes all ten negative probe
   requests and the successful oversized-output request through `Device::control`.
   No direct `::DeviceIoControl` or `::GetLastError` call remains under `client/`.
   `scripts/Build.ps1 -Target Client` fetched the exact pin, built with MSVC C++23,
