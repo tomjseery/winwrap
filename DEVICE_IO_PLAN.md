@@ -20,7 +20,7 @@ and out of scope for this correction. Live driver work remains prohibited.
 ## Current evidence
 
 - WinWrap standards PR #6 is open. WinWrap Device PR #7 is a draft at
-  `f51d2b77c2f54d4be6f7a38f2227e8fb52ec7ff0`, the frozen review head.
+  `df183221ea6ffa3069f38497e2f585a3a6710375`, the frozen review head.
 - Lab base PR #1 is open. Lab integration PR #2 is a draft at `7338ee809b4d315d5d5046a73340e92a32d33303` and pins that exact WinWrap revision through FetchContent.
 - WinWrap x64 MSVC no-sanitizer build and 33/33 CTests pass. The current dev ASan preset compiles but cannot link because this Visual Studio installation lacks `clang_rt.asan_dynamic_runtime_thunk-x86_64.lib`. Restore that component and rerun the dev preset to close this verification gap.
 - `scripts/Build.ps1 -Target Client` fetched the exact WinWrap pin, built the user-mode client, and passed 9/9 CTests. No live client request, driver load, signing change, or VM validation occurred.
